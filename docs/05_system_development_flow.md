@@ -8,7 +8,7 @@
 | 作成日 | 2026-03-01 |
 | バージョン | 1.0 |
 | ステータス | 開発進行中 |
-| 体制 | エンジニアA（インフラ・AWS担当）＋ エンジニアB（SeaweedFS担当）＋ 開発チーム |
+| 体制 | エンジニアA（インフラ・S3/AWS連携担当）＋ エンジニアB（SeaweedFS担当）＋ 開発チーム |
 
 ---
 
@@ -22,38 +22,37 @@
   AWS S3 Bucket (ap-northeast-1)
   ├── /incoming/  ← ユーザーがアップロード (~5GB/ジョブ)
   ├── /results/   ← レンダリング結果 (GPU→S3へ書き戻し)
-  └── /archive/   ← 長期保存用  
+  └── /archive/   ← 長期保存用
        │
-       │  10Gbps NURO回線 (AWS Direct Connect / S3 Transfer Acceleration)
+       │  10Gbps NURO回線
        │  ※ S3マルチパート並列ダウンロード
        ▼
 【データセンター側】
-  ┌─────────────────────────────────────────────────────┐
-  │  10Gbps FIREWALL (1台)                              │
-  │       │                                             │
-  │  10Gbps SWITCH (2台, スタック or LACP)              │
-  │       │                                             │
-  │  ┌────┼────────────────────────────────────┐        │
-  │  │    │         │             │            │        │
-  │  ▼    ▼         ▼             ▼            ▼        │
-  │ QNAP  QNAP   GPU Server   GPU Server   監視・管理   │
-  │ NAS1  NAS2   (A6000×12)   グループ     サーバー群   │
-  │  │    │         │                                   │
-  │  └────┘         │                                   │
-  │  SeaweedFS       │  CUDA/Render Job                 │
-  │  分散FS          │                                   │
-  │  (M.2 4TB×8枚   │                                   │
-  │   ×2台 = 64TB)   │                                   │
-  │       │          │                                   │
-  │       ▼          │                                   │
-  │  アーカイバー ←──┘                                   │
-  │  (250TB HDD×4台 = 1PB)                              │
-  └─────────────────────────────────────────────────────┘
+  ┌──────────────────────────────────────────────────────────┐
+  │  10Gbps FIREWALL (1台)                                   │
+  │       │                                                  │
+  │  10Gbps SWITCH (2台)                                     │
+  │       │                                                  │
+  │  ┌────┼──────────────┬──────────────┐                    │
+  │  │    │              │              │                    │
+  │  ▼    ▼              ▼              ▼                    │
+  │ QNAP  QNAP         QNAP  QNAP    GPU Server             │
+  │ NAS1  NAS2         NAS3  NAS4    (A6000 PROMAX ×12)     │
+  │  │                  │               │                    │
+  │  └──SeaweedFS構成A──┘  SeaweedFS構成B│  CUDA/Render Job  │
+  │  (2台ずつ×2グループ or 4台統合 ※要検討)│                  │
+  │                         │            │                   │
+  │                         ▼            │                   │
+  │                  アーカイバー (未定) ←┘                   │
+  │                  (250TB HDD×4台 = 1PB)                   │
+  └──────────────────────────────────────────────────────────┘
        │
-  1GB SWITCH (管理・監視用)
+  1Gbps SWITCH (管理・監視用)
        │
-  監視サーバー・Grafana・Prometheus・Zabbix
+  Zabbix 監視サーバー
 ```
+
+> ⚠️ **未決定事項**: QNAP 4台の構成（2台×2グループ / 4台統合）は構成検討・動作検証が必要。確定後に本図を更新する。
 
 ---
 
@@ -64,8 +63,8 @@
 | 機器 | スペック | 台数 | 用途 |
 |------|---------|------|------|
 | GPU サーバー | NVIDIA A6000 PROMAX × 12 | 1クラスター | レンダリング実行 |
-| QNAP NAS | M.2 4TB × 8枚 = 32TB/台 | 2台 | ホットストレージ (SeaweedFS) |
-| アーカイバーHDD | 250TB/台 | 4台 | コールドストレージ (合計1PB) |
+| QNAP NAS | M.2 4TB × 8枚 = 32TB/台 | **4台** ※構成検討中 | ホットストレージ (SeaweedFS) |
+| アーカイバーサーバー | 250TB/台 (機種・構成未定) | 4台 | コールドストレージ (合計1PB) |
 
 ### 2.2 ネットワーク機器
 
@@ -76,7 +75,7 @@
 | 管理スイッチ | 1Gbps | 1台 | 管理・監視ネットワーク |
 | インターネット回線 | NURO 10Gbps | 1回線 | AWS S3との通信 |
 
-### 2.3 SeaweedFS クラスター構成（検証済み）
+### 2.3 SeaweedFS クラスター構成（**検証中**）
 
 | ロール | 台数 | 役割 |
 |--------|------|------|
@@ -84,18 +83,24 @@
 | Filerサーバー | 2台 | クライアントアクセス用 |
 | Masterサーバー | 3台 | メタデータ管理・Raft選出 |
 | Databaseサーバー | 3台 | メタデータ永続化 |
-| Volumeサーバー | 3台 | 実データ保存 |
+| Volumeサーバー | **4台** | 実データ保存 |
+
+> ⚠️ **ステータス**: 現在検証環境で性能試験・フェイルオーバー試験を実施中。合格後にサービス環境を構築する予定。
 
 ---
 
 ## 3. 開発フェーズ全体マップ
 
 ```
-Phase 0: 環境検証・技術選定 ────────────► 完了 ✅ (一部進行中)
+Phase 0: 環境検証・技術選定 ────────────► 完了 ✅ (一部継続中)
   └─ S3帯域検証 / SeaweedFS選定 / 構成検討
 
 Phase 1: インフラ基盤構築 ─────────────► 現在着手中 🔄
-  └─ ネットワーク / QNAP / SeaweedFS本番 / GPU OS
+  ├─ ネットワーク設計・構築 (構成確定後に詳細手順決定)
+  ├─ QNAP NAS 4台構成検討・決定・セットアップ
+  ├─ SeaweedFS: ①検証環境での性能試験 → ②合格後 サービス環境構築
+  ├─ GPU サーバー OS セットアップ
+  └─ アーカイバーサーバーセットアップ (機種・構成決定後)
 
 Phase 2: データパイプライン構築 ────────► 次フェーズ
   └─ S3↔データセンター同期 / SeaweedFS統合
@@ -107,7 +112,7 @@ Phase 4: Webプラットフォーム開発 ───────► 次フェー
   └─ UI / API / 課金 / ユーザー管理
 
 Phase 5: 監視・運用システム ────────────► 次フェーズ
-  └─ Grafana / Prometheus / アラート
+  └─ Zabbix による監視・アラート設定
 
 Phase 6: セキュリティ強化・外部公開 ────► 次フェーズ
   └─ ファイアウォール / CDN / 負荷テスト
@@ -162,63 +167,74 @@ python3 scripts/s3_multipart_benchmark.py \
 
 ### 5.1 ネットワーク設計・構築
 
-#### VLAN 設計
+> ⚠️ **未決定**: VLAN設計・ファイアウォールルール・設定手順はすべて未決定です。
+> QNAP 4台構成・SeaweedFS構成が確定した後、ネットワーク設計を具体化します。
 
-| VLAN | 名称 | 帯域 | 用途 |
-|------|------|------|------|
-| VLAN 10 | 管理ネットワーク | 1Gbps | サーバー管理・SSH・IPMI |
-| VLAN 20 | ストレージネットワーク | 10Gbps | QNAP↔GPUサーバー間 |
-| VLAN 30 | レンダリングネットワーク | 10Gbps | GPUサーバー間通信 |
-| VLAN 40 | インターネット向け | 10Gbps | S3転送・外部通信 |
-| VLAN 50 | 監視ネットワーク | 1Gbps | Prometheus/Grafana収集 |
+#### 現時点での方針（参考）
 
-#### ファイアウォールルール設計
+| 項目 | 状況 | 備考 |
+|------|------|------|
+| VLAN 設計 | **未決定** | QNAP構成確定後に設計 |
+| ファイアウォールルール | **未決定** | ネットワーク設計確定後 |
+| 10Gbps FIREWALL 設定 | **未決定** | 設定手順は構成確定後 |
+| 10Gbps SWITCH 設定 | **未決定** | 設定手順は構成確定後 |
+| 1Gbps 管理SWITCH 設定 | **未決定** | 設定手順は構成確定後 |
+| NURO 10Gbps 回線収容 | 検討中 | 開通日要確認 |
 
-```
-外部 → データセンター:
-  ALLOW: HTTPS(443) from AWS S3 range → VLAN40
-  ALLOW: SSH(22) from Admin IP only → VLAN10
-  DENY: ALL others
-
-VLAN40 → AWS:
-  ALLOW: HTTPS(443) to s3.amazonaws.com
-  ALLOW: HTTPS(443) to s3-accelerate.amazonaws.com
-
-VLAN20 (ストレージ):
-  ALLOW: SeaweedFS (8333, 9333, 19333) internal only
-  ALLOW: QNAP管理(8080) from VLAN10 only
-```
-
-#### ステップ
+#### 今後の手順（確定後に詳細化）
 
 ```
-□ Step 1.1: 10Gbps FW 設定 (VLAN/ルーティング/NAT)
-□ Step 1.2: 10Gbps SWITCH コアスイッチ設定 (LACP/VLAN trunk)
-□ Step 1.3: 1Gbps 管理SWITCHセグメント設定
-□ Step 1.4: NURO 10Gbps 回線収容・疎通確認
-□ Step 1.5: ネットワーク疎通テスト (iperf3)
-□ Step 1.6: ファイアウォールポリシー設定
+□ Step 1.1: QNAP 4台構成・SeaweedFS構成の最終確定
+□ Step 1.2: ネットワーク設計書の作成 (VLAN / ルーティング / FWルール)
+□ Step 1.3: 設計レビュー・承認
+□ Step 1.4: ネットワーク機器への設定投入
+□ Step 1.5: NURO 10Gbps 回線収容・疎通確認
+□ Step 1.6: 通信テスト (iperf3)
 ```
 
 ### 5.2 QNAP NAS セットアップ
 
+> ⚠️ **未決定**: QNAP 4台の具体的な構成（2台×2グループ / 4台統合 / その他）が未確定です。
+> 構成を決定した後、詳細な設定手順を策定します。動作検証も必要なため、十分な期間を確保する必要があります。
+
+#### QNAP 構成パターン（検討中）
+
+| パターン | 構成 | メリット | デメリット |
+|---------|------|---------|----------|
+| **案A**: 2台×2グループ | NAS1+NAS2 でSeaweedFS群A / NAS3+NAS4 でSeaweedFS群B | 障害分離・冗長性高い | 管理が複雑 |
+| **案B**: 4台統合 | 4台すべてをSeaweedFSに統合（Volume数を増やす） | シンプル・総容量大 | 1グループ障害時の影響大 |
+| **案C**: 役割分担 | 2台をSeaweedFS用、2台をバックアップ/アーカイブ前段用 | 用途明確 | 要詳細設計 |
+
 ```
-□ Step 2.1: QTS OS 最新版インストール (両台)
-□ Step 2.2: M.2 NVMe SSD 8枚 RAID設定
-             ├─ RAID 6 (2本冗長 → 実効24TB/台) ← 推奨
-             └─ RAID 10 (高速 → 実効16TB/台)
-□ Step 2.3: 10Gbps NIC 設定 (Link Aggregation)
-□ Step 2.4: QNAP間レプリケーション設定 (SnapSync)
-□ Step 2.5: Ubuntu 24.04 LTS VM起動 (SeaweedFS用)
-              → QNAP Virtualization Station利用
-□ Step 2.6: SeaweedFS インストール・設定（後述）
-□ Step 2.7: ストレージパフォーマンス計測
-             iperf3 / fio ベンチマーク実施
+【今後の手順 (構成決定後に詳細化)】
+□ Step 2.1: QNAP 4台の構成方針を決定・合意
+□ Step 2.2: 構成に応じた動作検証（性能・フェイルオーバー）
+□ Step 2.3: 検証合格後、本番セットアップ手順書を作成
+□ Step 2.4: 本番セットアップ実施
+□ Step 2.5: SeaweedFS との統合確認
 ```
 
-### 5.3 SeaweedFS 本番環境構築
+### 5.3 SeaweedFS 環境構築（検証→本番の2ステップ）
 
-検証環境（冗長16ノード構成）をベースに本番展開する。
+> 📋 **方針**: まず検証環境での性能試験・フェイルオーバー試験を完了させ、
+> 合格後にサービス環境（本番）を構築する。
+
+#### ステップ概要
+
+```
+【Step A: 検証環境での試験】(現在進行中 🔄)
+  ├─ 書込み/読込み性能測定 (目標: Write ≥ 500MB/s, Read ≥ 1GB/s)
+  ├─ フェイルオーバーテスト (Master障害/Volume障害)
+  ├─ 長時間安定性テスト
+  └─ 試験合格の判定
+
+【Step B: サービス環境構築】(検証合格後)
+  ├─ QNAP 4台構成確定後に本番ノード配置設計
+  ├─ 本番環境インストール・設定
+  └─ サービス環境での最終確認
+```
+
+#### 検証環境 SeaweedFS 構成（現在の検証対象）
 
 #### 本番構成アーキテクチャ
 
@@ -300,14 +316,26 @@ sudo systemctl start weed-master weed-volume weed-filer
 
 ### 5.5 アーカイバーサーバーセットアップ
 
+> ⚠️ **未決定**: アーカイバーサーバーの機種・OS・ストレージ構成（RAIDレベル等）は未決定です。
+> 構成決定後に詳細手順を策定します。
+
+#### 検討事項
+
+| 項目 | 状況 | 備考 |
+|------|------|------|
+| 機種・OS | **未決定** | Linux系を想定 |
+| RAIDレベル | **未決定** | RAID6 / ZFS RAIDZ2 等を検討 |
+| ファイルシステム | **未決定** | ZFS / XFS 等 |
+| アーカイブソフト | **未決定** | rsync / rclone 等を検討 |
+
 ```
-□ Step 5.1: 4台のアーカイバーサーバー OS インストール (Ubuntu 24.04)
-□ Step 5.2: HDDアレイ構成 (ZFS推奨 / RAID6)
-             zpool create archive raidz2 /dev/sd{a..h}
-□ Step 5.3: 自動アーカイブポリシー設定
-             SeaweedFS → Archive: 7日後自動移動
-□ Step 5.4: rsync / rclone によるS3→Archive同期設定
-□ Step 5.5: ストレージ使用量監視アラート設定
+【今後の手順 (構成決定後に詳細化)】
+□ Step 5.1: アーカイバーサーバー機種・構成の決定
+□ Step 5.2: OS インストール・初期設定
+□ Step 5.3: ストレージ（HDD）アレイ構成
+□ Step 5.4: 自動アーカイブポリシー設定
+□ Step 5.5: SeaweedFS → アーカイバー 自動移動設定
+□ Step 5.6: 監視・アラート設定 (Zabbix)
 ```
 
 ---
@@ -671,50 +699,46 @@ CREATE TABLE storage_metrics (
 
 ## 9. Phase 5: 監視・運用システム
 
-### 9.1 監視スタック
+> 📋 **方針**: 監視システムは **Zabbix** を使用します。Prometheus / Grafana は使用しません。
+
+### 9.1 Zabbix 監視システム
+
+#### 監視対象
+
+| 監視対象 | 監視内容 | 方法 |
+|---------|---------|------|
+| GPU サーバー | CPU/RAM/Disk/Network/GPU温度・使用率 | Zabbix Agent |
+| QNAP NAS × 4台 | Disk使用量・温度・NIC帯域 | SNMP / Zabbix Agent |
+| アーカイバーサーバー × 4台 | Disk使用量・温度・NIC帯域 | Zabbix Agent |
+| 10Gbps ファイアウォール | 死活・帯域・セッション数 | SNMP |
+| 10Gbps スイッチ × 2台 | 死活・帯域・エラー率 | SNMP |
+| 1Gbps 管理スイッチ | 死活 | SNMP |
+| AWS S3 | 転送量・エラー率 | CloudWatch (参照のみ) |
+| SeaweedFS クラスター | FS状態・容量 | Zabbix Agent |
+
+#### アラート設定
 
 ```
-【収集】
-Prometheus Node Exporter  → CPU/RAM/Disk/Network
-NVIDIA DCGM Exporter      → GPU メトリクス
-SeaweedFS Exporter        → FS状態
-Blackbox Exporter         → 外形監視 (URL疎通)
-S3 CloudWatch Metrics     → S3転送量・エラー率
-
-【可視化】
-Grafana Dashboards
-├─ GPU Cluster Overview  (温度・使用率・VRAMマップ)
-├─ Render Job Dashboard  (キュー長・処理速度・完了率)
-├─ Storage Dashboard     (SeaweedFS使用量・IO)
-├─ Network Dashboard     (帯域使用量・S3転送量)
-└─ Business Dashboard    (ジョブ数・売上・ユーザー数)
-
-【アラート】
-Grafana Alerting / PagerDuty
+【Zabbix アラート】
 ├─ GPU温度 > 85℃ → 警告
 ├─ GPU温度 > 90℃ → 緊急（自動シャットダウン）
-├─ GPU使用率 < 10% for 30min → アイドル警告
-├─ SeaweedFS 容量 > 80% → 警告
-├─ ジョブ失敗率 > 5% → 異常検知
-├─ S3転送エラー率 > 1% → 警告
-└─ サービスダウン → 即時通知 (LINE / Slack)
-
-【ログ管理】
-Loki + Grafana (ログ集約・全文検索)
-├─ GPU Worker ログ
-├─ Web API ログ
-├─ SeaweedFS ログ
-└─ Nginx アクセスログ
+├─ QNAP / アーカイバー Disk使用量 > 80% → 警告
+├─ SeaweedFS Volume使用量 > 80% → 警告
+├─ ネットワーク機器 死活異常 → 即時通知
+└─ サービスダウン → 即時通知 (メール / Slack)
 ```
 
-### 9.2 Zabbix（既存監視インフラ）
+### 9.2 Zabbix セットアップ チェックリスト
 
 ```
-□ Step 9.1: Zabbix Server 設定 (管理ネットワーク上)
+□ Step 9.1: Zabbix Server インストール (管理ネットワーク上)
 □ Step 9.2: 全サーバーへ Zabbix Agent インストール
-□ Step 9.3: QNAP SNMP 監視設定
-□ Step 9.4: ファイアウォール・スイッチ 死活監視
-□ Step 9.5: Prometheus + Grafana 連携
+□ Step 9.3: QNAP × 4台 SNMP 監視設定
+□ Step 9.4: ファイアウォール・スイッチ 死活監視設定
+□ Step 9.5: アーカイバーサーバー × 4台 監視設定
+□ Step 9.6: GPU 温度・使用率アラート設定
+□ Step 9.7: ストレージ使用量アラート設定
+□ Step 9.8: 通知設定 (メール / Slack)
 ```
 
 ---
@@ -844,7 +868,7 @@ done
 
 2026年6月 ─────────────────────────────────────────────
  Week 13-14: Phase 4 後半 (管理画面/監視ダッシュボード)
- Week 15   : Phase 5 (Grafana/Prometheus)
+ Week 15   : Phase 5 (Zabbix監視設定)
  Week 16   : Phase 6 (セキュリティ/Cloudflare)
 
 2026年7月 ─────────────────────────────────────────────
@@ -862,7 +886,7 @@ done
 | M2 | パイプライン完成 | S3→SeaweedFS→GPU自動連携確認 | 2026/04/30 |
 | M3 | レンダリングα版 | Blenderジョブ実行・GPU分散動作 | 2026/05/31 |
 | M4 | Web UIα版 | ジョブ投入〜結果DLフロー動作 | 2026/06/30 |
-| M5 | 監視・セキュリティ完成 | Grafana/アラート/外部公開準備 | 2026/07/15 |
+| M5 | 監視・セキュリティ完成 | Zabbix監視/アラート/外部公開準備 | 2026/07/15 |
 | M6 | 本番リリース🚀 | 全機能テスト完了・負荷試験OK | 2026/07/31 |
 
 ---
@@ -871,7 +895,7 @@ done
 
 | 担当 | 現状の担当範囲 | 推奨追加担当 |
 |------|-------------|------------|
-| **エンジニアA** | ①AWS/S3帯域検証, ③システム構成検討 | Phase1インフラ全般、Phase6外部公開 |
+| **エンジニアA** | ①S3/AWS連携・帯域検証, ③システム構成検討 | Phase1インフラ全般（ネットワーク・QNAP）、Phase6外部公開 |
 | **エンジニアB** | ②SeaweedFS検証・本番構築 | Phase2パイプライン、Phase5監視 |
 | **追加SEが必要** | - | Phase3レンダリングエンジン、Phase4 Web開発 |
 
@@ -935,5 +959,6 @@ done
 ---
 
 > 📝 **更新履歴**  
-> 2026-03-01 v1.0 初版作成 (週次報告・2/2〜2/23の進捗を反映)
+> 2026-03-01 v1.0 初版作成 (週次報告・2/2〜2/23の進捗を反映)  
+> 2026-03-02 v1.1 指摘事項反映 (QNAP4台対応・監視Zabbix統一・未決定項目の明記・SeaweedFS検証→本番2ステップ化・ネットワーク/QNAP手順を未確定に変更)
 
