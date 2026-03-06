@@ -57,10 +57,20 @@ app.use('/api/', rateLimit(config.rateLimit.api));
 
 // Static files - serve each UI as a subdirectory
 app.use(express.static(path.join(__dirname, '../public')));
+app.use('/', express.static(path.join(__dirname, '../public/landing')));
 app.use('/portal', express.static(path.join(__dirname, '../public/portal')));
 app.use('/workspace', express.static(path.join(__dirname, '../public/workspace')));
 app.use('/admin', express.static(path.join(__dirname, '../public/admin')));
 app.use('/provider', express.static(path.join(__dirname, '../public/provider')));
+
+// Named pages
+app.get('/terms.html', (req, res) => res.sendFile(path.join(__dirname, '../public/landing/terms.html')));
+app.get('/terms', (req, res) => res.sendFile(path.join(__dirname, '../public/landing/terms.html')));
+app.get('/privacy.html', (req, res) => res.sendFile(path.join(__dirname, '../public/landing/privacy.html')));
+app.get('/privacy', (req, res) => res.sendFile(path.join(__dirname, '../public/landing/privacy.html')));
+
+// Root → landing page
+app.get('/', (req, res) => res.sendFile(path.join(__dirname, '../public/landing/index.html')));
 
 // SPA fallback routes
 app.get('/portal/*', (req, res) => res.sendFile(path.join(__dirname, '../public/portal/index.html')));
