@@ -74,7 +74,7 @@ document.getElementById('heroReserve').addEventListener('click', () => {
     document.getElementById('gpus').scrollIntoView({ behavior: 'smooth' });
 });
 document.getElementById('heroProvide').addEventListener('click', () => {
-    showToast('GPUプロバイダー登録機能は近日公開予定です！', 'info');
+    window.location.href = '/provider/';
 });
 document.getElementById('btnLogout').addEventListener('click', () => {
     localStorage.removeItem('gpu_token');
