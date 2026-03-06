@@ -344,7 +344,7 @@ async function loadUsers() {
         const list = await api('/admin/users');
         const roleBadge = { admin: 'b-danger', provider: 'b-primary', user: 'b-muted' };
         const roleLabel = { admin: '管理者', provider: 'プロバイダー', user: 'ユーザー' };
-        document.getElementById('userTableBody').innerHTML = (list || []).map(u => `<tr>
+        document.getElementById('userTableBody').innerHTML = (list || []).map(u => `<tr id="user-row-${u.id}">
           <td class="mono">#${u.id}</td>
           <td><strong>${u.username}</strong></td>
           <td style="color:var(--text2)">${u.email}</td>
@@ -352,7 +352,13 @@ async function loadUsers() {
           <td><span class="badge ${u.status === 'active' ? 'b-success' : 'b-danger'}">${u.status === 'active' ? '有効' : '停止'}</span></td>
           <td class="mono">¥${Math.round(u.wallet_balance || 0).toLocaleString()}</td>
           <td style="color:var(--text3)">${new Date(u.created_at).toLocaleDateString('ja-JP')}</td>
-          <td>${u.role !== 'admin' ? `<button class="btn btn-ghost btn-sm" onclick="toggleUser(${u.id},'${u.status}')">${u.status === 'active' ? '停止' : '有効化'}</button>` : '—'}</td>
+          <td style="display:flex;gap:6px;align-items:center">
+            ${u.role !== 'admin'
+                ? `<button class="btn btn-ghost btn-sm" onclick="toggleUser(${u.id},'${u.status}')">${u.status === 'active' ? '停止' : '有効化'}</button>
+                 <button class="btn btn-danger btn-sm" onclick="confirmDeleteUser(${u.id},'${u.username}','${u.email}')">🗑 削除</button>`
+                : '<span style="color:var(--text3);font-size:0.8rem">保護</span>'
+            }
+          </td>
         </tr>`).join('') || '<tr><td colspan="8" style="text-align:center;color:var(--text3);padding:2rem">ユーザーなし</td></tr>';
     } catch (err) { console.error(err); }
 }
@@ -361,6 +367,102 @@ async function toggleUser(id, currentStatus) {
     const newStatus = currentStatus === 'active' ? 'suspended' : 'active';
     try { await api(`/admin/users/${id}`, { method: 'PATCH', body: JSON.stringify({ status: newStatus }) }); loadUsers(); } catch (e) { alert(e.message); }
 }
+
+/**
+ * 2段階確認ダイアログで強制削除
+ */
+function confirmDeleteUser(id, username, email) {
+    // 既存モーダルがあれば除去
+    document.getElementById('deleteUserModal')?.remove();
+
+    const modal = document.createElement('div');
+    modal.id = 'deleteUserModal';
+    modal.style.cssText = `
+        position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:9999;
+        display:flex;align-items:center;justify-content:center;
+        backdrop-filter:blur(6px);animation:fadeIn 0.15s ease`;
+    modal.innerHTML = `
+        <div style="background:#12122a;border:1px solid rgba(255,71,87,0.4);border-radius:16px;
+                    padding:32px;max-width:440px;width:90%;box-shadow:0 24px 64px rgba(0,0,0,0.7)">
+            <div style="display:flex;align-items:center;gap:12px;margin-bottom:20px">
+                <span style="font-size:2rem">🗑</span>
+                <div>
+                    <div style="font-size:1.1rem;font-weight:700;color:#ff4757">ユーザーを強制削除</div>
+                    <div style="font-size:0.8rem;color:#9898b8;margin-top:2px">この操作は元に戻せません</div>
+                </div>
+            </div>
+            <div style="background:rgba(255,71,87,0.08);border:1px solid rgba(255,71,87,0.2);
+                        border-radius:10px;padding:14px 16px;margin-bottom:20px">
+                <div style="font-size:0.85rem;color:#9898b8;margin-bottom:4px">削除対象</div>
+                <div style="font-weight:700">${username}</div>
+                <div style="font-size:0.82rem;color:#6c6c9a">${email} &nbsp;·&nbsp; ID: ${id}</div>
+            </div>
+            <div style="font-size:0.85rem;color:#ff4757;margin-bottom:6px">
+                ⚠ 以下のデータが全て削除されます：
+            </div>
+            <ul style="font-size:0.8rem;color:#9898b8;margin:0 0 20px 18px;line-height:1.9">
+                <li>アカウント情報・パスワード</li>
+                <li>全予約履歴（稼働中は強制終了）</li>
+                <li>使用ログ・課金履歴</li>
+            </ul>
+            <div style="margin-bottom:16px">
+                <label style="font-size:0.82rem;color:#9898b8;display:block;margin-bottom:6px">
+                    確認のため <strong style="color:#fff">${username}</strong> と入力してから削除してください
+                </label>
+                <input id="deleteConfirmInput" type="text" placeholder="ユーザー名を入力..."
+                    style="width:100%;padding:10px 14px;background:#0a0a1a;border:1px solid rgba(255,255,255,0.15);
+                           border-radius:8px;color:#eee;font-size:0.9rem;outline:none;box-sizing:border-box"
+                    oninput="checkDeleteInput('${username}')"/>
+            </div>
+            <div style="display:flex;gap:10px;justify-content:flex-end">
+                <button class="btn btn-ghost" onclick="document.getElementById('deleteUserModal').remove()">
+                    キャンセル
+                </button>
+                <button id="deleteConfirmBtn" class="btn btn-danger" disabled
+                    onclick="executeDeleteUser(${id}, '${username}')">
+                    🗑 強制削除する
+                </button>
+            </div>
+        </div>`;
+    document.body.appendChild(modal);
+    // Esc で閉じる
+    modal.addEventListener('click', e => { if (e.target === modal) modal.remove(); });
+    document.getElementById('deleteConfirmInput').focus();
+}
+
+function checkDeleteInput(username) {
+    const val = document.getElementById('deleteConfirmInput')?.value || '';
+    const btn = document.getElementById('deleteConfirmBtn');
+    if (btn) btn.disabled = (val !== username);
+}
+
+async function executeDeleteUser(id, username) {
+    const btn = document.getElementById('deleteConfirmBtn');
+    if (btn) { btn.disabled = true; btn.textContent = '削除中...'; }
+    try {
+        await api(`/admin/users/${id}?force=true`, { method: 'DELETE' });
+        document.getElementById('deleteUserModal')?.remove();
+        // テーブル行を消す（即時反映）
+        document.getElementById(`user-row-${id}`)?.remove();
+        showDeleteToast(`✅ ${username} を削除しました`);
+    } catch (e) {
+        if (btn) { btn.disabled = false; btn.textContent = '🗑 強制削除する'; }
+        alert('削除失敗: ' + e.message);
+    }
+}
+
+function showDeleteToast(msg) {
+    const t = document.createElement('div');
+    t.textContent = msg;
+    t.style.cssText = `position:fixed;bottom:24px;right:24px;background:#1a1a3a;
+        border:1px solid rgba(255,71,87,0.4);border-radius:10px;padding:12px 20px;
+        color:#ff6b6b;font-size:0.875rem;font-weight:600;z-index:99999;
+        box-shadow:0 8px 24px rgba(0,0,0,0.5);animation:fadeIn 0.2s ease`;
+    document.body.appendChild(t);
+    setTimeout(() => t.remove(), 3500);
+}
+
+
 
 /* ── ALERTS ─────────────────────────────────────────────────────── */
 async function loadAlerts() {

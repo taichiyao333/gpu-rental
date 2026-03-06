@@ -65,6 +65,50 @@ router.patch('/users/:id', authMiddleware, adminOnly, (req, res) => {
   res.json({ success: true });
 });
 
+// DELETE /api/admin/users/:id - 強制削除（カスケード）
+router.delete('/users/:id', authMiddleware, adminOnly, (req, res) => {
+  const db = getDb();
+  const targetId = parseInt(req.params.id);
+
+  // 自分自身は削除不可
+  if (targetId === req.user.id) {
+    return res.status(400).json({ error: '自分自身は削除できません' });
+  }
+
+  const target = db.prepare('SELECT * FROM users WHERE id = ?').get(targetId);
+  if (!target) return res.status(404).json({ error: 'ユーザーが見つかりません' });
+
+  // 稼働中のポッドがある場合は警告（強制削除フラグがなければ拒否）
+  const activePod = db.prepare("SELECT id FROM pods WHERE renter_id = ? AND status = 'running'").get(targetId);
+  if (activePod && !req.query.force) {
+    return res.status(409).json({
+      error: 'このユーザーには稼働中のセッションがあります。force=true で強制削除できます',
+      activePod: activePod.id,
+    });
+  }
+
+  // カスケード削除（トランザクション）
+  const deleteUser = db.transaction(() => {
+    // ポッドを停止
+    db.prepare("UPDATE pods SET status = 'terminated' WHERE renter_id = ?").run(targetId);
+    // 予約をキャンセル
+    db.prepare("UPDATE reservations SET status = 'cancelled' WHERE renter_id = ? AND status IN ('confirmed','pending')").run(targetId);
+    // 使用ログ削除
+    db.prepare('DELETE FROM usage_logs WHERE renter_id = ?').run(targetId);
+    // ユーザー削除
+    db.prepare('DELETE FROM users WHERE id = ?').run(targetId);
+  });
+
+  try {
+    deleteUser();
+    console.log(`🗑 User #${targetId} (${target.username}) deleted by admin #${req.user.id}`);
+    res.json({ success: true, deleted: { id: targetId, username: target.username } });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+
 // GET /api/admin/stats - revenue + usage over time
 router.get('/stats', authMiddleware, adminOnly, (req, res) => {
   const db = getDb();
