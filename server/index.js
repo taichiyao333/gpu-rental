@@ -11,8 +11,9 @@ const rateLimit = require('express-rate-limit');
 const config = require('./config');
 const { runMigrations } = require('./db/migrations');
 const { initDb } = require('./db/database');
-const { startGpuMonitor } = require('./services/gpuManager');
+const { startGpuMonitor, getGpuNodesWithStats } = require('./services/gpuManager');
 const { startScheduler } = require('./services/scheduler');
+const { attachTerminal } = require('./services/terminal');
 
 // Routes
 const authRoutes = require('./routes/auth');
@@ -91,10 +92,29 @@ io.on('connection', (socket) => {
         try {
             const jwt = require('jsonwebtoken');
             const decoded = jwt.verify(token, config.jwt.secret);
+            socket.userId = decoded.id;
+            socket.userRole = decoded.role;
             socket.join(`user_${decoded.id}`);
             if (decoded.role === 'admin') socket.join('admin');
             socket.emit('auth:ok', { userId: decoded.id, role: decoded.role });
         } catch { /* ignore invalid tokens */ }
+    });
+
+    // Terminal attachment request
+    socket.on('terminal:attach', async (data) => {
+        try {
+            if (!socket.userId) return socket.emit('terminal:error', 'Not authenticated');
+            const { getDb } = require('./db/database');
+            const db = getDb();
+            const user = db.prepare('SELECT id,username,role FROM users WHERE id=?').get(socket.userId);
+            const pod = data?.podId
+                ? db.prepare('SELECT * FROM pods WHERE id=? AND renter_id=?').get(data.podId, socket.userId)
+                : db.prepare('SELECT * FROM pods WHERE renter_id=? AND status="running" ORDER BY started_at DESC LIMIT 1').get(socket.userId);
+            if (!user) return socket.emit('terminal:error', 'User not found');
+            attachTerminal(socket, pod || { workspace_path: require('./config').storage.usersPath + '/' + socket.userId }, user);
+        } catch (e) {
+            socket.emit('terminal:error', e.message);
+        }
     });
 
     socket.on('disconnect', () => {
@@ -121,6 +141,7 @@ async function start() {
         console.log(`📊 Portal:     http://localhost:${config.port}/portal/`);
         console.log(`🛡  Admin:      http://localhost:${config.port}/admin/`);
         console.log(`💻 Workspace:  http://localhost:${config.port}/workspace/`);
+        console.log(`🏭 Provider:   http://localhost:${config.port}/provider/`);
         console.log('\n─────────────────────────────────────────────');
         console.log('📧 Admin login: taichi.yao@gmail.com / admin123');
         console.log('─────────────────────────────────────────────\n');

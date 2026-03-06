@@ -4,229 +4,1157 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Admin Dashboard — GPU Rental</title>
+    <title>管理ダッシュボード — GPU Rental</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link
-        href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap"
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap"
         rel="stylesheet" />
-    <link rel="stylesheet" href="style.css" />
+    <style>
+        :root {
+            --bg: #0a0a0f;
+            --bg2: #0f0f1a;
+            --bg3: #14141f;
+            --card: #16162a;
+            --border: rgba(120, 120, 200, 0.13);
+            --border-h: rgba(120, 120, 255, 0.3);
+            --primary: #6c47ff;
+            --accent: #00d4ff;
+            --success: #00e5a0;
+            --warning: #ffb300;
+            --danger: #ff4757;
+            --text: #e8e8f0;
+            --text2: #9898b8;
+            --text3: #5a5a7a;
+            --sidebar-w: 220px;
+            --header-h: 60px;
+        }
+
+        *,
+        *::before,
+        *::after {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0
+        }
+
+        html,
+        body {
+            height: 100%;
+            overflow: hidden
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            display: flex;
+            flex-direction: column
+        }
+
+        a {
+            text-decoration: none;
+            color: inherit
+        }
+
+        /* ── HEADER ── */
+        .header {
+            height: var(--header-h);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 1.5rem;
+            background: var(--bg2);
+            border-bottom: 1px solid var(--border);
+            flex-shrink: 0;
+            z-index: 10
+        }
+
+        .brand {
+            font-size: 1.1rem;
+            font-weight: 800
+        }
+
+        .brand span {
+            color: var(--accent)
+        }
+
+        .header-right {
+            display: flex;
+            align-items: center;
+            gap: 1rem
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: var(--success);
+            box-shadow: 0 0 6px var(--success);
+            animation: pulse 2s infinite
+        }
+
+        @keyframes pulse {
+
+            0%,
+            100% {
+                opacity: 1
+            }
+
+            50% {
+                opacity: .5
+            }
+        }
+
+        .header-badge {
+            font-size: 0.78rem;
+            color: var(--text2);
+            background: rgba(0, 229, 160, 0.1);
+            border: 1px solid rgba(0, 229, 160, 0.2);
+            padding: 4px 10px;
+            border-radius: 20px;
+            display: flex;
+            align-items: center;
+            gap: 6px
+        }
+
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 6px 14px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 0.8rem;
+            font-weight: 500;
+            font-family: 'Inter', sans-serif;
+            transition: all 0.2s
+        }
+
+        .btn-danger {
+            background: rgba(255, 71, 87, 0.15);
+            color: var(--danger);
+            border: 1px solid rgba(255, 71, 87, 0.2)
+        }
+
+        .btn-danger:hover {
+            background: rgba(255, 71, 87, 0.25)
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, var(--primary), #8b5cf6);
+            color: #fff
+        }
+
+        .btn-ghost {
+            background: transparent;
+            border: 1px solid var(--border);
+            color: var(--text2)
+        }
+
+        .btn-ghost:hover {
+            color: var(--text);
+            background: rgba(255, 255, 255, 0.05)
+        }
+
+        .btn-sm {
+            padding: 4px 10px;
+            font-size: 0.75rem
+        }
+
+        /* ── LAYOUT ── */
+        .layout {
+            display: flex;
+            height: calc(100vh - var(--header-h));
+            overflow: hidden
+        }
+
+        /* ── SIDEBAR ── */
+        .sidebar {
+            width: var(--sidebar-w);
+            background: var(--bg2);
+            border-right: 1px solid var(--border);
+            display: flex;
+            flex-direction: column;
+            flex-shrink: 0;
+            overflow-y: auto
+        }
+
+        .nav-section {
+            padding: 1rem 0.75rem 0.25rem;
+            font-size: 0.65rem;
+            color: var(--text3);
+            text-transform: uppercase;
+            letter-spacing: 0.8px;
+            font-weight: 600
+        }
+
+        .nav-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 0.55rem 1rem;
+            margin: 1px 0.5rem;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 0.85rem;
+            color: var(--text2);
+            transition: all 0.15s;
+            border: none;
+            background: none;
+            width: calc(100% - 1rem);
+            text-align: left;
+            font-family: 'Inter', sans-serif
+        }
+
+        .nav-item:hover {
+            background: rgba(255, 255, 255, 0.05);
+            color: var(--text)
+        }
+
+        .nav-item.active {
+            background: rgba(108, 71, 255, 0.15);
+            color: #a78bfa;
+            border: 1px solid rgba(108, 71, 255, 0.2)
+        }
+
+        .nav-icon {
+            font-size: 1rem;
+            width: 20px;
+            text-align: center
+        }
+
+        .nav-badge {
+            margin-left: auto;
+            background: var(--danger);
+            color: #fff;
+            font-size: 0.65rem;
+            padding: 1px 6px;
+            border-radius: 10px
+        }
+
+        .sidebar-footer {
+            padding: 1rem;
+            border-top: 1px solid var(--border);
+            margin-top: auto
+        }
+
+        .provider-info {
+            font-size: 0.75rem;
+            color: var(--text3);
+            line-height: 1.6
+        }
+
+        .provider-info strong {
+            color: var(--text2)
+        }
+
+        /* ── MAIN ── */
+        .main {
+            flex: 1;
+            overflow-y: auto;
+            padding: 1.5rem
+        }
+
+        /* ── SECTIONS ── */
+        .section {
+            display: none
+        }
+
+        .section.active {
+            display: block
+        }
+
+        .section-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 1.25rem
+        }
+
+        .section-title {
+            font-size: 1.3rem;
+            font-weight: 800;
+            letter-spacing: -0.5px
+        }
+
+        .section-sub {
+            font-size: 0.8rem;
+            color: var(--text2);
+            margin-top: 2px
+        }
+
+        /* ── KPI GRID ── */
+        .kpi-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+            gap: 1rem;
+            margin-bottom: 1.5rem
+        }
+
+        .kpi {
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 14px;
+            padding: 1.25rem;
+            transition: border-color 0.2s;
+            position: relative;
+            overflow: hidden
+        }
+
+        .kpi::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 2px
+        }
+
+        .kpi.c-primary::after {
+            background: linear-gradient(90deg, var(--primary), #8b5cf6)
+        }
+
+        .kpi.c-success::after {
+            background: linear-gradient(90deg, var(--success), #00b8d4)
+        }
+
+        .kpi.c-warning::after {
+            background: linear-gradient(90deg, var(--warning), #ff9100)
+        }
+
+        .kpi.c-accent::after {
+            background: linear-gradient(90deg, var(--accent), var(--primary))
+        }
+
+        .kpi.c-danger::after {
+            background: linear-gradient(90deg, var(--danger), #ff6b35)
+        }
+
+        .kpi:hover {
+            border-color: var(--border-h)
+        }
+
+        .kpi-icon {
+            font-size: 1.5rem;
+            margin-bottom: 0.5rem
+        }
+
+        .kpi-val {
+            font-size: 2rem;
+            font-weight: 800;
+            letter-spacing: -1px;
+            font-family: 'JetBrains Mono', monospace;
+            line-height: 1
+        }
+
+        .kpi-label {
+            font-size: 0.72rem;
+            color: var(--text3);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-top: 4px
+        }
+
+        .kpi-delta {
+            font-size: 0.72rem;
+            margin-top: 6px
+        }
+
+        .kpi-delta.up {
+            color: var(--success)
+        }
+
+        .kpi-delta.down {
+            color: var(--danger)
+        }
+
+        /* ── CHART ROW ── */
+        .chart-row {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 1rem;
+            margin-bottom: 1.5rem
+        }
+
+        .chart-card {
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 14px;
+            padding: 1.25rem
+        }
+
+        .chart-card h3 {
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: var(--text2);
+            margin-bottom: 1rem
+        }
+
+        canvas {
+            width: 100% !important
+        }
+
+        /* ── TABLE ── */
+        .table-card {
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 14px;
+            overflow: hidden;
+            margin-bottom: 1.25rem
+        }
+
+        .table-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 1rem 1.25rem;
+            border-bottom: 1px solid var(--border)
+        }
+
+        .table-header h3 {
+            font-size: 0.9rem;
+            font-weight: 700
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse
+        }
+
+        th {
+            padding: 0.6rem 1rem;
+            text-align: left;
+            font-size: 0.7rem;
+            color: var(--text3);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            font-weight: 600;
+            border-bottom: 1px solid var(--border);
+            background: var(--bg3)
+        }
+
+        td {
+            padding: 0.7rem 1rem;
+            font-size: 0.82rem;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.03)
+        }
+
+        tr:last-child td {
+            border-bottom: none
+        }
+
+        tr:hover td {
+            background: rgba(255, 255, 255, 0.02)
+        }
+
+        .mono {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.78rem
+        }
+
+        /* ── BADGES ── */
+        .badge {
+            padding: 2px 8px;
+            border-radius: 20px;
+            font-size: 0.7rem;
+            font-weight: 600;
+            display: inline-block
+        }
+
+        .b-success {
+            background: rgba(0, 229, 160, 0.12);
+            color: var(--success)
+        }
+
+        .b-primary {
+            background: rgba(108, 71, 255, 0.15);
+            color: #a78bfa
+        }
+
+        .b-warning {
+            background: rgba(255, 179, 0, 0.12);
+            color: var(--warning)
+        }
+
+        .b-danger {
+            background: rgba(255, 71, 87, 0.12);
+            color: var(--danger)
+        }
+
+        .b-muted {
+            background: rgba(100, 100, 150, 0.12);
+            color: var(--text3)
+        }
+
+        /* ── GPU MONITOR CARDS ── */
+        .gpu-monitor-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 1rem;
+            margin-bottom: 1.5rem
+        }
+
+        .gpu-card {
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 14px;
+            padding: 1.25rem
+        }
+
+        .gpu-card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem
+        }
+
+        .gpu-card-name {
+            font-size: 0.9rem;
+            font-weight: 700
+        }
+
+        .gauge {
+            margin-bottom: 0.6rem
+        }
+
+        .gauge-hd {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 4px;
+            font-size: 0.72rem
+        }
+
+        .gauge-label {
+            color: var(--text2)
+        }
+
+        .gauge-val {
+            font-family: 'JetBrains Mono', monospace;
+            color: var(--text)
+        }
+
+        .gauge-track {
+            height: 6px;
+            background: rgba(255, 255, 255, 0.06);
+            border-radius: 10px;
+            overflow: hidden
+        }
+
+        .gauge-fill {
+            height: 100%;
+            border-radius: 10px;
+            transition: width 0.5s ease
+        }
+
+        .gf-util {
+            background: linear-gradient(90deg, var(--primary), #8b5cf6)
+        }
+
+        .gf-vram {
+            background: linear-gradient(90deg, var(--accent), var(--primary))
+        }
+
+        .gf-temp {
+            background: linear-gradient(90deg, var(--success), var(--warning))
+        }
+
+        .gf-temp.hot {
+            background: linear-gradient(90deg, var(--warning), var(--danger))
+        }
+
+        .gf-pwr {
+            background: linear-gradient(90deg, var(--warning), #ff9100)
+        }
+
+        .gpu-meta {
+            display: flex;
+            gap: 0.75rem;
+            margin-top: 0.75rem;
+            padding-top: 0.75rem;
+            border-top: 1px solid var(--border);
+            flex-wrap: wrap
+        }
+
+        .gpu-meta-item {
+            font-size: 0.72rem;
+            color: var(--text3)
+        }
+
+        .gpu-meta-item span {
+            color: var(--text2);
+            font-family: 'JetBrains Mono', monospace
+        }
+
+        /* ── MODAL ── */
+        .modal-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.7);
+            backdrop-filter: blur(4px);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 100
+        }
+
+        .modal-overlay.open {
+            display: flex
+        }
+
+        .modal {
+            background: var(--bg2);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 1.75rem;
+            width: 460px;
+            max-width: 95vw;
+            position: relative
+        }
+
+        .modal h3 {
+            font-size: 1.1rem;
+            font-weight: 800;
+            margin-bottom: 1.25rem;
+            padding-right: 1.5rem
+        }
+
+        .modal-close {
+            position: absolute;
+            top: 1rem;
+            right: 1rem;
+            background: none;
+            border: none;
+            color: var(--text3);
+            cursor: pointer;
+            font-size: 1.2rem
+        }
+
+        .form-group {
+            margin-bottom: 1rem
+        }
+
+        .form-group label {
+            display: block;
+            font-size: 0.78rem;
+            color: var(--text2);
+            margin-bottom: 0.4rem;
+            font-weight: 500
+        }
+
+        .form-group input,
+        .form-group select {
+            width: 100%;
+            background: var(--bg);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 0.55rem 0.875rem;
+            color: var(--text);
+            font-size: 0.85rem;
+            font-family: 'Inter', sans-serif
+        }
+
+        .form-group input:focus,
+        .form-group select:focus {
+            outline: none;
+            border-color: var(--primary)
+        }
+
+        .form-group select option {
+            background: var(--bg)
+        }
+
+        .modal-actions {
+            display: flex;
+            gap: 0.75rem;
+            margin-top: 1.25rem;
+            justify-content: flex-end
+        }
+
+        /* ── ACTIVITY FEED ── */
+        .feed-list {
+            list-style: none;
+            max-height: 300px;
+            overflow-y: auto
+        }
+
+        .feed-item {
+            display: flex;
+            gap: 0.75rem;
+            padding: 0.6rem 1.25rem;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+            font-size: 0.8rem;
+            align-items: flex-start
+        }
+
+        .feed-item:last-child {
+            border-bottom: none
+        }
+
+        .feed-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            flex-shrink: 0;
+            margin-top: 4px
+        }
+
+        .feed-time {
+            color: var(--text3);
+            font-size: 0.72rem;
+            white-space: nowrap;
+            margin-left: auto;
+            padding-left: 0.5rem
+        }
+
+        .feed-msg {
+            color: var(--text2);
+            line-height: 1.4
+        }
+
+        /* ── LOADING SPINNER ── */
+        .spinner {
+            display: inline-block;
+            width: 16px;
+            height: 16px;
+            border: 2px solid rgba(255, 255, 255, 0.1);
+            border-top-color: var(--primary);
+            border-radius: 50%;
+            animation: spin 0.6s linear infinite
+        }
+
+        @keyframes spin {
+            to {
+                transform: rotate(360deg)
+            }
+        }
+
+        /* ── EARNINGS CHART ── */
+        .earnings-table {
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 14px;
+            overflow: hidden
+        }
+
+        .earnings-row {
+            display: flex;
+            align-items: center;
+            padding: 0.75rem 1.25rem;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+            font-size: 0.82rem;
+            gap: 1rem
+        }
+
+        .earnings-row:last-child {
+            border-bottom: none
+        }
+
+        .earn-bar-wrap {
+            flex: 1;
+            height: 6px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 10px;
+            overflow: hidden
+        }
+
+        .earn-bar {
+            height: 100%;
+            background: linear-gradient(90deg, var(--success), #00b8d4);
+            border-radius: 10px
+        }
+
+        /* ── RESPONSIVE ── */
+        @media(max-width:768px) {
+            .sidebar {
+                display: none
+            }
+
+            .chart-row {
+                grid-template-columns: 1fr
+            }
+        }
+    </style>
 </head>
 
 <body>
-    <!-- SIDEBAR -->
-    <aside class="adm-sidebar">
-        <div class="adm-brand">⚡ GPU<span>Rental</span></div>
-        <nav class="adm-nav">
-            <button class="adm-nav-item active" data-tab="overview">📊 概要</button>
-            <button class="adm-nav-item" data-tab="gpus">💻 GPU管理</button>
-            <button class="adm-nav-item" data-tab="pods">🖥 アクティブPod</button>
-            <button class="adm-nav-item" data-tab="reservations">📅 予約管理</button>
-            <button class="adm-nav-item" data-tab="users">👥 ユーザー管理</button>
-            <button class="adm-nav-item" data-tab="payouts">💰 報酬管理</button>
-            <button class="adm-nav-item" data-tab="alerts">🔔 アラート</button>
+    <!-- HEADER -->
+    <header class="header">
+        <div class="brand">⚡ GPU<span>Rental</span> <span
+                style="font-size:0.7rem;color:var(--text3);font-weight:400;margin-left:8px">管理ダッシュボード</span></div>
+        <div class="header-right">
+            <div class="header-badge">
+                <div class="status-dot"></div><span id="hdrStatus">サーバー稼働中</span>
+            </div>
+            <a href="/portal/" class="btn btn-ghost btn-sm">ポータル</a>
+            <button class="btn btn-danger btn-sm" id="btnAdminLogout">ログアウト</button>
+        </div>
+    </header>
+
+    <div class="layout">
+        <!-- SIDEBAR -->
+        <nav class="sidebar">
+            <div class="nav-section">メイン</div>
+            <button class="nav-item active" data-section="overview"><span class="nav-icon">📊</span>概要</button>
+            <button class="nav-item" data-section="gpus"><span class="nav-icon">🖥</span>GPU管理</button>
+            <button class="nav-item" data-section="pods"><span class="nav-icon">🚀</span>稼働中Pod</button>
+
+            <div class="nav-section">ビジネス</div>
+            <button class="nav-item" data-section="reservations"><span class="nav-icon">📅</span>予約管理</button>
+            <button class="nav-item" data-section="earnings"><span class="nav-icon">💰</span>収益分析</button>
+            <button class="nav-item" data-section="payouts"><span class="nav-icon">💴</span>出金管理</button>
+
+            <div class="nav-section">システム</div>
+            <button class="nav-item" data-section="users"><span class="nav-icon">👥</span>ユーザー</button>
+            <button class="nav-item" data-section="alerts"><span class="nav-icon">🔔</span>アラート<span class="nav-badge"
+                    id="alertsBadge" style="display:none">0</span></button>
+
+            <div class="sidebar-footer">
+                <div class="provider-info">
+                    <strong id="sfUsername">—</strong><br />
+                    <span>管理者 · RTX A4500</span>
+                </div>
+            </div>
         </nav>
-        <div class="adm-sidebar-footer">
-            <a href="/portal/" class="adm-back-link">← ポータルに戻る</a>
-            <button class="btn btn-ghost btn-sm" id="btnAdmLogout">ログアウト</button>
-        </div>
-    </aside>
 
-    <!-- MAIN -->
-    <div class="adm-main">
-        <!-- OVERVIEW TAB -->
-        <div class="adm-tab-content active" id="tab-overview">
-            <div class="adm-page-header">
-                <h1>ダッシュボード</h1>
-                <span class="adm-live-badge">● LIVE</span>
-            </div>
-            <div class="kpi-grid" id="kpiGrid">
-                <div class="kpi-card"><span class="kpi-icon">🔥</span><span class="kpi-val"
-                        id="kpiActivePods">-</span><span class="kpi-label">稼働中Pod</span></div>
-                <div class="kpi-card"><span class="kpi-icon">⚪</span><span class="kpi-val"
-                        id="kpiWaitingGpu">-</span><span class="kpi-label">空きGPU</span></div>
-                <div class="kpi-card"><span class="kpi-icon">👥</span><span class="kpi-val" id="kpiUsers">-</span><span
-                        class="kpi-label">総ユーザー</span></div>
-                <div class="kpi-card accent"><span class="kpi-icon">💴</span><span class="kpi-val"
-                        id="kpiTodayRev">-</span><span class="kpi-label">本日収益</span></div>
-                <div class="kpi-card accent"><span class="kpi-icon">📈</span><span class="kpi-val"
-                        id="kpiMonthRev">-</span><span class="kpi-label">月間収益</span></div>
-                <div class="kpi-card"><span class="kpi-icon">⚡</span><span class="kpi-val" id="kpiUtil">-</span><span
-                        class="kpi-label">GPU稼働率</span></div>
+        <!-- MAIN -->
+        <main class="main">
+
+            <!-- ═══ OVERVIEW ═══ -->
+            <div class="section active" id="section-overview">
+                <div class="section-header">
+                    <div>
+                        <div class="section-title">概要ダッシュボード</div>
+                        <div class="section-sub" id="lastUpdated">更新中...</div>
+                    </div>
+                    <button class="btn btn-ghost btn-sm" onclick="refreshAll()">↻ 更新</button>
+                </div>
+
+                <div class="kpi-grid" id="kpiGrid">
+                    <div class="kpi c-success">
+                        <div class="kpi-icon">🖥</div>
+                        <div class="kpi-val" id="kActivePods">—</div>
+                        <div class="kpi-label">稼働中Pod</div>
+                    </div>
+                    <div class="kpi c-primary">
+                        <div class="kpi-icon">✅</div>
+                        <div class="kpi-val" id="kAvailGpus">—</div>
+                        <div class="kpi-label">空きGPU</div>
+                    </div>
+                    <div class="kpi c-accent">
+                        <div class="kpi-icon">👥</div>
+                        <div class="kpi-val" id="kTotalUsers">—</div>
+                        <div class="kpi-label">登録ユーザー</div>
+                    </div>
+                    <div class="kpi c-warning">
+                        <div class="kpi-icon">💰</div>
+                        <div class="kpi-val" id="kMonthRevenue">—</div>
+                        <div class="kpi-label">今月収益</div>
+                    </div>
+                    <div class="kpi c-danger">
+                        <div class="kpi-icon">📈</div>
+                        <div class="kpi-val" id="kUtilization">—</div>
+                        <div class="kpi-label">平均GPU使用率</div>
+                    </div>
+                    <div class="kpi c-primary">
+                        <div class="kpi-icon">📅</div>
+                        <div class="kpi-val" id="kTotalRes">—</div>
+                        <div class="kpi-label">総予約数</div>
+                    </div>
+                </div>
+
+                <div class="chart-row">
+                    <div class="chart-card">
+                        <h3>GPU使用率 リアルタイム (過去10分)</h3>
+                        <canvas id="chartUtilHistory" height="120"></canvas>
+                    </div>
+                    <div class="chart-card">
+                        <h3>GPU ステータス分布</h3>
+                        <canvas id="chartGpuStatus" height="120"></canvas>
+                    </div>
+                </div>
+
+                <div class="gpu-monitor-grid" id="gpuMonitorGrid">
+                    <div style="color:var(--text3);font-size:0.85rem;grid-column:1/-1;padding:1rem">GPUデータ読み込み中...</div>
+                </div>
+
+                <div class="table-card">
+                    <div class="table-header">
+                        <h3>🔔 最近のアクティビティ</h3>
+                    </div>
+                    <ul class="feed-list" id="activityFeed">
+                        <li class="feed-item">
+                            <div class="feed-dot" style="background:var(--text3)"></div>
+                            <div class="feed-msg">読み込み中...</div>
+                        </li>
+                    </ul>
+                </div>
             </div>
 
-            <div class="adm-section-title">GPU ステータス</div>
-            <div class="adm-card" style="overflow-x:auto">
-                <table class="adm-table" id="gpuStatusTable">
-                    <thead>
-                        <tr>
-                            <th>GPU</th>
-                            <th>状態</th>
-                            <th>ユーザー</th>
-                            <th>使用率</th>
-                            <th>VRAM</th>
-                            <th>温度</th>
-                            <th>電力</th>
-                            <th>操作</th>
-                        </tr>
-                    </thead>
-                    <tbody id="gpuStatusBody">
-                        <tr>
-                            <td colspan="8" class="loading-cell">読み込み中...</td>
-                        </tr>
-                    </tbody>
-                </table>
+            <!-- ═══ GPU MANAGEMENT ═══ -->
+            <div class="section" id="section-gpus">
+                <div class="section-header">
+                    <div>
+                        <div class="section-title">GPU管理</div>
+                    </div>
+                    <button class="btn btn-primary btn-sm" onclick="openGpuModal(null)">+ GPU追加</button>
+                </div>
+                <div class="table-card">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>GPU名</th>
+                                <th>VRAM</th>
+                                <th>ステータス</th>
+                                <th>使用率</th>
+                                <th>温度</th>
+                                <th>価格/時</th>
+                                <th>場所</th>
+                                <th>操作</th>
+                            </tr>
+                        </thead>
+                        <tbody id="gpuTableBody">
+                            <tr>
+                                <td colspan="8" style="text-align:center;color:var(--text3);padding:2rem">
+                                    <div class="spinner"></div>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
             </div>
 
-            <div class="adm-section-title" style="margin-top:1.5rem">最新アラート</div>
-            <div id="overviewAlerts"></div>
-        </div>
+            <!-- ═══ PODS ═══ -->
+            <div class="section" id="section-pods">
+                <div class="section-header">
+                    <div class="section-title">稼働中Pod</div>
+                </div>
+                <div class="table-card">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Pod ID</th>
+                                <th>ユーザー</th>
+                                <th>GPU</th>
+                                <th>開始時刻</th>
+                                <th>終了予定</th>
+                                <th>使用コスト</th>
+                                <th>操作</th>
+                            </tr>
+                        </thead>
+                        <tbody id="podTableBody">
+                            <tr>
+                                <td colspan="7" style="text-align:center;color:var(--text3);padding:2rem">
+                                    <div class="spinner"></div>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
 
-        <!-- GPU TAB -->
-        <div class="adm-tab-content" id="tab-gpus">
-            <div class="adm-page-header">
-                <h1>GPU管理</h1>
+            <!-- ═══ RESERVATIONS ═══ -->
+            <div class="section" id="section-reservations">
+                <div class="section-header">
+                    <div class="section-title">予約管理</div>
+                </div>
+                <div class="table-card">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>ユーザー</th>
+                                <th>GPU</th>
+                                <th>開始</th>
+                                <th>終了</th>
+                                <th>ステータス</th>
+                                <th>料金</th>
+                                <th>操作</th>
+                            </tr>
+                        </thead>
+                        <tbody id="reservTableBody">
+                            <tr>
+                                <td colspan="8" style="text-align:center;color:var(--text3);padding:2rem">
+                                    <div class="spinner"></div>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
             </div>
-            <div id="gpuManageGrid" class="gpu-manage-grid"></div>
-        </div>
 
-        <!-- PODS TAB -->
-        <div class="adm-tab-content" id="tab-pods">
-            <div class="adm-page-header">
-                <h1>アクティブ Pod</h1>
+            <!-- ═══ EARNINGS ═══ -->
+            <div class="section" id="section-earnings">
+                <div class="section-header">
+                    <div>
+                        <div class="section-title">収益分析</div>
+                    </div>
+                    <select id="earningPeriod" onchange="loadEarnings()"
+                        style="background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:6px 12px;color:var(--text);font-size:0.82rem">
+                        <option value="monthly">月別</option>
+                        <option value="daily">日別</option>
+                    </select>
+                </div>
+                <div class="kpi-grid" style="grid-template-columns:repeat(4,1fr)">
+                    <div class="kpi c-success">
+                        <div class="kpi-icon">💰</div>
+                        <div class="kpi-val" id="eTotalRev">¥0</div>
+                        <div class="kpi-label">総収益</div>
+                    </div>
+                    <div class="kpi c-primary">
+                        <div class="kpi-icon">🏦</div>
+                        <div class="kpi-val" id="eProvPayout">¥0</div>
+                        <div class="kpi-label">プロバイダー支払い</div>
+                    </div>
+                    <div class="kpi c-accent">
+                        <div class="kpi-icon">⏱</div>
+                        <div class="kpi-val" id="eTotalHours">0h</div>
+                        <div class="kpi-label">総稼働時間</div>
+                    </div>
+                    <div class="kpi c-warning">
+                        <div class="kpi-icon">📊</div>
+                        <div class="kpi-val" id="eSessions">0</div>
+                        <div class="kpi-label">総セッション数</div>
+                    </div>
+                </div>
+                <div class="chart-card" style="margin-bottom:1.25rem">
+                    <h3>月別収益推移</h3>
+                    <canvas id="chartRevenue" height="120"></canvas>
+                </div>
+                <div class="table-card" id="earningsTableCard">
+                    <div class="table-header">
+                        <h3>期間別収益詳細</h3>
+                    </div>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>期間</th>
+                                <th>GPU</th>
+                                <th>セッション</th>
+                                <th>稼働時間</th>
+                                <th>総収益</th>
+                                <th>プロバイダー</th>
+                                <th>プラットフォーム</th>
+                            </tr>
+                        </thead>
+                        <tbody id="earningsTableBody"></tbody>
+                    </table>
+                </div>
             </div>
-            <div class="adm-card" style="overflow-x:auto">
-                <table class="adm-table">
-                    <thead>
-                        <tr>
-                            <th>Pod#</th>
-                            <th>ユーザー</th>
-                            <th>GPU</th>
-                            <th>開始</th>
-                            <th>終了</th>
-                            <th>GPU%</th>
-                            <th>VRAM</th>
-                            <th>温度</th>
-                            <th>操作</th>
-                        </tr>
-                    </thead>
-                    <tbody id="podsBody">
-                        <tr>
-                            <td colspan="9" class="loading-cell">読み込み中...</td>
-                        </tr>
-                    </tbody>
-                </table>
-            </div>
-        </div>
 
-        <!-- RESERVATIONS TAB -->
-        <div class="adm-tab-content" id="tab-reservations">
-            <div class="adm-page-header">
-                <h1>予約管理</h1>
+            <!-- ═══ PAYOUTS ═══ -->
+            <div class="section" id="section-payouts">
+                <div class="section-header">
+                    <div class="section-title">出金管理</div>
+                </div>
+                <div class="table-card">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>プロバイダー</th>
+                                <th>金額</th>
+                                <th>ステータス</th>
+                                <th>申請日</th>
+                                <th>操作</th>
+                            </tr>
+                        </thead>
+                        <tbody id="payoutTableBody">
+                            <tr>
+                                <td colspan="6" style="text-align:center;color:var(--text3);padding:2rem">
+                                    <div class="spinner"></div>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
             </div>
-            <div class="adm-card" style="overflow-x:auto">
-                <table class="adm-table">
-                    <thead>
-                        <tr>
-                            <th>ID</th>
-                            <th>ユーザー</th>
-                            <th>GPU</th>
-                            <th>開始</th>
-                            <th>終了</th>
-                            <th>ステータス</th>
-                            <th>料金</th>
-                            <th>操作</th>
-                        </tr>
-                    </thead>
-                    <tbody id="reservationsBody"></tbody>
-                </table>
-            </div>
-        </div>
 
-        <!-- USERS TAB -->
-        <div class="adm-tab-content" id="tab-users">
-            <div class="adm-page-header">
-                <h1>ユーザー管理</h1>
+            <!-- ═══ USERS ═══ -->
+            <div class="section" id="section-users">
+                <div class="section-header">
+                    <div class="section-title">ユーザー管理</div>
+                </div>
+                <div class="table-card">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>ユーザー名</th>
+                                <th>メール</th>
+                                <th>ロール</th>
+                                <th>ステータス</th>
+                                <th>ウォレット</th>
+                                <th>登録日</th>
+                                <th>操作</th>
+                            </tr>
+                        </thead>
+                        <tbody id="userTableBody">
+                            <tr>
+                                <td colspan="8" style="text-align:center;color:var(--text3);padding:2rem">
+                                    <div class="spinner"></div>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
             </div>
-            <div class="adm-card" style="overflow-x:auto">
-                <table class="adm-table">
-                    <thead>
-                        <tr>
-                            <th>ID</th>
-                            <th>ユーザー名</th>
-                            <th>メール</th>
-                            <th>ロール</th>
-                            <th>状態</th>
-                            <th>予約数</th>
-                            <th>累計利用</th>
-                            <th>登録日</th>
-                            <th>操作</th>
-                        </tr>
-                    </thead>
-                    <tbody id="usersBody"></tbody>
-                </table>
-            </div>
-        </div>
 
-        <!-- PAYOUTS TAB -->
-        <div class="adm-tab-content" id="tab-payouts">
-            <div class="adm-page-header">
-                <h1>報酬管理 (プロバイダー)</h1>
+            <!-- ═══ ALERTS ═══ -->
+            <div class="section" id="section-alerts">
+                <div class="section-header">
+                    <div class="section-title">アラート</div>
+                </div>
+                <div class="table-card">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>タイプ</th>
+                                <th>重要度</th>
+                                <th>メッセージ</th>
+                                <th>GPU</th>
+                                <th>日時</th>
+                                <th>状態</th>
+                            </tr>
+                        </thead>
+                        <tbody id="alertTableBody">
+                            <tr>
+                                <td colspan="6" style="text-align:center;color:var(--text3);padding:2rem">
+                                    <div class="spinner"></div>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
             </div>
-            <div class="adm-info-box">
-                💡 プラットフォーム手数料: 20% / プロバイダー取り分: 80%
-            </div>
-            <div class="adm-card" style="overflow-x:auto">
-                <table class="adm-table">
-                    <thead>
-                        <tr>
-                            <th>プロバイダー</th>
-                            <th>セッション数</th>
-                            <th>総稼動時間</th>
-                            <th>総収益</th>
-                            <th>ウォレット残高</th>
-                            <th>操作</th>
-                        </tr>
-                    </thead>
-                    <tbody id="payoutsBody"></tbody>
-                </table>
-            </div>
-        </div>
 
-        <!-- ALERTS TAB -->
-        <div class="adm-tab-content" id="tab-alerts">
-            <div class="adm-page-header">
-                <h1>アラート</h1>
-            </div>
-            <div id="alertsList" class="alerts-list"></div>
-        </div>
-
+        </main>
     </div>
 
-    <!-- GPU Edit Modal -->
-    <div class="modal-overlay hidden" id="gpuEditOverlay">
-        <div class="adm-modal">
-            <h3>GPU設定変更</h3>
+    <!-- GPU EDIT MODAL -->
+    <div class="modal-overlay" id="gpuModal">
+        <div class="modal">
+            <button class="modal-close" onclick="closeModal('gpuModal')">✕</button>
+            <h3 id="gpuModalTitle">GPU設定</h3>
             <input type="hidden" id="editGpuId" />
             <div class="form-group"><label>ステータス</label>
                 <select id="editGpuStatus">
                     <option value="available">利用可能</option>
-                    <option value="maintenance">メンテナンス</option>
+                    <option value="maintenance">メンテ中</option>
                     <option value="offline">オフライン</option>
                 </select>
             </div>
-            <div class="form-group"><label>時間単価 (円)</label>
-                <input type="number" id="editGpuPrice" min="0" />
+            <div class="form-group"><label>時間単価 (円/時間)</label><input type="number" id="editGpuPrice" min="100" /></div>
+            <div class="form-group"><label>温度閾値 (°C)</label><input type="number" id="editGpuTemp" min="60" max="100" />
             </div>
-            <div class="form-group"><label>温度アラート閾値 (°C)</label>
-                <input type="number" id="editGpuTemp" min="60" max="100" />
-            </div>
-            <div class="adm-modal-actions">
-                <button class="btn btn-ghost" id="btnGpuEditCancel">キャンセル</button>
-                <button class="btn btn-primary" id="btnGpuEditSave">保存</button>
+            <div class="modal-actions">
+                <button class="btn btn-ghost" onclick="closeModal('gpuModal')">キャンセル</button>
+                <button class="btn btn-primary" onclick="saveGpu()">保存</button>
             </div>
         </div>
     </div>
 
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
     <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
     <script src="app.js"></script>
 </body>

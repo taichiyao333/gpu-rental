@@ -127,71 +127,43 @@ function initTerminal() {
     term.open(document.getElementById('terminal'));
     fitAddon.fit();
 
-    // Welcome message
+    // ── Real PTY via WebSocket ──
     term.writeln('\x1b[36m╔═══════════════════════════════════════════╗\x1b[0m');
     term.writeln('\x1b[36m║   GPU Rental Platform - Workspace         ║\x1b[0m');
     term.writeln('\x1b[36m╚═══════════════════════════════════════════╝\x1b[0m');
-    term.writeln(`\x1b[32m✓ Pod #${pod.id} Connected\x1b[0m`);
-    term.writeln(`\x1b[33mNote: Web terminal requires node-pty setup.\x1b[0m`);
-    term.writeln(`\x1b[33mGPU: ${pod.gpu_name || 'RTX A4500'}\x1b[0m\n`);
-    term.writeln('Type commands below (simulated in this demo):');
-    term.writeln('');
-    term.write('$ ');
+    term.writeln(`\x1b[32m✓ Pod #${pod.id} 接続中...\x1b[0m\n`);
 
-    // Simulate terminal input
-    let inputBuffer = '';
-    term.onKey(e => {
-        const char = e.key;
-        if (char === '\r') {
-            term.writeln('');
-            handleCommand(inputBuffer.trim());
-            inputBuffer = '';
-        } else if (char === '\x7f') {
-            if (inputBuffer.length > 0) {
-                inputBuffer = inputBuffer.slice(0, -1);
-                term.write('\b \b');
-            }
-        } else {
-            inputBuffer += char;
-            term.write(char);
-        }
+    // Request terminal from server
+    socket.emit('terminal:attach', { podId: pod.id });
+
+    // Server → Terminal
+    socket.on('terminal:data', (data) => term.write(data));
+    socket.on('terminal:ready', ({ shell, workspacePath }) => {
+        term.writeln(`\x1b[90m[Shell: ${shell} | cwd: ${workspacePath}]\x1b[0m\n`);
+    });
+    socket.on('terminal:exit', ({ exitCode }) => {
+        term.writeln(`\r\n\x1b[33m[セッション終了 exit code: ${exitCode}]\x1b[0m`);
+    });
+    socket.on('terminal:error', (msg) => {
+        term.writeln(`\r\n\x1b[31m[ターミナルエラー: ${msg}]\x1b[0m`);
     });
 
-    window.addEventListener('resize', () => fitAddon.fit());
+    // Terminal → Server (real input)
+    term.onData(data => socket.emit('terminal:input', data));
+
+    // Resize
+    term.onResize(({ cols, rows }) => socket.emit('terminal:resize', { cols, rows }));
+    window.addEventListener('resize', () => {
+        fitAddon.fit();
+        socket.emit('terminal:resize', { cols: term.cols, rows: term.rows });
+    });
+
     document.getElementById('btnClearTerm').addEventListener('click', () => {
         term.clear();
-        term.write('$ ');
+        socket.emit('terminal:input', 'clear\r');
     });
 }
 
-function handleCommand(cmd) {
-    if (!cmd) { term.write('$ '); return; }
-    if (cmd === 'nvidia-smi') {
-        term.writeln('\x1b[32m+-------------------------------------------------------------------------+\x1b[0m');
-        term.writeln('\x1b[32m| NVIDIA-SMI 552.74   Driver Version: 552.74   CUDA Version: 12.4      |\x1b[0m');
-        term.writeln('\x1b[32m|-------------------------------+----------------------+------------------|\x1b[0m');
-        term.writeln('\x1b[32m| GPU  Name        Persistence  | Bus-Id      Disp.A  | Volatile Uncorr. |\x1b[0m');
-        term.writeln('\x1b[32m| Fan  Temp  Perf  Pwr:Usage/Cap|         Memory-Usage | GPU-Util  CS ECC |\x1b[0m');
-        term.writeln('\x1b[32m|=============================================================================|\x1b[0m');
-        term.writeln('\x1b[32m|  0  NVIDIA RTX A4500   Off  | 00000000:01:00.0 Off |                N/A|\x1b[0m');
-        term.writeln('\x1b[32m| 35%   38C   P8     15W /200W |      0MiB/20470MiB   |      0%   Default|\x1b[0m');
-        term.writeln('\x1b[32m+-------------------------------------------------------------------------+\x1b[0m');
-    } else if (cmd === 'ls' || cmd === 'dir') {
-        term.writeln('workspace/  uploads/  outputs/  README.txt');
-    } else if (cmd === 'pwd' || cmd === 'cd') {
-        term.writeln(`F:\\gpu-rental\\users\\${user.id}\\workspace`);
-    } else if (cmd === 'cls' || cmd === 'clear') {
-        term.clear();
-    } else if (cmd.startsWith('echo')) {
-        term.writeln(cmd.replace('echo ', ''));
-    } else if (cmd === 'python --version' || cmd === 'python3 --version') {
-        term.writeln('Python 3.12.0');
-    } else {
-        term.writeln(`\x1b[33m[Info] Command queued: ${cmd}\x1b[0m`);
-        term.writeln(`\x1b[90m(Full terminal requires node-pty. Install and restart server.)\x1b[0m`);
-    }
-    term.write('\n$ ');
-}
 
 /* ─── GPU Monitor ───────────────────────────────────────────────── */
 function updateMonitor(s) {
