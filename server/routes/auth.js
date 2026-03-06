@@ -9,24 +9,29 @@ const config = require('../config');
 router.post('/register', (req, res) => {
     const { username, email, password } = req.body;
     if (!username || !email || !password)
-        return res.status(400).json({ error: 'All fields required' });
+        return res.status(400).json({ error: 'すべてのフィールドが必要です' });
     if (password.length < 6)
-        return res.status(400).json({ error: 'Password must be at least 6 characters' });
+        return res.status(400).json({ error: 'パスワードは6文字以上にしてください' });
+    if (username.length < 3)
+        return res.status(400).json({ error: 'ユーザー名は3文字以上にしてください' });
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))
+        return res.status(400).json({ error: '有効なメールアドレスを入力してください' });
 
     const db = getDb();
     try {
         const hash = bcrypt.hashSync(password, 10);
         const result = db.prepare(
-            'INSERT INTO users (username, email, password_hash) VALUES (?, ?, ?)'
-        ).run(username, email, hash);
-        const user = db.prepare('SELECT id, username, email, role FROM users WHERE id = ?').get(result.lastInsertRowid);
+            'INSERT INTO users (username, email, password_hash, status) VALUES (?, ?, ?, ?)'
+        ).run(username, email, hash, 'active');
+        const user = db.prepare('SELECT id, username, email, role, wallet_balance, created_at FROM users WHERE id = ?').get(result.lastInsertRowid);
         const token = jwt.sign({ id: user.id, username: user.username, role: user.role }, config.jwt.secret, { expiresIn: config.jwt.expiresIn });
-        res.json({ token, user });
+        res.status(201).json({ token, user });
     } catch (err) {
-        if (err.message.includes('UNIQUE')) return res.status(409).json({ error: 'Username or email already exists' });
+        if (err.message.includes('UNIQUE')) return res.status(409).json({ error: 'このユーザー名またはメールアドレスはすでに使用されています' });
         res.status(500).json({ error: err.message });
     }
 });
+
 
 // POST /api/auth/login
 router.post('/login', (req, res) => {
