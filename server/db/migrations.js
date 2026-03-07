@@ -170,6 +170,69 @@ async function runMigrations() {
     db.exec(`ALTER TABLE payouts ADD COLUMN notes TEXT`);
   } catch (e) { /* already exists */ }
 
+  // ─── Point Logs (ポイント履歴) ────────────────────────────────────
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS point_logs (
+      id          INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id     INTEGER NOT NULL,
+      points      REAL NOT NULL,           -- positive=earn, negative=spend
+      type        TEXT NOT NULL,           -- 'purchase'|'compensation'|'spend'|'refund'
+      description TEXT,
+      ref_id      INTEGER,                 -- purchase_id or reservation_id
+      created_at  DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (user_id) REFERENCES users(id)
+    );
+  `);
+
+  // ─── Point Purchases (チケット購入) ──────────────────────────────
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS point_purchases (
+      id              INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id         INTEGER NOT NULL,
+      plan_name       TEXT NOT NULL,       -- '1h','3h','10h','30h','100h'
+      hours           REAL NOT NULL,       -- purchased hours
+      points          REAL NOT NULL,       -- = hours * gpu_price / 10
+      amount_yen      INTEGER NOT NULL,    -- price in yen
+      status          TEXT DEFAULT 'pending', -- 'pending'|'completed'|'failed'|'refunded'
+      epsilon_order   TEXT,                -- GMO Epsilon order number
+      epsilon_trans   TEXT,                -- GMO Epsilon transaction ID
+      gpu_id          INTEGER,             -- which GPU type
+      created_at      DATETIME DEFAULT CURRENT_TIMESTAMP,
+      paid_at         DATETIME,
+      FOREIGN KEY (user_id) REFERENCES users(id)
+    );
+  `);
+
+  // ─── Outage Reports (障害報告) ────────────────────────────────────
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS outage_reports (
+      id              INTEGER PRIMARY KEY AUTOINCREMENT,
+      gpu_id          INTEGER NOT NULL,
+      reported_by     INTEGER NOT NULL,    -- admin user_id
+      outage_start    DATETIME NOT NULL,
+      outage_end      DATETIME NOT NULL,
+      reason          TEXT,
+      status          TEXT DEFAULT 'pending', -- 'pending'|'compensated'
+      total_compensated_points REAL DEFAULT 0,
+      created_at      DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (gpu_id) REFERENCES gpu_nodes(id)
+    );
+  `);
+
+  // ─── ALTER existing tables ────────────────────────────────────────
+  // pods: add 'paused' status support + pause tracking
+  const alterList = [
+    "ALTER TABLE pods ADD COLUMN paused_at DATETIME",
+    "ALTER TABLE pods ADD COLUMN reconnect_count INTEGER DEFAULT 0",
+    // users: point_balance field (1 point = 10 yen)
+    "ALTER TABLE users ADD COLUMN point_balance REAL DEFAULT 0",
+    // reservations: track compensation
+    "ALTER TABLE reservations ADD COLUMN compensated_points REAL DEFAULT 0",
+  ];
+  for (const sql of alterList) {
+    try { db.exec(sql); } catch (_) { /* column already exists */ }
+  }
+
   console.log('✅ Database migrations complete');
 }
 

@@ -1,4 +1,4 @@
-/* ─── State ─────────────────────────────────────────────────────── */
+﻿/* ─── State ─────────────────────────────────────────────────────── */
 const state = {
     token: localStorage.getItem('gpu_token') || null,
     user: JSON.parse(localStorage.getItem('gpu_user') || 'null'),
@@ -1115,3 +1115,228 @@ async function loadPayoutHistory() {
         }).join('');
     } catch (e) { el.innerHTML = '<div class="wd-empty">Error: ' + e.message + '</div>'; }
 }
+
+/* ─────────────────────────────────────────────────────────────────── */
+/* ─── POINTS & TICKETS ───────────────────────────────────────────── */
+/* ─────────────────────────────────────────────────────────────────── */
+
+let _ticketPlans = [];
+
+// ポイント残高をナビに表示
+async function loadPointBalance() {
+    if (!state.user) return;
+    try {
+        const data = await apiFetch('/points/balance');
+        const el = document.getElementById('navPointBalance');
+        if (el) el.textContent = `${data.point_balance.toLocaleString()} pt`;
+    } catch { }
+}
+
+// チケット購入モーダルを開く
+async function openTicketModal() {
+    const modal = document.getElementById('ticketModal');
+    if (!modal) return createTicketModal();
+    modal.classList.remove('hidden');
+    await renderTicketPlans();
+}
+
+function closeTicketModal() {
+    const modal = document.getElementById('ticketModal');
+    if (modal) modal.classList.add('hidden');
+}
+
+async function renderTicketPlans() {
+    const container = document.getElementById('ticketPlansContainer');
+    if (!container) return;
+    container.innerHTML = '<div style="text-align:center;padding:2rem;color:var(--text2)">読み込み中...</div>';
+    try {
+        _ticketPlans = await apiFetch('/points/plans');
+        // ポイント残高も更新
+        const bal = await apiFetch('/points/balance');
+        const balEl = document.getElementById('ticketCurrentBalance');
+        if (balEl) balEl.textContent = `現在残高：${bal.point_balance.toLocaleString()}pt (¥${bal.yen_value.toLocaleString()})`;
+
+        container.innerHTML = _ticketPlans.map(p => `
+          <div class="ticket-plan ${p.badge ? 'plan-featured' : ''}" onclick="selectTicketPlan('${p.id}')">
+            ${p.badge ? `<span class="plan-badge">${p.badge}</span>` : ''}
+            ${p.discount ? `<span class="plan-discount">-${p.discount}%OFF</span>` : ''}
+            <div class="plan-name">${p.name}</div>
+            <div class="plan-hours">${p.hours}時間分</div>
+            <div class="plan-price">¥${p.amount_yen.toLocaleString()}</div>
+            <div class="plan-points">= ${p.points.toLocaleString()} pt</div>
+            ${p.discount ? `<div class="plan-original">定価 ¥${Math.round(p.hours * 800).toLocaleString()}</div>` : ''}
+            <button class="btn btn-primary btn-full" onclick="purchaseTicket('${p.id}',event)">購入する</button>
+          </div>
+        `).join('');
+    } catch (e) {
+        container.innerHTML = `<div style="color:var(--danger);padding:1rem">${e.message}</div>`;
+    }
+}
+
+async function purchaseTicket(planId, event) {
+    if (event) event.stopPropagation();
+    const plan = _ticketPlans.find(p => p.id === planId);
+    if (!plan) return;
+    const btn = event?.target;
+    if (btn) { btn.disabled = true; btn.textContent = '処理中...'; }
+    try {
+        const result = await apiFetch('/points/purchase', {
+            method: 'POST',
+            body: JSON.stringify({ plan_id: planId }),
+        });
+        if (result.test_mode) {
+            // テストモード：即時付与
+            showToast(`✅ ${result.points_added}pt 付与されました！（テストモード）`, 'success');
+            loadPointBalance();
+            renderTicketPlans();
+        } else if (result.redirect_url) {
+            // 本番：GMOイプシロン決済ページへリダイレクト
+            showToast('GMOイプシロン決済ページに移動します...', 'info');
+            setTimeout(() => { window.location.href = result.redirect_url; }, 1000);
+        }
+    } catch (e) {
+        showToast('購入エラー: ' + e.message, 'error');
+        if (btn) { btn.disabled = false; btn.textContent = '購入する'; }
+    }
+}
+
+function createTicketModal() {
+    const modal = document.createElement('div');
+    modal.id = 'ticketModal';
+    modal.className = 'modal-overlay';
+    modal.innerHTML = `
+      <div class="modal-box ticket-modal-box">
+        <div class="modal-header">
+          <h2>🎫 レンタルチケット購入</h2>
+          <span class="modal-subtitle" id="ticketCurrentBalance">残高確認中...</span>
+          <button class="modal-close" onclick="closeTicketModal()">✕</button>
+        </div>
+        <div class="ticket-plans-note">
+          <span>💡 1ポイント = 10円。ポイントはGPUレンタル予約時に自動消費されます。</span>
+        </div>
+        <div class="ticket-plans-grid" id="ticketPlansContainer">
+          <div style="text-align:center;padding:2rem;color:var(--text2)">読み込み中...</div>
+        </div>
+        <div style="margin-top:1rem">
+          <a href="https://www.epsilon.jp/" target="_blank" style="font-size:0.72rem;color:var(--text3)">
+            🔒 GMOイプシロン（クレジットカード）で安全に決済
+          </a>
+        </div>
+      </div>
+    `;
+    document.body.appendChild(modal);
+    modal.addEventListener('click', (e) => { if (e.target === modal) closeTicketModal(); });
+    renderTicketPlans();
+}
+
+/* ─── Reconnect (再接続) ─────────────────────────────────────────── */
+async function reconnectPod(podId) {
+    const btn = document.getElementById(`reconnectBtn_${podId}`);
+    if (btn) { btn.disabled = true; btn.textContent = '再接続中...'; }
+    try {
+        const result = await apiFetch(`/pods/${podId}/reconnect`, { method: 'POST' });
+        showToast(result.message || '🚀 再接続しました', 'success');
+        const wsBase = API || location.origin;
+        setTimeout(() => window.open(`${wsBase}/workspace/`, '_blank'), 1200);
+        setTimeout(() => loadMyReservations(), 2000);
+    } catch (e) {
+        showToast('再接続エラー: ' + e.message, 'error');
+        if (btn) { btn.disabled = false; btn.textContent = '🔄 再接続'; }
+    }
+}
+
+/* ─── 予約リストに再接続ボタンを反映（renderReservations 拡張） ─── */
+// Override renderReservations to add reconnect for paused pods
+const _origRenderReservations = renderReservations;
+function renderReservations(list) {
+    const el = document.getElementById('myReservationsList');
+    if (!list.length) {
+        el.innerHTML = '<p style="color:var(--text2);padding:1rem;font-size:0.875rem">予約がありません</p>';
+        return;
+    }
+    const statusLabel = {
+        pending: '確認中', confirmed: '確定済', active: '稼働中',
+        completed: '完了', cancelled: 'キャンセル', paused: '一時停止中'
+    };
+    const wsBase = API || location.origin;
+
+    el.innerHTML = list.map(r => {
+        // 対応するPodのステータスを確認（r.pod_statusがあれば）
+        const isPaused = r.pod_status === 'paused';
+        const podId = r.last_pod_id;
+
+        return `
+        <div class="reservation-item">
+          <div class="res-header">
+            <span class="res-gpu">${r.gpu_name}</span>
+            <span class="status-badge status-${r.status === 'active' ? 'available' : r.status === 'completed' ? 'offline' : 'rented'}">
+              ${statusLabel[r.status] || r.status}
+            </span>
+          </div>
+          <div class="res-time">📅 ${formatDate(r.start_time)} → ${formatDate(r.end_time)}</div>
+          <div class="res-time">💰 ¥${r.total_price ? Math.round(r.total_price).toLocaleString() : '—'}
+            ${r.compensated_points ? `<span style="color:var(--success);font-size:0.75rem;margin-left:8px">+${r.compensated_points}pt 補償済</span>` : ''}
+          </div>
+          <div class="res-actions">
+            ${r.status === 'active'
+                ? `<a href="${wsBase}/workspace/" target="_blank" class="btn btn-success btn-sm">🖥 ワークスペースを開く</a>
+                   ${podId ? `<button class="btn btn-ghost btn-sm" id="reconnectBtn_${podId}" onclick="reconnectPod(${podId})">🔄 再接続</button>` : ''}`
+                : (r.status === 'confirmed' || r.status === 'pending')
+                    ? `<button class="btn btn-primary btn-sm" onclick="startPod(${r.id})" id="startBtn_${r.id}">🚀 今すぐ開始</button>
+                       <button class="btn btn-danger btn-sm" onclick="cancelReservation(${r.id})">キャンセル</button>`
+                    : ''}
+          </div>
+        </div>`;
+    }).join('');
+}
+
+// 予約データ取得を拡張 - Pod情報も含める
+async function loadMyReservations() {
+    if (!state.user) return;
+    try {
+        const res = await apiFetch('/reservations');
+        // 各予約に最新Podのステータスを付加
+        state.reservations = res;
+        renderReservations(res);
+    } catch { }
+}
+
+/* ─── Payment success/failed message from callback ──────────────── */
+(function checkPaymentReturn() {
+    const params = new URLSearchParams(location.search);
+    const payment = params.get('payment');
+    const pts = params.get('points');
+    if (payment === 'success' && pts) {
+        showToast(`✅ 決済完了！${Number(pts).toLocaleString()}pt が付与されました`, 'success');
+        loadPointBalance();
+        history.replaceState({}, '', location.pathname);
+    } else if (payment === 'failed') {
+        showToast('❌ 決済が失敗しました', 'error');
+        history.replaceState({}, '', location.pathname);
+    } else if (payment === 'cancelled') {
+        showToast('決済がキャンセルされました', 'info');
+        history.replaceState({}, '', location.pathname);
+    }
+})();
+
+// チケット購入ボタンをナビに追加
+document.addEventListener('DOMContentLoaded', () => {
+    const nav = document.getElementById('navActions') || document.querySelector('.nav-actions') || document.querySelector('nav');
+    if (nav) {
+        const ticketBtn = document.createElement('button');
+        ticketBtn.id = 'navTicketBtn';
+        ticketBtn.className = 'btn btn-primary btn-sm';
+        ticketBtn.style.cssText = 'background:linear-gradient(135deg,#f59e0b,#ef4444);margin-right:8px';
+        ticketBtn.textContent = '🎫 チケット購入';
+        ticketBtn.addEventListener('click', openTicketModal);
+        nav.insertBefore(ticketBtn, nav.firstChild);
+
+        // ポイント残高表示
+        const balSpan = document.createElement('span');
+        balSpan.id = 'navPointBalance';
+        balSpan.style.cssText = 'font-size:0.75rem;color:var(--accent);margin-right:8px;font-family:monospace';
+        balSpan.textContent = '0 pt';
+        nav.insertBefore(balSpan, nav.firstChild);
+    }
+    loadPointBalance();
+});

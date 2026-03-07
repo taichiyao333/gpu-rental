@@ -25,6 +25,8 @@ const fileRoutes = require('./routes/files');
 const paymentRoutes = require('./routes/payments');
 const providerRoutes = require('./routes/providers');
 const bankAccountRoutes = require('./routes/bankAccounts');
+const pointRoutes = require('./routes/points');
+const outageRoutes = require('./routes/outage');
 
 // ─── App Setup ───────────────────────────────────────────────────────────────
 const app = express();
@@ -88,7 +90,10 @@ app.use('/api/files', fileRoutes);
 app.use('/api/payments', paymentRoutes);
 app.use('/api/providers', providerRoutes);
 app.use('/api/bank-accounts', bankAccountRoutes);
+app.use('/api/points', pointRoutes);
+app.use('/api/outage', outageRoutes);
 app.use('/api/admin', adminRoutes);
+
 
 // Health check
 app.get('/api/health', (req, res) => {
