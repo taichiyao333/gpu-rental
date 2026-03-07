@@ -100,6 +100,27 @@ app.get('/api/health', (req, res) => {
     res.json({ status: 'ok', timestamp: new Date().toISOString(), version: '1.0.0' });
 });
 
+// ─── Bandwidth Benchmark ─────────────────────────────────────────────────────
+// ダウンロード速度計測用: ランダム 500KB ペイロード
+const BENCH_SIZE = 512 * 1024; // 512 KB
+const benchPayload = Buffer.alloc(BENCH_SIZE, 'X');
+app.get('/api/bench/download', (req, res) => {
+    res.setHeader('Content-Type', 'application/octet-stream');
+    res.setHeader('Content-Length', BENCH_SIZE);
+    res.setHeader('Cache-Control', 'no-store');
+    res.setHeader('X-Bench-Time', Date.now());
+    res.end(benchPayload);
+});
+// アップロード速度計測用: body を受け取って時間を返す
+app.post('/api/bench/upload', (req, res) => {
+    let bytes = 0;
+    req.on('data', chunk => { bytes += chunk.length; });
+    req.on('end', () => {
+        res.json({ received_bytes: bytes, server_time: Date.now() });
+    });
+});
+
+
 // ─── WebSocket ────────────────────────────────────────────────────────────────
 io.on('connection', (socket) => {
     console.log(`🔌 Client connected: ${socket.id}`);

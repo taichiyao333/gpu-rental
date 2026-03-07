@@ -103,9 +103,10 @@ function stopPod(podId, reason = 'expired') {
     const gpuNode = db.prepare('SELECT provider_id FROM gpu_nodes WHERE id = ?').get(pod.gpu_id);
 
     // Insert usage log
+    const interrupted = reason === 'provider_force' || reason === 'provider_outage' ? 1 : 0;
     db.prepare(`
-    INSERT INTO usage_logs (pod_id, renter_id, gpu_id, provider_id, gpu_util_avg, vram_usage_avg, max_temperature, duration_minutes, cost, provider_payout)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    INSERT INTO usage_logs (pod_id, renter_id, gpu_id, provider_id, gpu_util_avg, vram_usage_avg, max_temperature, duration_minutes, cost, provider_payout, interrupted, interrupt_reason)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `).run(
         podId,
         pod.renter_id,
@@ -116,7 +117,9 @@ function stopPod(podId, reason = 'expired') {
         stats?.temperature || 0,
         durationMinutes,
         actualCost,
-        providerPayout
+        providerPayout,
+        interrupted,
+        interrupted ? reason : null
     );
 
     // Update provider wallet
@@ -124,6 +127,28 @@ function stopPod(podId, reason = 'expired') {
         db.prepare('UPDATE users SET wallet_balance = wallet_balance + ? WHERE id = ?')
             .run(providerPayout, gpuNode.provider_id);
     }
+
+    // Update GPU node session stats & uptime_rate
+    try {
+        const reservedMinutes = reservation
+            ? Math.max(1, (new Date(reservation.end_time) - new Date(reservation.start_time)) / 60000)
+            : durationMinutes;
+
+        db.prepare(`
+            UPDATE gpu_nodes
+            SET session_count         = session_count + 1,
+                total_session_minutes = total_session_minutes + ?,
+                uptime_rate = CASE
+                    WHEN total_session_minutes + ? > 0
+                    THEN ROUND(
+                        ((total_session_minutes + ? - total_outage_minutes) /
+                         (total_session_minutes + ?)) * 100.0, 1
+                    )
+                    ELSE 100
+                END
+            WHERE id = ?
+        `).run(reservedMinutes, reservedMinutes, reservedMinutes, reservedMinutes, pod.gpu_id);
+    } catch (e) { /* column not yet migrated – ignore */ }
 
     // Update pod & reservation statuses
     db.prepare("UPDATE pods SET status = 'stopped' WHERE id = ?").run(podId);

@@ -120,6 +120,23 @@ router.post('/:id/compensate', authMiddleware, adminOnly, (req, res) => {
 
         db.prepare("UPDATE outage_reports SET status='compensated', total_compensated_points=? WHERE id=?")
             .run(totalPoints, report.id);
+
+        // GPU uptime_rate を更新
+        try {
+            db.prepare(`
+                UPDATE gpu_nodes
+                SET total_outage_minutes = total_outage_minutes + ?,
+                    uptime_rate = CASE
+                        WHEN total_session_minutes > 0
+                        THEN ROUND(
+                            ((total_session_minutes - (total_outage_minutes + ?)) /
+                              total_session_minutes) * 100.0, 1
+                        )
+                        ELSE 100
+                    END
+                WHERE id = ?
+            `).run(outageMinutes, outageMinutes, report.gpu_id);
+        } catch (_) { }
     });
 
     compensate();

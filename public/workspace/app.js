@@ -57,7 +57,59 @@ async function init() {
     initTerminal();
     initChart();
     loadFiles();
+
+    // 回線速度計測（接続完了後に開始）
+    setTimeout(() => measureBandwidth(), 2000);
 }
+
+/* ─── Bandwidth Measurement ─────────────────────────────────────── */
+let _bandwidthMbps = null;
+let _pingMs = null;
+
+async function measureBandwidth() {
+    const el = document.getElementById('wsBandwidth');
+    if (el) el.textContent = '計測中...';
+
+    try {
+        // Ping (RTT)
+        const t0 = performance.now();
+        await fetch(`${API}/api/health`, { cache: 'no-store' });
+        _pingMs = Math.round(performance.now() - t0);
+
+        // Download speed: 512KB ペイロードをダウンロード
+        const dlStart = performance.now();
+        const resp = await fetch(`${API}/api/bench/download`, { cache: 'no-store' });
+        const buf = await resp.arrayBuffer();
+        const dlTime = (performance.now() - dlStart) / 1000; // seconds
+        const dlMbps = ((buf.byteLength * 8) / dlTime / 1_000_000).toFixed(1);
+        _bandwidthMbps = parseFloat(dlMbps);
+
+        // 表示更新
+        if (el) {
+            const color = _bandwidthMbps >= 50 ? '#00e5a0'
+                : _bandwidthMbps >= 10 ? '#a3e635'
+                    : _bandwidthMbps >= 3 ? '#fbbf24'
+                        : '#ff4757';
+            const quality = _bandwidthMbps >= 50 ? '🚀 高速'
+                : _bandwidthMbps >= 10 ? '✅ 良好'
+                    : _bandwidthMbps >= 3 ? '⚠️ 普通'
+                        : '🔴 低速';
+            el.innerHTML = `<span style="color:${color}">${quality} ${dlMbps} Mbps</span> · 遅延 ${_pingMs}ms`;
+        }
+
+        // モニター右パネルにも表示
+        const monBw = document.getElementById('monBandwidth');
+        if (monBw) monBw.textContent = `↓ ${dlMbps} Mbps`;
+        const monPing = document.getElementById('monPing');
+        if (monPing) monPing.textContent = `${_pingMs} ms`;
+
+        // 30秒後に再計測
+        setTimeout(() => measureBandwidth(), 30000);
+    } catch (e) {
+        if (el) el.textContent = '計測失敗';
+    }
+}
+
 
 /* ─── Timers ────────────────────────────────────────────────────── */
 function startTimers() {

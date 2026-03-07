@@ -204,6 +204,13 @@ function renderGpuGrid(gpus) {
         const statusLabel = { available: '空きあり', rented: '使用中', maintenance: 'メンテ中', offline: 'オフライン' }[gpu.status] || gpu.status;
         const vramGB = Math.round(gpu.vram_total / 1024);
 
+        // 接続率 (uptime_rate)
+        const uptime = gpu.uptime_rate !== undefined && gpu.uptime_rate !== null ? parseFloat(gpu.uptime_rate) : 100;
+        const sessionCount = gpu.session_count || 0;
+        const uptimeColor = uptime >= 99.5 ? '#00e5a0' : uptime >= 98 ? '#a3e635' : uptime >= 95 ? '#fbbf24' : '#ff4757';
+        const uptimeLabel = sessionCount === 0 ? '新規' : uptime.toFixed(1) + '%';
+        const uptimeBar = sessionCount === 0 ? 100 : uptime;
+
         return `
       <div class="gpu-node-card ${statusClass}" data-gpu-id="${gpu.id}" onclick="openReserveModal(${gpu.id})">
         <div class="card-header">
@@ -236,6 +243,18 @@ function renderGpuGrid(gpus) {
             <span class="usage-val">${temp ? temp + '°' : '-'}</span>
           </div>
         </div>
+        <!-- 接続率バー -->
+        <div class="uptime-section">
+          <div class="uptime-header">
+            <span class="uptime-label-text">📶 接続率</span>
+            <span class="uptime-value" style="color:${uptimeColor}">${uptimeLabel}</span>
+            <span class="uptime-sessions">${sessionCount > 0 ? sessionCount + 'セッション実績' : '初回'}</span>
+          </div>
+          <div class="uptime-bar">
+            <div class="uptime-fill" style="width:${uptimeBar}%; background:${uptimeColor}"></div>
+          </div>
+          ${uptime < 99.5 && sessionCount > 0 ? `<div class="uptime-warn">⚠️ 過去に接続が途切れたことがあります</div>` : ''}
+        </div>
         <div class="card-footer">
           <div class="card-price">¥${gpu.price_per_hour.toLocaleString()}<span>/時間</span></div>
           ${gpu.status === 'available'
@@ -248,6 +267,7 @@ function renderGpuGrid(gpus) {
 }
 
 // Filter
+
 document.querySelectorAll('.filter-btn').forEach(btn => {
     btn.addEventListener('click', () => {
         document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));

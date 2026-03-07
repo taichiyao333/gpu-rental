@@ -2081,3 +2081,43 @@ button {
     padding:14px 0;border-bottom:1px solid rgba(255,255,255,0.05);font-size:0.85rem}
 .payout-history-row:last-child{border-bottom:none}
 .phr-bank{color:var(--text3);font-size:0.75rem}
+
+/* ─── Uptime Section (GPU Cards) ────────────────────────────────── */
+.uptime-section {
+    padding: 0 1rem 0.75rem;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+.uptime-header {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.72rem;
+}
+.uptime-label-text { color: var(--text3); }
+.uptime-value {
+    font-weight: 700;
+    font-size: 0.82rem;
+}
+.uptime-sessions {
+    margin-left: auto;
+    font-size: 0.65rem;
+    color: var(--text3);
+}
+.uptime-bar {
+    height: 4px;
+    background: rgba(255,255,255,0.08);
+    border-radius: 4px;
+    overflow: hidden;
+}
+.uptime-fill {
+    height: 100%;
+    border-radius: 4px;
+    transition: width 0.8s ease;
+}
+.uptime-warn {
+    font-size: 0.68rem;
+    color: #fbbf24;
+    margin-top: 2px;
+}

@@ -220,14 +220,19 @@ async function runMigrations() {
   `);
 
   // ─── ALTER existing tables ────────────────────────────────────────
-  // pods: add 'paused' status support + pause tracking
   const alterList = [
     "ALTER TABLE pods ADD COLUMN paused_at DATETIME",
     "ALTER TABLE pods ADD COLUMN reconnect_count INTEGER DEFAULT 0",
-    // users: point_balance field (1 point = 10 yen)
     "ALTER TABLE users ADD COLUMN point_balance REAL DEFAULT 0",
-    // reservations: track compensation
     "ALTER TABLE reservations ADD COLUMN compensated_points REAL DEFAULT 0",
+    // uptime tracking
+    "ALTER TABLE gpu_nodes ADD COLUMN uptime_rate REAL DEFAULT 100",
+    "ALTER TABLE gpu_nodes ADD COLUMN total_session_minutes REAL DEFAULT 0",
+    "ALTER TABLE gpu_nodes ADD COLUMN total_outage_minutes REAL DEFAULT 0",
+    "ALTER TABLE gpu_nodes ADD COLUMN session_count INTEGER DEFAULT 0",
+    // interrupted flag on usage_logs
+    "ALTER TABLE usage_logs ADD COLUMN interrupted INTEGER DEFAULT 0",
+    "ALTER TABLE usage_logs ADD COLUMN interrupt_reason TEXT",
   ];
   for (const sql of alterList) {
     try { db.exec(sql); } catch (_) { /* column already exists */ }
