@@ -27,6 +27,7 @@ const providerRoutes = require('./routes/providers');
 const bankAccountRoutes = require('./routes/bankAccounts');
 const pointRoutes = require('./routes/points');
 const outageRoutes = require('./routes/outage');
+const { router: priceRoutes } = require('./routes/prices');
 
 // ─── App Setup ───────────────────────────────────────────────────────────────
 const app = express();
@@ -92,6 +93,7 @@ app.use('/api/providers', providerRoutes);
 app.use('/api/bank-accounts', bankAccountRoutes);
 app.use('/api/points', pointRoutes);
 app.use('/api/outage', outageRoutes);
+app.use('/api/prices', priceRoutes);
 app.use('/api/admin', adminRoutes);
 
 

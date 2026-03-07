@@ -1,4 +1,4 @@
-const { getDb, initDb } = require('./database');
+﻿const { getDb, initDb } = require('./database');
 const bcrypt = require('bcryptjs');
 const config = require('../config');
 
@@ -170,7 +170,17 @@ async function runMigrations() {
     db.exec(`ALTER TABLE payouts ADD COLUMN notes TEXT`);
   } catch (e) { /* already exists */ }
 
-  // ─── Point Logs (ポイント履歴) ────────────────────────────────────
+
+  // --- GPU Price Catalog ---
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS gpu_price_catalog (
+      model          TEXT PRIMARY KEY,
+      price_per_hour REAL NOT NULL,
+      enabled        INTEGER DEFAULT 1,
+      updated_at     DATETIME DEFAULT CURRENT_TIMESTAMP
+    );
+  `);
+
   db.exec(`
     CREATE TABLE IF NOT EXISTS point_logs (
       id          INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -248,3 +258,4 @@ module.exports = { runMigrations };
 if (require.main === module) {
   runMigrations().catch(console.error);
 }
+
