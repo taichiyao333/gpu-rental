@@ -106,4 +106,44 @@ router.get('/my/active-pod', authMiddleware, (req, res) => {
   res.json(pod || null);
 });
 
+// POST /api/reservations/:id/start - 手動でPodを即時起動
+router.post('/:id/start', authMiddleware, (req, res) => {
+  const db = getDb();
+  const reservation = db.prepare('SELECT * FROM reservations WHERE id = ?').get(req.params.id);
+  if (!reservation) return res.status(404).json({ error: '予約が見つかりません' });
+  if (reservation.renter_id !== req.user.id && req.user.role !== 'admin')
+    return res.status(403).json({ error: 'Forbidden' });
+  if (!['confirmed', 'pending'].includes(reservation.status))
+    return res.status(400).json({ error: `この予約はすでに ${reservation.status} 状態です` });
+
+  // 既存の稼働中Podがあればそれを返す
+  const existingPod = db.prepare(
+    "SELECT * FROM pods WHERE reservation_id = ? AND status = 'running'"
+  ).get(reservation.id);
+  if (existingPod) {
+    return res.json({ success: true, pod: existingPod, alreadyRunning: true });
+  }
+
+  try {
+    const { createPod } = require('../services/podManager');
+    const pod = createPod(reservation.id);
+
+    // Socket.IO通知（io が使えれば）
+    try {
+      const { io } = require('../index');
+      if (io) {
+        io.to(`user_${pod.renter_id}`).emit('pod:started', {
+          podId: pod.id,
+          message: '🚀 GPUが利用可能になりました！ワークスペースに接続してください。',
+        });
+      }
+    } catch (_) { /* ioが取れなくても継続 */ }
+
+    res.json({ success: true, pod });
+  } catch (err) {
+    res.status(500).json({ error: 'Pod起動に失敗しました: ' + err.message });
+  }
+});
+
 module.exports = router;
+

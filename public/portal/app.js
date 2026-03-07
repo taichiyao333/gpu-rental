@@ -7,7 +7,13 @@ const state = {
     reservations: [],
 };
 
-const API = '';  // relative path, served from same origin
+// API base: '' = same origin (local dev), 'https://...' = external backend
+const API = (function () {
+    // If running on localhost, use relative path
+    if (location.hostname === 'localhost' || location.hostname === '127.0.0.1') return '';
+    // Otherwise use the deployed backend URL
+    return 'https://pubmed-apartments-unix-implementation.trycloudflare.com';
+})();
 let socket = null;
 
 /* ─── Utilities ─────────────────────────────────────────────────── */
@@ -29,11 +35,12 @@ function showToast(msg, type = 'info') {
 async function apiFetch(path, opts = {}) {
     const headers = { 'Content-Type': 'application/json' };
     if (state.token) headers['Authorization'] = `Bearer ${state.token}`;
-    const res = await fetch(`/api${path}`, { ...opts, headers: { ...headers, ...opts.headers } });
+    const res = await fetch(`${API}/api${path}`, { ...opts, headers: { ...headers, ...opts.headers } });
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || 'API Error');
     return data;
 }
+
 
 function formatDate(d) {
     return new Date(d).toLocaleString('ja-JP', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
@@ -648,7 +655,10 @@ function renderReservations(list) {
         el.innerHTML = '<p style="color:var(--text2);padding:1rem;font-size:0.875rem">予約がありません</p>';
         return;
     }
-    const statusLabel = { pending: '確認中', confirmed: '確定', active: '稼働中', completed: '完了', cancelled: 'キャンセル' };
+    const statusLabel = { pending: '確認中', confirmed: '確定済', active: '稼働中', completed: '完了', cancelled: 'キャンセル' };
+    // ワークスペースURL: 外部アクセス時はAPI（バックエンド）のURLを使う
+    const wsBase = API || location.origin;
+
     el.innerHTML = list.map(r => `
     <div class="reservation-item">
       <div class="res-header">
@@ -658,11 +668,37 @@ function renderReservations(list) {
       <div class="res-time">📅 ${formatDate(r.start_time)} → ${formatDate(r.end_time)}</div>
       <div class="res-time">💰 ¥${r.total_price ? Math.round(r.total_price).toLocaleString() : '—'}</div>
       <div class="res-actions">
-        ${r.status === 'active' ? `<a href="/workspace/" class="btn btn-success btn-sm">🖥 接続</a>` : ''}
-        ${(r.status === 'confirmed' || r.status === 'pending') ? `<button class="btn btn-danger btn-sm" onclick="cancelReservation(${r.id})">キャンセル</button>` : ''}
+        ${r.status === 'active'
+            ? `<a href="${wsBase}/workspace/" target="_blank" class="btn btn-success btn-sm">🖥 ワークスペースを開く</a>`
+            : (r.status === 'confirmed' || r.status === 'pending')
+                ? `<button class="btn btn-primary btn-sm" onclick="startPod(${r.id})" id="startBtn_${r.id}">🚀 今すぐ開始</button>
+                   <button class="btn btn-danger btn-sm" onclick="cancelReservation(${r.id})">キャンセル</button>`
+                : ''}
       </div>
     </div>
   `).join('');
+}
+
+// Pod を即時起動してワークスペースへ誘導
+async function startPod(reservationId) {
+    const btn = document.getElementById(`startBtn_${reservationId}`);
+    if (btn) { btn.disabled = true; btn.textContent = '起動中...'; }
+    try {
+        const result = await apiFetch(`/reservations/${reservationId}/start`, { method: 'POST' });
+        showToast('🚀 GPUが起動しました！ワークスペースに接続します...', 'success');
+
+        // ワークスペースURL
+        const wsBase = API || location.origin;
+        setTimeout(() => {
+            window.open(`${wsBase}/workspace/`, '_blank');
+        }, 1500);
+
+        // 予約リストを更新
+        setTimeout(() => loadMyReservations(), 2000);
+    } catch (err) {
+        showToast('起動エラー: ' + err.message, 'error');
+        if (btn) { btn.disabled = false; btn.textContent = '🚀 今すぐ開始'; }
+    }
 }
 
 async function cancelReservation(id) {
@@ -677,6 +713,7 @@ async function cancelReservation(id) {
     }
 }
 
+
 // Show my reservations panel from username click
 document.getElementById('navUsername').addEventListener('click', () => {
     const panel = document.getElementById('myPanel');
@@ -690,7 +727,7 @@ document.getElementById('panelClose').addEventListener('click', () => {
 /* ─── WebSocket ─────────────────────────────────────────────────── */
 function connectSocket() {
     if (socket) socket.disconnect();
-    socket = io();
+    socket = API ? io(API, { transports: ['polling', 'websocket'] }) : io();
     if (state.token) socket.emit('auth', state.token);
 
     socket.on('gpu:stats', (stats) => {
@@ -900,9 +937,9 @@ function closeWithdrawModal() {
 document.addEventListener('keydown', e => { if (e.key === 'Escape') closeWithdrawModal(); });
 
 function switchWdTab(idx) {
-    [0,1,2].forEach(i => {
-        document.getElementById('wdTab'+i)?.classList.toggle('active', i===idx);
-        document.getElementById('wdPane'+i)?.classList.toggle('hidden', i!==idx);
+    [0, 1, 2].forEach(i => {
+        document.getElementById('wdTab' + i)?.classList.toggle('active', i === idx);
+        document.getElementById('wdPane' + i)?.classList.toggle('hidden', i !== idx);
     });
     if (idx === 1) { loadBankAccountsForSelect(); loadWalletBalance(); }
     if (idx === 2) loadPayoutHistory();
@@ -934,24 +971,24 @@ async function loadBankAccounts() {
             list.innerHTML = '<div class="wd-empty">No accounts registered.<br><small>Click below to add one.</small></div>';
             return;
         }
-        list.innerHTML = _bankAccounts.map(function(a) {
+        list.innerHTML = _bankAccounts.map(function (a) {
             var typeLabel = a.account_type === 'checking' ? 'Toza' : 'Futsuu';
             var masked = a.account_number.slice(-4).padStart(a.account_number.length, '*');
             var defBadge = a.is_default ? '<span class="badge-default">Default</span>' : '';
-            var defBtn = !a.is_default ? '<button class="btn btn-ghost btn-sm" onclick="setDefaultAccount('+a.id+')">Set Default</button>' : '';
-            return '<div class="bank-account-card '+(a.is_default?'is-default':'')+'" id="bac-'+a.id+'">'
+            var defBtn = !a.is_default ? '<button class="btn btn-ghost btn-sm" onclick="setDefaultAccount(' + a.id + ')">Set Default</button>' : '';
+            return '<div class="bank-account-card ' + (a.is_default ? 'is-default' : '') + '" id="bac-' + a.id + '">'
                 + '<div class="bac-main">'
-                + '<div class="bac-bank">  '+a.bank_name+(a.bank_code?' ('+a.bank_code+')':'')+defBadge+'</div>'
-                + '<div class="bac-detail">'+a.branch_name+(a.branch_code?' ('+a.branch_code+')':'')+'  '+typeLabel+'  '+masked+'</div>'
-                + '<div class="bac-holder">'+a.account_holder+'</div>'
+                + '<div class="bac-bank">  ' + a.bank_name + (a.bank_code ? ' (' + a.bank_code + ')' : '') + defBadge + '</div>'
+                + '<div class="bac-detail">' + a.branch_name + (a.branch_code ? ' (' + a.branch_code + ')' : '') + '  ' + typeLabel + '  ' + masked + '</div>'
+                + '<div class="bac-holder">' + a.account_holder + '</div>'
                 + '</div>'
                 + '<div class="bac-actions">'
                 + defBtn
-                + '<button class="btn btn-danger btn-sm" onclick="deleteAccount('+a.id+', \''+a.bank_name+'\')">Delete</button>'
+                + '<button class="btn btn-danger btn-sm" onclick="deleteAccount(' + a.id + ', \'' + a.bank_name + '\')">Delete</button>'
                 + '</div></div>';
         }).join('');
-    } catch(e) {
-        list.innerHTML = '<div class="wd-empty">Load failed: '+e.message+'</div>';
+    } catch (e) {
+        list.innerHTML = '<div class="wd-empty">Load failed: ' + e.message + '</div>';
     }
 }
 
@@ -961,21 +998,21 @@ async function loadBankAccountsForSelect() {
     try {
         _bankAccounts = await apiFetch('/bank-accounts');
         sel.innerHTML = '<option value="">Select account</option>'
-            + _bankAccounts.map(function(a) {
+            + _bankAccounts.map(function (a) {
                 var typeLabel = a.account_type === 'checking' ? 'Toza' : 'Futsuu';
                 var masked = a.account_number.slice(-4).padStart(a.account_number.length, '*');
-                return '<option value="'+a.id+'" '+(a.is_default?'selected':'')+'>'+a.bank_name+' '+a.branch_name+' '+typeLabel+' '+masked+' ('+a.account_holder+')</option>';
+                return '<option value="' + a.id + '" ' + (a.is_default ? 'selected' : '') + '>' + a.bank_name + ' ' + a.branch_name + ' ' + typeLabel + ' ' + masked + ' (' + a.account_holder + ')</option>';
             }).join('');
-    } catch(e) {}
+    } catch (e) { }
 }
 
 function openAddAccountForm() {
     document.getElementById('addAccountForm')?.classList.remove('hidden');
-    ['bfBankName','bfBankCode','bfBranchName','bfBranchCode','bfAccountNumber','bfAccountHolder'].forEach(function(id){
-        var el = document.getElementById(id); if(el) el.value = '';
+    ['bfBankName', 'bfBankCode', 'bfBranchName', 'bfBranchCode', 'bfAccountNumber', 'bfAccountHolder'].forEach(function (id) {
+        var el = document.getElementById(id); if (el) el.value = '';
     });
-    var chk = document.getElementById('bfIsDefault'); if(chk) chk.checked = !_bankAccounts.length;
-    var f = document.getElementById('bfBankName'); if(f) f.focus();
+    var chk = document.getElementById('bfIsDefault'); if (chk) chk.checked = !_bankAccounts.length;
+    var f = document.getElementById('bfBankName'); if (f) f.focus();
 }
 function closeAddAccountForm() { document.getElementById('addAccountForm')?.classList.add('hidden'); }
 
@@ -996,25 +1033,25 @@ async function submitAddAccount() {
     try {
         await apiFetch('/bank-accounts', { method: 'POST', body: JSON.stringify(body) });
         closeAddAccountForm(); await loadBankAccounts(); showToast('Account registered!', 'success');
-    } catch(e) { showToast('Error: '+e.message, 'error'); }
+    } catch (e) { showToast('Error: ' + e.message, 'error'); }
 }
 
 async function setDefaultAccount(id) {
     try {
-        await apiFetch('/bank-accounts/'+id+'/default', { method: 'PATCH' });
+        await apiFetch('/bank-accounts/' + id + '/default', { method: 'PATCH' });
         await loadBankAccounts(); showToast('Default account updated', 'success');
-    } catch(e) { showToast('Error: '+e.message, 'error'); }
+    } catch (e) { showToast('Error: ' + e.message, 'error'); }
 }
 
 async function deleteAccount(id, bankName) {
-    if (!confirm('Delete account "'+bankName+'"?')) return;
+    if (!confirm('Delete account "' + bankName + '"?')) return;
     try {
-        await apiFetch('/bank-accounts/'+id, { method: 'DELETE' });
-        document.getElementById('bac-'+id)?.remove();
-        _bankAccounts = _bankAccounts.filter(function(a){ return a.id !== id; });
+        await apiFetch('/bank-accounts/' + id, { method: 'DELETE' });
+        document.getElementById('bac-' + id)?.remove();
+        _bankAccounts = _bankAccounts.filter(function (a) { return a.id !== id; });
         showToast('Account deleted', 'success');
         if (!_bankAccounts.length) loadBankAccounts();
-    } catch(e) { showToast('Error: '+e.message, 'error'); }
+    } catch (e) { showToast('Error: ' + e.message, 'error'); }
 }
 
 async function submitPayout() {
@@ -1031,20 +1068,20 @@ async function submitPayout() {
         });
         document.getElementById('payoutForm').classList.add('hidden');
         document.getElementById('payoutSuccess').classList.remove('hidden');
-        var acct = _bankAccounts.find(function(a){ return a.id === parseInt(bankAccountId); });
+        var acct = _bankAccounts.find(function (a) { return a.id === parseInt(bankAccountId); });
         var typeLabel = acct && acct.account_type === 'checking' ? 'Toza' : 'Futsuu';
         var masked = acct ? acct.account_number.slice(-4).padStart(acct.account_number.length, '*') : '****';
         var detail = document.getElementById('payoutSuccessDetail');
         if (detail) detail.innerHTML =
-            '<div>Application #: #'+result.id+'</div>'
-            + '<div>Amount: <strong>'+Math.round(amount).toLocaleString()+' yen</strong></div>'
-            + '<div>Bank: '+(acct?acct.bank_name:'')+' '+(acct?acct.branch_name:'')+' '+typeLabel+' '+masked+'</div>'
-            + '<div>Holder: '+(acct?acct.account_holder:'')+'</div>';
+            '<div>Application #: #' + result.id + '</div>'
+            + '<div>Amount: <strong>' + Math.round(amount).toLocaleString() + ' yen</strong></div>'
+            + '<div>Bank: ' + (acct ? acct.bank_name : '') + ' ' + (acct ? acct.branch_name : '') + ' ' + typeLabel + ' ' + masked + '</div>'
+            + '<div>Holder: ' + (acct ? acct.account_holder : '') + '</div>';
         loadWalletBalance();
         showToast('Withdrawal application submitted!', 'success');
-    } catch(e) {
+    } catch (e) {
         if (btn) { btn.disabled = false; btn.textContent = 'Submit Withdrawal'; }
-        showToast('Error: '+e.message, 'error');
+        showToast('Error: ' + e.message, 'error');
     }
 }
 
@@ -1053,8 +1090,8 @@ function resetPayoutForm() {
     document.getElementById('payoutSuccess').classList.add('hidden');
     var btn = document.querySelector('#payoutForm .btn-primary');
     if (btn) { btn.disabled = false; btn.textContent = 'Submit Withdrawal'; }
-    var amt = document.getElementById('payoutAmount'); if(amt) amt.value = '';
-    var notes = document.getElementById('payoutNotes'); if(notes) notes.value = '';
+    var amt = document.getElementById('payoutAmount'); if (amt) amt.value = '';
+    var notes = document.getElementById('payoutNotes'); if (notes) notes.value = '';
 }
 
 async function loadPayoutHistory() {
@@ -1064,17 +1101,17 @@ async function loadPayoutHistory() {
     try {
         var list = await apiFetch('/bank-accounts/payouts');
         if (!list.length) { el.innerHTML = '<div class="wd-empty">No withdrawal history</div>'; return; }
-        el.innerHTML = list.map(function(p) {
+        el.innerHTML = list.map(function (p) {
             var statusLabels = { pending: 'Under Review', paid: 'Paid', rejected: 'Rejected' };
             var statusBadges = { pending: 'b-warning', paid: 'b-success', rejected: 'b-danger' };
             return '<div class="payout-history-row">'
                 + '<div>'
-                + '<div style="font-weight:600">'+Math.round(p.amount).toLocaleString()+' yen</div>'
-                + '<div class="phr-bank">'+(p.bank_name||'')+'  '+(p.branch_name||'')+'  #'+p.id+'</div>'
-                + '<div style="font-size:0.72rem;color:var(--text3)">'+new Date(p.created_at).toLocaleDateString('ja-JP')+'</div>'
+                + '<div style="font-weight:600">' + Math.round(p.amount).toLocaleString() + ' yen</div>'
+                + '<div class="phr-bank">' + (p.bank_name || '') + '  ' + (p.branch_name || '') + '  #' + p.id + '</div>'
+                + '<div style="font-size:0.72rem;color:var(--text3)">' + new Date(p.created_at).toLocaleDateString('ja-JP') + '</div>'
                 + '</div>'
-                + '<span class="badge '+(statusBadges[p.status]||'b-muted')+'">'+(statusLabels[p.status]||p.status)+'</span>'
+                + '<span class="badge ' + (statusBadges[p.status] || 'b-muted') + '">' + (statusLabels[p.status] || p.status) + '</span>'
                 + '</div>';
         }).join('');
-    } catch(e) { el.innerHTML = '<div class="wd-empty">Error: '+e.message+'</div>'; }
+    } catch (e) { el.innerHTML = '<div class="wd-empty">Error: ' + e.message + '</div>'; }
 }

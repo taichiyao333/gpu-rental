@@ -9,9 +9,15 @@ if (!token || !user || user.role !== 'admin') {
 
 document.getElementById('sfUsername').textContent = user?.username || '—';
 
+/* API base: auto-detect local vs remote */
+const API = (function () {
+    if (location.hostname === 'localhost' || location.hostname === '127.0.0.1') return '';
+    return 'https://pubmed-apartments-unix-implementation.trycloudflare.com';
+})();
+
 /* ── API ───────────────────────────────────────────────────────── */
 async function api(path, opts = {}) {
-    const res = await fetch(`/api${path}`, {
+    const res = await fetch(`${API}/api${path}`, {
         ...opts,
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}`, ...opts.headers },
     });

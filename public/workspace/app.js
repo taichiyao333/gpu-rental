@@ -2,7 +2,12 @@ const token = localStorage.getItem('gpu_token');
 const user = JSON.parse(localStorage.getItem('gpu_user') || 'null');
 if (!token || !user) { window.location.href = '/portal/'; }
 
-const API = '';
+/* API base: auto-detect local vs remote */
+const API = (function () {
+    if (location.hostname === 'localhost' || location.hostname === '127.0.0.1') return '';
+    return 'https://pubmed-apartments-unix-implementation.trycloudflare.com';
+})();
+
 let pod = null;
 let socket = null;
 let term = null;
@@ -14,7 +19,7 @@ let gpuChartData = { labels: [], gpu: [], vram: [] };
 let gpuChart = null;
 
 async function apiFetch(path, opts = {}) {
-    const res = await fetch(`/api${path}`, {
+    const res = await fetch(`${API}/api${path}`, {
         ...opts,
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}`, ...opts.headers },
     });
@@ -83,7 +88,7 @@ function startTimers() {
 
 /* ─── Socket ────────────────────────────────────────────────────── */
 function initSocket() {
-    socket = io();
+    socket = API ? io(API, { transports: ['polling', 'websocket'] }) : io();
     socket.emit('auth', token);
 
     socket.on('gpu:stats', (stats) => {
