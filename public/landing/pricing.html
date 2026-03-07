@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="ja">
 
 <head>
@@ -501,17 +501,12 @@
             <table id="table-3000">
                 <thead>
                     <tr>
-                        <th>モデル</th>
-                        <th>VRAM</th>
-                        <th>主な用途</th>
-                        <th>料金/時間</th>
-                        <th>プロバイダー収益</th>
-                        <th>ティア</th>
+                        <th>モデル</th><th>VRAM</th><th>主な用途</th><th>料金/時間</th><th style="color:var(--text3)">RunPod参考</th><th>プロバイダー収益</th><th>ティア</th>
                     </tr>
                 </thead>
                 <tbody>
                     <tr class="loading-row">
-                        <td colspan="6">読み込み中...</td>
+                        <td colspan="7">読み込み中...</td>
                     </tr>
                 </tbody>
             </table>
@@ -523,17 +518,12 @@
             <table id="table-4000">
                 <thead>
                     <tr>
-                        <th>モデル</th>
-                        <th>VRAM</th>
-                        <th>主な用途</th>
-                        <th>料金/時間</th>
-                        <th>プロバイダー収益</th>
-                        <th>ティア</th>
+                        <th>モデル</th><th>VRAM</th><th>主な用途</th><th>料金/時間</th><th style="color:var(--text3)">RunPod参考</th><th>プロバイダー収益</th><th>ティア</th>
                     </tr>
                 </thead>
                 <tbody>
                     <tr class="loading-row">
-                        <td colspan="6">読み込み中...</td>
+                        <td colspan="7">読み込み中...</td>
                     </tr>
                 </tbody>
             </table>
@@ -545,17 +535,12 @@
             <table id="table-5000">
                 <thead>
                     <tr>
-                        <th>モデル</th>
-                        <th>VRAM</th>
-                        <th>主な用途</th>
-                        <th>料金/時間</th>
-                        <th>プロバイダー収益</th>
-                        <th>ティア</th>
+                        <th>モデル</th><th>VRAM</th><th>主な用途</th><th>料金/時間</th><th style="color:var(--text3)">RunPod参考</th><th>プロバイダー収益</th><th>ティア</th>
                     </tr>
                 </thead>
                 <tbody>
                     <tr class="loading-row">
-                        <td colspan="6">読み込み中...</td>
+                        <td colspan="7">読み込み中...</td>
                     </tr>
                 </tbody>
             </table>
@@ -567,17 +552,12 @@
             <table id="table-rtxa">
                 <thead>
                     <tr>
-                        <th>モデル</th>
-                        <th>VRAM</th>
-                        <th>主な用途</th>
-                        <th>料金/時間</th>
-                        <th>プロバイダー収益</th>
-                        <th>ティア</th>
+                        <th>モデル</th><th>VRAM</th><th>主な用途</th><th>料金/時間</th><th style="color:var(--text3)">RunPod参考</th><th>プロバイダー収益</th><th>ティア</th>
                     </tr>
                 </thead>
                 <tbody>
                     <tr class="loading-row">
-                        <td colspan="6">読み込み中...</td>
+                        <td colspan="7">読み込み中...</td>
                     </tr>
                 </tbody>
             </table>
@@ -589,17 +569,12 @@
             <table id="table-datacenter">
                 <thead>
                     <tr>
-                        <th>モデル</th>
-                        <th>VRAM</th>
-                        <th>主な用途</th>
-                        <th>料金/時間</th>
-                        <th>プロバイダー収益</th>
-                        <th>ティア</th>
+                        <th>モデル</th><th>VRAM</th><th>主な用途</th><th>料金/時間</th><th style="color:var(--text3)">RunPod参考</th><th>プロバイダー収益</th><th>ティア</th>
                     </tr>
                 </thead>
                 <tbody>
                     <tr class="loading-row">
-                        <td colspan="6">読み込み中...</td>
+                        <td colspan="7">読み込み中...</td>
                     </tr>
                 </tbody>
             </table>
@@ -620,18 +595,15 @@
 
         <div class="fee-box">
             <div class="fee-item">
-                <div class="fee-val" style="color:var(--text)">¥1,200</div>
-                <div class="fee-label">ユーザー支払い (RTX 4090/h)</div>
+                <div class="fee-val" style="color:var(--text)">¥650</div><div class="fee-label">ユーザー支払い (RTX 4090/h)</div>
             </div>
             <div class="fee-arrow">→</div>
             <div class="fee-item">
-                <div class="fee-val" style="color:var(--danger)">¥240</div>
-                <div class="fee-label">運営手数料 (20%)</div>
+                <div class="fee-val" style="color:var(--danger)">¥130</div><div class="fee-label">運営手数料 (20%)</div>
             </div>
             <div class="fee-arrow">+</div>
             <div class="fee-item">
-                <div class="fee-val" style="color:var(--success)">¥960</div>
-                <div class="fee-label">プロバイダー収益 (80%)</div>
+                <div class="fee-val" style="color:var(--success)">¥520</div><div class="fee-label">プロバイダー収益 (80%)</div>
             </div>
         </div>
 
@@ -709,46 +681,46 @@
     <script>
         // GPU価格マスターデータ（API優先・フォールバック）
         const GPU_CATALOG = [
-            // 3000番台
-            { series: '3000', model: 'RTX 3060', vram: '12 GB', use: '入門AI・軽量レンダリング', price: 400, tier: 'entry' },
-            { series: '3000', model: 'RTX 3070', vram: '8 GB', use: '中規模学習・映像編集', price: 500, tier: 'entry' },
-            { series: '3000', model: 'RTX 3070 Ti', vram: '8 GB', use: '中規模学習・映像編集', price: 550, tier: 'entry' },
-            { series: '3000', model: 'RTX 3080', vram: '10 GB', use: '大規模推論・4Kレンダリング', price: 700, tier: 'mid' },
-            { series: '3000', model: 'RTX 3080 Ti', vram: '12 GB', use: '大規模推論・4Kレンダリング', price: 750, tier: 'mid' },
-            { series: '3000', model: 'RTX 3090', vram: '24 GB', use: 'LLM・大規模モデル学習', price: 900, tier: 'mid' },
-            { series: '3000', model: 'RTX 3090 Ti', vram: '24 GB', use: 'LLM・大規模モデル学習', price: 950, tier: 'mid' },
-            // 4000番台
-            { series: '4000', model: 'RTX 4060', vram: '8 GB', use: '入門AI・軽量推論', price: 450, tier: 'entry' },
-            { series: '4000', model: 'RTX 4060 Ti', vram: '16 GB', use: '中規模学習・Stable Diffusion', price: 550, tier: 'entry' },
-            { series: '4000', model: 'RTX 4070', vram: '12 GB', use: '中規模学習・映像編集', price: 700, tier: 'mid' },
-            { series: '4000', model: 'RTX 4070 Ti', vram: '12 GB', use: '大規模学習・4Kレンダリング', price: 800, tier: 'mid' },
-            { series: '4000', model: 'RTX 4070 Ti Super', vram: '16 GB', use: '大規模学習・高速推論', price: 900, tier: 'mid' },
-            { series: '4000', model: 'RTX 4080', vram: '16 GB', use: 'LLM・映像プロダクション', price: 1050, tier: 'mid' },
-            { series: '4000', model: 'RTX 4080 Super', vram: '16 GB', use: 'LLM・映像プロダクション', price: 1100, tier: 'mid' },
-            { series: '4000', model: 'RTX 4090', vram: '24 GB', use: '大規模LLM・最高速推論', price: 1200, tier: 'pro', featured: true },
-            // 5000番台
-            { series: '5000', model: 'RTX 5070', vram: '12 GB', use: '次世代AI・映像編集', price: 850, tier: 'mid' },
-            { series: '5000', model: 'RTX 5070 Ti', vram: '16 GB', use: '次世代大規模学習', price: 1000, tier: 'mid' },
-            { series: '5000', model: 'RTX 5080', vram: '16 GB', use: '次世代LLM推論', price: 1200, tier: 'pro' },
-            { series: '5000', model: 'RTX 5090', vram: '32 GB', use: '最大規模モデル・研究用途', price: 1800, tier: 'pro' },
-            // RTX Aシリーズ
-            { series: 'rtxa', model: 'RTX A2000', vram: '12 GB', use: 'CAD・3D・軽量AI', price: 450, tier: 'entry' },
-            { series: 'rtxa', model: 'RTX A4000', vram: '16 GB', use: 'プロ映像・中規模AI', price: 700, tier: 'mid' },
-            { series: 'rtxa', model: 'RTX A4500', vram: '20 GB', use: 'AI学習・プロレンダリング', price: 800, tier: 'mid' },
-            { series: 'rtxa', model: 'RTX A5000', vram: '24 GB', use: '大規模AI・映像制作', price: 1000, tier: 'pro' },
-            { series: 'rtxa', model: 'RTX A6000', vram: '48 GB', use: '超大規模モデル・研究', price: 1600, tier: 'pro' },
-            { series: 'rtxa', model: 'RTX A6000 Ada', vram: '48 GB', use: '最高峰プロAI・CGI', price: 2000, tier: 'hpc' },
-            // データセンター / HPC
-            { series: 'datacenter', model: 'Tesla T4', vram: '16 GB', use: '推論・エッジAI', price: 600, tier: 'mid' },
-            { series: 'datacenter', model: 'A30', vram: '24 GB', use: '推論・小規模学習', price: 900, tier: 'mid' },
-            { series: 'datacenter', model: 'A100 40GB', vram: '40 GB', use: '大規模学習・科学計算', price: 2500, tier: 'hpc' },
-            { series: 'datacenter', model: 'A100 80GB', vram: '80 GB', use: '超大規模LLM・マルチモーダル', price: 3200, tier: 'hpc' },
-            { series: 'datacenter', model: 'H100 SXM5', vram: '80 GB', use: 'GPT-4クラス学習・最高性能', price: 4500, tier: 'hpc' },
-            { series: 'datacenter', model: 'H100 PCIe', vram: '80 GB', use: 'GPT-4クラス推論', price: 3800, tier: 'hpc' },
-            { series: 'datacenter', model: 'H200 SXM5', vram: '141 GB', use: '次世代フロンティアモデル', price: 6000, tier: 'hpc' },
-            { series: 'datacenter', model: 'L40S', vram: '48 GB', use: '推論・映像AI・生成AI', price: 1800, tier: 'pro' },
-            { series: 'datacenter', model: 'L4', vram: '24 GB', use: '推論・エッジ展開', price: 800, tier: 'mid' },
-        ];
+  // ─── RTX 3000 Series ───────────────────────────────────────
+  {series:'3000', model:'RTX 3060',         vram:'12 GB', use:'入門AI・Stable Diffusion',      price:200,  tier:'entry', runpod:'~$0.12/h'},
+  {series:'3000', model:'RTX 3070',         vram:'8 GB',  use:'中規模推論・映像編集',           price:220,  tier:'entry', runpod:'~$0.15/h'},
+  {series:'3000', model:'RTX 3070 Ti',      vram:'8 GB',  use:'中規模推論・映像編集',           price:250,  tier:'entry', runpod:'~$0.17/h'},
+  {series:'3000', model:'RTX 3080',         vram:'10 GB', use:'大規模推論・4Kレンダリング',     price:280,  tier:'entry', runpod:'~$0.20/h'},
+  {series:'3000', model:'RTX 3080 Ti',      vram:'12 GB', use:'大規模推論・4Kレンダリング',     price:320,  tier:'mid',   runpod:'~$0.22/h'},
+  {series:'3000', model:'RTX 3090',         vram:'24 GB', use:'LLM推論・大規模モデル学習',      price:500,  tier:'mid',   runpod:'~$0.39-0.49/h'},
+  {series:'3000', model:'RTX 3090 Ti',      vram:'24 GB', use:'LLM推論・大規模モデル学習',      price:550,  tier:'mid',   runpod:'~$0.45/h'},
+  // ─── RTX 4000 Series ───────────────────────────────────────
+  {series:'4000', model:'RTX 4060',         vram:'8 GB',  use:'入門AI・軽量推論',               price:200,  tier:'entry', runpod:'~$0.13/h'},
+  {series:'4000', model:'RTX 4060 Ti',      vram:'16 GB', use:'中規模学習・SDXL',               price:280,  tier:'entry', runpod:'~$0.18/h'},
+  {series:'4000', model:'RTX 4070',         vram:'12 GB', use:'中規模学習・映像編集',           price:350,  tier:'mid',   runpod:'~$0.25/h'},
+  {series:'4000', model:'RTX 4070 Ti',      vram:'12 GB', use:'大規模学習・4Kレンダリング',     price:400,  tier:'mid',   runpod:'~$0.30/h'},
+  {series:'4000', model:'RTX 4070 Ti Super',vram:'16 GB', use:'大規模学習・高速推論',           price:450,  tier:'mid',   runpod:'~$0.33/h'},
+  {series:'4000', model:'RTX 4080',         vram:'16 GB', use:'LLM・映像プロダクション',        price:550,  tier:'mid',   runpod:'~$0.44/h'},
+  {series:'4000', model:'RTX 4080 Super',   vram:'16 GB', use:'LLM・映像プロダクション',        price:580,  tier:'mid',   runpod:'~$0.46/h'},
+  {series:'4000', model:'RTX 4090',         vram:'24 GB', use:'大規模LLM・最高速推論',          price:650,  tier:'pro',   runpod:'~$0.39-0.74/h', featured:true},
+  // ─── RTX 5000 Series ───────────────────────────────────────
+  {series:'5000', model:'RTX 5070',         vram:'12 GB', use:'次世代AI・映像編集',             price:450,  tier:'mid',   runpod:'~$0.30/h est.'},
+  {series:'5000', model:'RTX 5070 Ti',      vram:'16 GB', use:'次世代大規模学習',               price:550,  tier:'mid',   runpod:'~$0.38/h est.'},
+  {series:'5000', model:'RTX 5080',         vram:'16 GB', use:'次世代LLM推論',                  price:650,  tier:'pro',   runpod:'~$0.45/h est.'},
+  {series:'5000', model:'RTX 5090',         vram:'32 GB', use:'最大規模モデル・研究用途',        price:1200, tier:'pro',   runpod:'~$1.00/h est.'},
+  // ─── RTX A Series ──────────────────────────────────────────
+  {series:'rtxa', model:'RTX A2000',        vram:'12 GB', use:'CAD・3D・軽量AI',                price:250,  tier:'entry', runpod:'~$0.17/h'},
+  {series:'rtxa', model:'RTX A4000',        vram:'16 GB', use:'プロ映像・中規模AI',             price:400,  tier:'mid',   runpod:'~$0.35/h'},
+  {series:'rtxa', model:'RTX A4500',        vram:'20 GB', use:'AI学習・プロレンダリング',       price:450,  tier:'mid',   runpod:'~$0.40/h'},
+  {series:'rtxa', model:'RTX A5000',        vram:'24 GB', use:'大規模AI・映像制作',             price:500,  tier:'mid',   runpod:'~$0.45/h'},
+  {series:'rtxa', model:'RTX A6000',        vram:'48 GB', use:'超大規模モデル・研究',            price:900,  tier:'pro',   runpod:'~$0.76/h'},
+  {series:'rtxa', model:'RTX A6000 Ada',    vram:'48 GB', use:'最高峰プロAI・CGI',              price:1100, tier:'hpc',   runpod:'~$0.80/h'},
+  // ─── Datacenter / HPC ──────────────────────────────────────
+  {series:'datacenter', model:'Tesla T4',   vram:'16 GB', use:'推論・エッジAI',                 price:300,  tier:'mid',   runpod:'~$0.22/h'},
+  {series:'datacenter', model:'A30',        vram:'24 GB', use:'推論・小規模学習',               price:500,  tier:'mid',   runpod:'~$0.39/h'},
+  {series:'datacenter', model:'L4',         vram:'24 GB', use:'推論・エッジ展開',               price:550,  tier:'mid',   runpod:'~$0.44/h'},
+  {series:'datacenter', model:'L40S',       vram:'48 GB', use:'推論・映像AI・生成AI',           price:1300, tier:'pro',   runpod:'~$1.14/h'},
+  {series:'datacenter', model:'A100 40GB',  vram:'40 GB', use:'大規模学習・科学計算',           price:1200, tier:'hpc',   runpod:'~$0.89-1.04/h'},
+  {series:'datacenter', model:'A100 80GB',  vram:'80 GB', use:'超大規模LLM・マルチモーダル',    price:2100, tier:'hpc',   runpod:'~$1.89-2.30/h'},
+  {series:'datacenter', model:'H100 PCIe',  vram:'80 GB', use:'GPT-4クラス推論',                price:2800, tier:'hpc',   runpod:'~$2.39-2.89/h'},
+  {series:'datacenter', model:'H100 SXM5',  vram:'80 GB', use:'GPT-4クラス学習・最高性能',      price:3500, tier:'hpc',   runpod:'~$2.69-3.89/h'},
+  {series:'datacenter', model:'H200 SXM5',  vram:'141 GB',use:'次世代フロンティアモデル',        price:5000, tier:'hpc',   runpod:'~$4.50-5.00/h'},
+];
 
         const TIER_META = {
             entry: { label: 'エントリー', cls: 'tier-entry' },
@@ -817,3 +789,4 @@
 </body>
 
 </html>
+
