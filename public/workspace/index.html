@@ -55,6 +55,7 @@
             <div class="ws-terminal-header">
                 <div class="ws-tabs">
                     <button class="ws-tab active" id="tabTerminal">ターミナル</button>
+                    <button class="ws-tab" id="tabConnect">🔌 接続情報</button>
                     <button class="ws-tab" id="tabRender">🎬 レンダリング</button>
                 </div>
                 <div class="ws-terminal-actions">
@@ -64,6 +65,122 @@
             <div id="terminalPane" class="terminal-pane">
                 <div id="terminal"></div>
             </div>
+
+            <!-- 接続情報パネル -->
+            <div id="connectPane" class="connect-pane hidden">
+                <div class="connect-inner">
+                    <h2 class="connect-title">🔌 外部エディターから接続する</h2>
+                    <p class="connect-subtitle">ブラウザ端末の他に、お好みのエディターやツールからこのGPUを利用できます。</p>
+
+                    <!-- SSH接続情報カード -->
+                    <div class="connect-card">
+                        <div class="connect-card-header">
+                            <span class="connect-badge badge-ssh">SSH</span>
+                            <h3>SSH 接続情報</h3>
+                        </div>
+                        <div class="connect-info-grid" id="sshInfoGrid">
+                            <div class="info-item"><span class="info-label">ホスト</span><code id="sshHost"
+                                    class="info-val copiable" onclick="copyText(this)">読み込み中...</code></div>
+                            <div class="info-item"><span class="info-label">ポート</span><code class="info-val copiable"
+                                    onclick="copyText(this)">2222</code></div>
+                            <div class="info-item"><span class="info-label">ユーザー名</span><code id="sshUser"
+                                    class="info-val copiable" onclick="copyText(this)">読み込み中...</code></div>
+                            <div class="info-item"><span class="info-label">パスワード</span><code id="sshPass"
+                                    class="info-val copiable" onclick="copyText(this)">読み込み中...</code></div>
+                            <div class="info-item full"><span class="info-label">作業ディレクトリ</span><code id="sshCwd"
+                                    class="info-val copiable" onclick="copyText(this)">読み込み中...</code></div>
+                        </div>
+                        <div class="connect-cmd-block">
+                            <span class="cmd-label">ターミナルからSSH接続</span>
+                            <div class="cmd-line">
+                                <code id="sshCmd">ssh -p 2222 gpu-user@...</code>
+                                <button class="copy-btn"
+                                    onclick="copyText(document.getElementById('sshCmd'))">コピー</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- VSCode -->
+                    <div class="connect-card">
+                        <div class="connect-card-header">
+                            <span class="connect-badge badge-vscode">VS Code</span>
+                            <h3>VS Code Remote SSH</h3>
+                        </div>
+                        <ol class="connect-steps">
+                            <li>VS Code に <strong>Remote - SSH</strong> 拡張機能をインストール<br>
+                                <a href="https://marketplace.visualstudio.com/items?itemName=ms-vscode-remote.remote-ssh"
+                                    target="_blank" class="connect-link">→ インストールページを開く</a>
+                            </li>
+                            <li><code>~/.ssh/config</code> に以下を追記：
+                                <div class="code-block">
+                                    <pre id="vscodeConfig">Host gpu-rental
+    HostName (上のSSHホスト)
+    Port 2222
+    User gpu-user-(ユーザーID)</pre>
+                                    <button class="copy-btn"
+                                        onclick="copyText(document.getElementById('vscodeConfig'))">コピー</button>
+                                </div>
+                            </li>
+                            <li><code>Ctrl+Shift+P</code> → <strong>Remote-SSH: Connect to Host</strong> →
+                                <strong>gpu-rental</strong> を選択</li>
+                            <li>パスワードを入力してリモートGPUマシンに接続</li>
+                            <li><strong>ファイル → フォルダを開く</strong> → 作業ディレクトリを指定</li>
+                        </ol>
+                        <div class="connect-note">✅ 接続後はVS Codeのすべての機能（デバッグ、拡張機能、Git等）がリモートGPU上で動作します</div>
+                    </div>
+
+                    <!-- JupyterLab -->
+                    <div class="connect-card">
+                        <div class="connect-card-header">
+                            <span class="connect-badge badge-jupyter">Jupyter</span>
+                            <h3>JupyterLab（機械学習・データ分析）</h3>
+                        </div>
+                        <ol class="connect-steps">
+                            <li>上のターミナルタブで以下を実行：
+                                <div class="code-block">
+                                    <pre>pip install jupyterlab -q
+jupyter lab --ip=0.0.0.0 --port=8888 --no-browser --NotebookApp.token='gpurental'</pre>
+                                </div>
+                            </li>
+                            <li>ブラウザで以下にアクセス（新しいタブ）：
+                                <div class="cmd-line">
+                                    <code id="jupyterUrl">読み込み中...</code>
+                                    <button class="copy-btn"
+                                        onclick="copyText(document.getElementById('jupyterUrl'))">コピー</button>
+                                </div>
+                            </li>
+                        </ol>
+                        <div class="connect-note">⚠️
+                            JupyterLabポートはCloudflareトンネル経由で公開されていません。SSHポートフォワードを使うか、ブラウザ端末で直接利用してください</div>
+                    </div>
+
+                    <!-- PyCharm -->
+                    <div class="connect-card">
+                        <div class="connect-card-header">
+                            <span class="connect-badge badge-pycharm">PyCharm</span>
+                            <h3>PyCharm Remote Interpreter</h3>
+                        </div>
+                        <ol class="connect-steps">
+                            <li><strong>File → Settings → Project → Python Interpreter</strong></li>
+                            <li><strong>Add → SSH Interpreter</strong></li>
+                            <li>SSH接続情報（上記）を入力して接続</li>
+                            <li><strong>Tools → Deployment → Configuration</strong> でワークスペースパスを紐付け</li>
+                        </ol>
+                    </div>
+
+                    <!-- 注意事項 -->
+                    <div class="connect-warning">
+                        <h4>⚠️ 注意事項</h4>
+                        <ul>
+                            <li>セッション終了時間になると<strong>自動切断</strong>されます（10分前にメール警告）</li>
+                            <li><code>/workspace</code> 内のファイルは次回接続時も保持されます</li>
+                            <li>CUDAは利用可能。<code>torch</code>・<code>tensorflow</code>はデフォルトでインストール済みです</li>
+                            <li>クリックすると<strong>コード/コマンドをコピー</strong>できます</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
             <div id="renderPane" class="render-pane hidden">
                 <!-- Render settings panel -->
                 <div class="render-layout">

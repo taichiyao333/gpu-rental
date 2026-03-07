@@ -439,4 +439,76 @@ function showNotif(msg, type = 'info') {
     setTimeout(() => el.remove(), 4000);
 }
 
+/* ─── Tab: 接続情報 ─────────────────────────────────────────────── */
+function initConnectTab() {
+    if (!pod) return;
+    const tunnelHost = API ? new URL(API).hostname : location.hostname;
+    const sshUser = `gpu-user-${pod.renter_id}`;
+    const sshPass = pod.access_token ? pod.access_token.substring(0, 12) : 'gpu-' + pod.id + '-pass';
+    const workDir = pod.workspace_path
+        ? pod.workspace_path.replace(/\\/g, '/')
+        : `/gpu-rental/users/${pod.renter_id}/workspace`;
+
+    // SSH情報を設定
+    const setEl = (id, txt) => { const e = document.getElementById(id); if (e) e.textContent = txt; };
+    setEl('sshHost', tunnelHost);
+    setEl('sshUser', sshUser);
+    setEl('sshPass', sshPass);
+    setEl('sshCwd', workDir);
+    setEl('sshCmd', `ssh -p 2222 ${sshUser}@${tunnelHost}`);
+
+    // VSCode設定を更新
+    const vscCfg = document.getElementById('vscodeConfig');
+    if (vscCfg) {
+        vscCfg.textContent = `Host gpu-rental\n    HostName ${tunnelHost}\n    Port 2222\n    User ${sshUser}`;
+    }
+
+    // JupyterURL（SSHポートフォワード経由）
+    setEl('jupyterUrl', `http://localhost:8888/?token=gpurental`);
+}
+
+// タブ切り替え
+document.addEventListener('DOMContentLoaded', () => {
+    const tabs = [
+        { btn: 'tabTerminal', pane: 'terminalPane' },
+        { btn: 'tabConnect', pane: 'connectPane' },
+        { btn: 'tabRender', pane: 'renderPane' },
+    ];
+
+    tabs.forEach(({ btn, pane }) => {
+        const btnEl = document.getElementById(btn);
+        if (!btnEl) return;
+        btnEl.addEventListener('click', () => {
+            // タブ切り替え
+            tabs.forEach(t => {
+                const b = document.getElementById(t.btn);
+                const p = document.getElementById(t.pane);
+                if (b) b.classList.toggle('active', t.btn === btn);
+                if (p) p.classList.toggle('hidden', t.pane !== pane);
+            });
+            // 接続情報タブを開いた時にSSH情報をセット
+            if (btn === 'tabConnect') initConnectTab();
+        });
+    });
+});
+
+/* ─── コピー機能 ──────────────────────────────────────────────────── */
+function copyText(el) {
+    const text = el.textContent || el.innerText;
+    navigator.clipboard.writeText(text).then(() => {
+        const orig = el.style.background;
+        el.style.background = 'rgba(0,229,160,0.25)';
+        setTimeout(() => { el.style.background = orig; }, 600);
+        showNotif('クリップボードにコピーしました ✅', 'success');
+    }).catch(() => {
+        // fallback
+        const ta = document.createElement('textarea');
+        ta.value = text; document.body.appendChild(ta);
+        ta.select(); document.execCommand('copy');
+        document.body.removeChild(ta);
+        showNotif('コピーしました ✅', 'success');
+    });
+}
+
 init();
+
