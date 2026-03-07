@@ -3,6 +3,83 @@ const router = express.Router();
 const { authMiddleware, adminOnly } = require('../middleware/auth');
 const { getDb } = require('../db/database');
 const config = require('../config');
+const { fetchGpuStats } = require('../services/gpuManager');
+const { DEFAULT_CATALOG } = require('./prices');
+
+/* ─── GPU Catalog helpers ─────────────────────────────────────────── */
+/**
+ * nvidia-smi で返ってくる名称と DEFAULT_CATALOG を照合する。
+ * 例: "NVIDIA GeForce RTX 4090" -> モデル "RTX 4090" にマッチ
+ */
+function matchCatalog(smiName, db) {
+    // 1) DB にカスタム価格があれば優先
+    const customRows = (() => {
+        try { return db.prepare('SELECT * FROM gpu_price_catalog WHERE enabled=1').all(); }
+        catch { return []; }
+    })();
+
+    const allModels = [
+        ...customRows.map(r => ({ model: r.model, price_per_hour: r.price_per_hour, source: 'db' })),
+        ...DEFAULT_CATALOG.map(d => ({ model: d.model, price_per_hour: d.default_price, source: 'default' })),
+    ];
+
+    // 部分一致で照合 (大文字小文字無視)
+    const upper = smiName.toUpperCase();
+    for (const entry of allModels) {
+        const m = entry.model.toUpperCase().replace('NVIDIA ', '').replace('GEFORCE ', '');
+        if (upper.includes(m) || upper.replace('NVIDIA ', '').replace('GEFORCE ', '').includes(m)) {
+            return { ...entry, supported: true };
+        }
+    }
+    return { model: null, price_per_hour: null, source: null, supported: false };
+}
+
+/**
+ * GET /api/providers/detect-gpu
+ * サーバー側で nvidia-smi を実行し、検出GPUとカタログ照合結果を返す
+ */
+router.get('/detect-gpu', authMiddleware, async (req, res) => {
+    try {
+        const gpus = await fetchGpuStats();
+        if (!gpus || gpus.length === 0) {
+            return res.json({
+                success: false,
+                error: 'nvidia-smi で GPU が検出されませんでした。NVIDIAドライバがインストールされているか確認してください。',
+                gpus: [],
+            });
+        }
+        const db = getDb();
+        const result = gpus.map(g => {
+            const catalog = matchCatalog(g.name, db);
+            return {
+                device_index: g.index,
+                name: g.name,
+                vram_total_mb: g.vramTotal,
+                vram_gb: Math.round(g.vramTotal / 1024),
+                driver_version: g.driverVersion,
+                temperature: g.temperature,
+                pstate: g.pstate,
+                // catalog match
+                supported: catalog.supported,
+                matched_model: catalog.model,
+                catalog_price: catalog.price_per_hour,
+                catalog_source: catalog.source,
+                reason: catalog.supported
+                    ? null
+                    : `"${g.name}" は現在サポートされているGPUリストに含まれていません。`,
+            };
+        });
+
+        res.json({ success: true, gpus: result, detected_count: result.length });
+    } catch (err) {
+        res.json({
+            success: false,
+            error: 'GPU検出に失敗しました: ' + err.message,
+            gpus: [],
+        });
+    }
+});
+
 
 /**
  * GET /api/providers - List all approved GPU providers
