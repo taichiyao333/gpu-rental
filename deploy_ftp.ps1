@@ -15,7 +15,12 @@ $LOCAL_PUBLIC = "F:\antigravity\gpu-platform\public"
 $CRED = New-Object System.Net.NetworkCredential($FTP_USER, $FTP_PASS)
 
 # Files to upload (relative to $LOCAL_PUBLIC)
-$UPLOAD_DIRS = @("landing", "portal", "admin", "workspace", "provider")
+$UPLOAD_DIRS = @("landing", "portal", "admin", "workspace", "provider", "mypage", "epsilon_mock")
+
+# Root-level files to upload directly (e.g. pricing.html, terms.html)
+$ROOT_FILES = @("pricing.html", "pricing.html")
+# Unique root html files in public/
+$ROOT_FILES = Get-ChildItem "$LOCAL_PUBLIC" -File -Filter "*.html" | Select-Object -ExpandProperty Name
 
 function Ensure-FtpDir($url) {
     try {
@@ -25,7 +30,8 @@ function Ensure-FtpDir($url) {
         $req.Timeout = 10000
         $req.GetResponse() | Out-Null
         Write-Host "  Created dir: $url"
-    } catch {
+    }
+    catch {
         # Already exists is fine (550 error)
     }
 }
@@ -53,28 +59,126 @@ if (Test-Path $tempDir) { Remove-Item $tempDir -Recurse -Force }
 Copy-Item $LOCAL_PUBLIC $tempDir -Recurse
 
 $jsFiles = Get-ChildItem "$tempDir" -Recurse -Filter "*.js" |
-    Where-Object { $_.FullName -notmatch "node_modules" }
+Where-Object { $_.FullName -notmatch "node_modules" }
 
 foreach ($f in $jsFiles) {
     $content = Get-Content $f.FullName -Raw -Encoding UTF8
     $changed = $false
 
-    # Replace relative API path with absolute backend URL
+    # Pattern 1: simple const API = '' or const API=""
     if ($content -match "const API = ''" -or $content -match 'const API=""') {
         $content = $content -replace "const API = ''", "const API = '$ApiBase'"
         $content = $content -replace 'const API=""', "const API = '$ApiBase'"
         $changed = $true
     }
-    # socket.io connection (relative -> absolute)
+
+    # Pattern 2: IIFE style – replace the return value of any existing https://...trycloudflare.com URL
+    # e.g.  return 'https://old-tunnel.trycloudflare.com';
+    if ($content -match "return 'https://[^']+\.trycloudflare\.com'") {
+        $content = $content -replace "return 'https://[^']+\.trycloudflare\.com'", "return '$ApiBase'"
+        $changed = $true
+    }
+
+    # Pattern 3: IIFE with empty return (local only, add production URL branch)
+    if ($content -match "return '';  // production") {
+        $content = $content -replace "return '';  // production", "return '$ApiBase'; // production"
+        $changed = $true
+    }
+
+    # Pattern 4: socket.io connection (relative -> absolute)
     if ($content -match "io\(\)") {
         $content = $content -replace "io\(\)", "io('$ApiBase')"
         $changed = $true
     }
+
     if ($changed) {
         Set-Content -Path $f.FullName -Value $content -Encoding UTF8
         Write-Host "  Patched: $($f.Name)"
     }
 }
+
+# ── Epsilon Callback PHP Relay: inject current tunnel URL ────────────────
+Write-Host "  Preparing epsilon_callback.php with Node URL: $ApiBase"
+$phpRelaySource = "$LOCAL_PUBLIC\epsilon_callback.php"
+$phpRelayDest = "$tempDir\epsilon_callback.php"
+if (Test-Path $phpRelaySource) {
+    $phpContent = [System.IO.File]::ReadAllText($phpRelaySource, [System.Text.Encoding]::UTF8)
+    $phpContent = $phpContent -replace "'__NODE_URL_PLACEHOLDER__'", "'$ApiBase'"
+    [System.IO.File]::WriteAllText($phpRelayDest, $phpContent, [System.Text.Encoding]::UTF8)
+    Write-Host "  epsilon_callback.php ready (NODE_URL injected)"
+}
+else {
+    Write-Host "  WARNING: epsilon_callback.php not found in public/"
+}
+
+# ── Password Gate: inject beta password into password-gate.js ───────────
+Write-Host "  Preparing password-gate.js..."
+$pgSource = "$LOCAL_PUBLIC\password-gate.js"
+$pgDest = "$tempDir\password-gate.js"
+# Load beta password from .env
+$envLines = Get-Content "F:\antigravity\gpu-platform\.env" -Encoding UTF8
+$betaPass = ($envLines | Where-Object { $_ -match '^SITE_BETA_PASSWORD' } | Select-Object -First 1) -replace '^SITE_BETA_PASSWORD\s*=\s*', ''
+$betaPass = $betaPass.Trim()
+
+if (-not $betaPass) {
+    Write-Host "  WARNING: SITE_BETA_PASSWORD not set — password gate DISABLED"
+    # Write empty gate that does nothing
+    '/* Password gate disabled */' | Set-Content $pgDest -Encoding UTF8
+}
+elseif (Test-Path $pgSource) {
+    $pgContent = [System.IO.File]::ReadAllText($pgSource, [System.Text.Encoding]::UTF8)
+    $pgContent = $pgContent -replace "'__BETA_PASSWORD__'", "'$betaPass'"
+    [System.IO.File]::WriteAllText($pgDest, $pgContent, [System.Text.Encoding]::UTF8)
+    Write-Host "  password-gate.js ready (password injected, length=$($betaPass.Length) chars)"
+}
+else {
+    Write-Host "  WARNING: password-gate.js not found in public/"
+}
+
+
+# ── Maintenance Check: inject into all non-admin HTML pages ──────────────
+Write-Host "  Injecting maintenance check script into HTML pages..."
+$maintSnippet = @"
+<script>
+/* GPURental Maintenance Check - auto-injected by deploy */
+(function(){
+  var p = location.pathname;
+  // Skip admin pages
+  if (p.indexOf('/admin') !== -1 || p.indexOf('maintenance') !== -1) return;
+  var apiBase = '$ApiBase';
+  fetch(apiBase + '/api/maintenance/status')
+    .then(function(r){ return r.json(); })
+    .then(function(d){
+      if (d && d.enabled) {
+        sessionStorage.setItem('maintMsg', d.message || '');
+        location.replace('/maintenance.html');
+      }
+    })
+    .catch(function(){});
+})();
+</script>
+"@
+
+
+$htmlFiles = Get-ChildItem "$tempDir" -Recurse -Include "*.html" |
+Where-Object { $_.Name -notmatch "admin|maintenance" }
+foreach ($f in $htmlFiles) {
+    $c = [System.IO.File]::ReadAllText($f.FullName, [System.Text.Encoding]::UTF8)
+
+    # Inject maintenance check
+    if ($c -notmatch "GPURental Maintenance Check") {
+        $c = $c -replace '<head>', "<head>`n$maintSnippet"
+    }
+
+    # Inject password gate (before </body> for reliable execution)
+    if ($betaPass -and ($c -notmatch "password-gate.js")) {
+        $pgSnippet = '<script src="/password-gate.js"></script>'
+        $c = $c -replace '</body>', "$pgSnippet`n</body>"
+    }
+
+    [System.IO.File]::WriteAllText($f.FullName, $c, [System.Text.Encoding]::UTF8)
+}
+
 
 # Create top-level index.html that redirects to /gpurental/landing/
 $indexHtml = @"
@@ -113,7 +217,59 @@ if (-not $DryRun) {
         Upload-File "$tempDir\index.html" "$baseUrl/index.html"
         Write-Host "  -> index.html"
         $totalFiles++
-    } catch { Write-Host "  FAIL index.html: $_"; $failFiles++ }
+    }
+    catch { Write-Host "  FAIL index.html: $_"; $failFiles++ }
+}
+
+# Upload epsilon_callback.php (GMO Epsilon PHP relay)
+$phpRelay = "$tempDir\epsilon_callback.php"
+if (Test-Path $phpRelay) {
+    if (-not $DryRun) {
+        try {
+            Upload-File $phpRelay "$baseUrl/epsilon_callback.php"
+            Write-Host "  -> epsilon_callback.php (GMO Epsilon relay)"
+            $totalFiles++
+        }
+        catch { Write-Host "  FAIL epsilon_callback.php: $_"; $failFiles++ }
+    }
+    else {
+        Write-Host "  [DRY] epsilon_callback.php"
+    }
+}
+
+# Upload password-gate.js (Beta Access Gate)
+$pgFile = "$tempDir\password-gate.js"
+if (Test-Path $pgFile) {
+    if (-not $DryRun) {
+        try {
+            Upload-File $pgFile "$baseUrl/password-gate.js"
+            Write-Host "  -> password-gate.js (beta access gate)"
+            $totalFiles++
+        }
+        catch { Write-Host "  FAIL password-gate.js: $_"; $failFiles++ }
+    }
+    else {
+        Write-Host "  [DRY] password-gate.js"
+    }
+}
+
+# Upload root-level HTML files (pricing.html etc.)
+foreach ($rf in $ROOT_FILES) {
+    $localFile = "$LOCAL_PUBLIC\$rf"
+    if (Test-Path $localFile) {
+        if (-not $DryRun) {
+            try {
+                Upload-File $localFile "$baseUrl/$rf"
+                Write-Host "  -> $rf"
+                $totalFiles++
+            }
+            catch { Write-Host "  FAIL $rf : $_"; $failFiles++ }
+        }
+        else {
+            $sz = [math]::Round((Get-Item $localFile).Length / 1KB, 1)
+            Write-Host "  [DRY] $rf ($sz KB)"
+        }
+    }
 }
 
 foreach ($dir in $UPLOAD_DIRS) {
@@ -128,12 +284,14 @@ foreach ($dir in $UPLOAD_DIRS) {
         
         if ($DryRun) {
             Write-Host "  [DRY] $dir/$rel ($fileSize KB)"
-        } else {
+        }
+        else {
             try {
                 Upload-File $file.FullName $remoteUrl
                 Write-Host "  -> $dir/$rel ($fileSize KB)"
                 $totalFiles++
-            } catch {
+            }
+            catch {
                 Write-Host "  FAIL $dir/$rel : $_"
                 $failFiles++
             }

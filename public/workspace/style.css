@@ -905,3 +905,37 @@ a {
     font-family: "JetBrains Mono", monospace;
     white-space: nowrap;
 }
+
+/* ===== MOBILE RESPONSIVE (workspace) ===== */
+@media (max-width: 768px) {
+    html, body { overflow: auto; height: auto; }
+    body { flex-direction: column; overflow: auto; }
+
+    .ws-layout { flex-direction: column; overflow: auto; height: auto; }
+    .ws-sidebar {
+        width: 100%;
+        height: 180px;
+        border-right: none;
+        border-bottom: 1px solid var(--border);
+        flex-shrink: 0;
+    }
+    .ws-monitor {
+        width: 100%;
+        height: auto;
+        border-left: none;
+        border-top: 1px solid var(--border);
+    }
+    .monitor-body { flex-direction: row; flex-wrap: wrap; gap: 0.5rem; padding: 0.5rem; }
+    .monitor-gauge { flex: 1; min-width: 120px; }
+    .monitor-divider { display: none; }
+
+    .ws-main { height: 400px; flex-shrink: 0; }
+    .render-layout { grid-template-columns: 1fr; }
+    .rform-row { grid-template-columns: 1fr; }
+    .ws-header { padding: 0 0.75rem; flex-wrap: wrap; height: auto; min-height: 48px; gap: 0.5rem; }
+    .ws-header-center { order: 3; flex-basis: 100%; justify-content: flex-start; }
+}
+@media (max-width: 480px) {
+    .ws-tabs .ws-tab { padding: 4px 8px; font-size: 0.72rem; }
+    .ws-cost { display: none; }
+}

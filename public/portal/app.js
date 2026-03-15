@@ -42,8 +42,19 @@ async function apiFetch(path, opts = {}) {
 }
 
 
+// JST共通フォーマット関数
+const JST = { timeZone: 'Asia/Tokyo' };
 function formatDate(d) {
-    return new Date(d).toLocaleString('ja-JP', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+    return new Date(d).toLocaleString('ja-JP', { ...JST, month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+}
+function fmtJp(d) {
+    return new Date(d).toLocaleString('ja-JP', { ...JST, year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' });
+}
+function fmtJpDate(d) {
+    return new Date(d).toLocaleDateString('ja-JP', { ...JST, year: 'numeric', month: '2-digit', day: '2-digit' });
+}
+function fmtJpTime(d) {
+    return new Date(d).toLocaleTimeString('ja-JP', { ...JST, hour: '2-digit', minute: '2-digit' });
 }
 
 function formatMins(mins) {
@@ -176,15 +187,175 @@ document.getElementById('registerForm').addEventListener('submit', async (e) => 
     }
 });
 
+/* ─── パスワードリセット ───────────────────────────────────────────── */
+
+// 「パスワードをお忘れの方」リンク
+document.getElementById('forgotPasswordLink').addEventListener('click', (e) => {
+    e.preventDefault();
+    document.getElementById('authOverlay').classList.add('hidden');
+    openResetModal();
+});
+
+// リセットモーダルを開く
+function openResetModal(showStep2 = false) {
+    const overlay = document.getElementById('resetOverlay');
+    overlay.classList.remove('hidden');
+    if (showStep2) {
+        document.getElementById('resetStep1').classList.add('hidden');
+        document.getElementById('resetStep2').classList.remove('hidden');
+    } else {
+        document.getElementById('resetStep1').classList.remove('hidden');
+        document.getElementById('resetStep2').classList.add('hidden');
+    }
+    // エラー・成功メッセージをクリア
+    ['forgotError', 'forgotSuccess', 'resetError', 'resetSuccess'].forEach(id => {
+        const el = document.getElementById(id);
+        el.classList.add('hidden');
+        el.textContent = '';
+    });
+}
+
+// リセットモーダルを閉じる
+document.getElementById('resetClose').addEventListener('click', () => {
+    document.getElementById('resetOverlay').classList.add('hidden');
+    // URLからreset_tokenを除去
+    const url = new URL(window.location.href);
+    url.searchParams.delete('reset_token');
+    window.history.replaceState({}, '', url.toString());
+});
+document.getElementById('resetOverlay').addEventListener('click', (e) => {
+    if (e.target === document.getElementById('resetOverlay')) {
+        document.getElementById('resetOverlay').classList.add('hidden');
+    }
+});
+document.getElementById('backToLoginLink').addEventListener('click', (e) => {
+    e.preventDefault();
+    document.getElementById('resetOverlay').classList.add('hidden');
+    openAuthModal('login');
+});
+
+// Step1: メールアドレスを送信してリセットメールを要求
+document.getElementById('forgotForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const errEl = document.getElementById('forgotError');
+    const successEl = document.getElementById('forgotSuccess');
+    const btn = document.getElementById('forgotSubmitBtn');
+    errEl.classList.add('hidden');
+    successEl.classList.add('hidden');
+    btn.disabled = true;
+    btn.textContent = '送信中...';
+    try {
+        const data = await apiFetch('/auth/forgot-password', {
+            method: 'POST',
+            body: JSON.stringify({ email: document.getElementById('forgotEmail').value }),
+        });
+        successEl.textContent = data.message || 'リセットメールを送信しました。メールをご確認ください。';
+        successEl.classList.remove('hidden');
+        btn.textContent = '送信済み ✓';
+    } catch (err) {
+        errEl.textContent = err.message;
+        errEl.classList.remove('hidden');
+        btn.disabled = false;
+        btn.textContent = 'リセットメールを送信';
+    }
+});
+
+// Step2: 新しいパスワードを設定
+document.getElementById('resetPasswordForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const errEl = document.getElementById('resetError');
+    const successEl = document.getElementById('resetSuccess');
+    errEl.classList.add('hidden');
+    successEl.classList.add('hidden');
+
+    const newPw = document.getElementById('newPassword').value;
+    const newPwConfirm = document.getElementById('newPasswordConfirm').value;
+    if (newPw !== newPwConfirm) {
+        errEl.textContent = 'パスワードが一致しません';
+        errEl.classList.remove('hidden');
+        return;
+    }
+
+    const urlParams = new URLSearchParams(window.location.search);
+    const resetToken = urlParams.get('reset_token');
+    if (!resetToken) {
+        errEl.textContent = 'リセットトークンが見つかりません。メールのリンクを再度クリックしてください。';
+        errEl.classList.remove('hidden');
+        return;
+    }
+
+    try {
+        const data = await apiFetch('/auth/reset-password', {
+            method: 'POST',
+            body: JSON.stringify({ token: resetToken, password: newPw }),
+        });
+        successEl.textContent = data.message || 'パスワードを変更しました！';
+        successEl.classList.remove('hidden');
+        // URLからトークンを除去
+        const url = new URL(window.location.href);
+        url.searchParams.delete('reset_token');
+        window.history.replaceState({}, '', url.toString());
+        // 3秒後にログインモーダルを表示
+        setTimeout(() => {
+            document.getElementById('resetOverlay').classList.add('hidden');
+            openAuthModal('login');
+            showToast('パスワードを変更しました。新しいパスワードでログインしてください。', 'success');
+        }, 2500);
+    } catch (err) {
+        errEl.textContent = err.message;
+        errEl.classList.remove('hidden');
+    }
+});
+
+// ページ読み込み時: URLに reset_token がある場合は自動でStep2を表示
+(function checkResetToken() {
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.has('reset_token')) {
+        // ページ読み込み後にモーダルを開く
+        window.addEventListener('DOMContentLoaded', () => openResetModal(true), { once: true });
+        if (document.readyState !== 'loading') openResetModal(true);
+    }
+})();
+
+
 /* ─── GPU List ──────────────────────────────────────────────────── */
 async function loadGpus() {
     try {
         const gpus = await apiFetch('/gpus');
         state.gpus = gpus;
         renderGpuGrid(gpus);
-        document.getElementById('statGpus').textContent = gpus.length;
+        // GPU登録数を更新（フォールバック）
+        const el = document.getElementById('statGpus');
+        if (el && el.textContent === '—') el.textContent = gpus.length;
     } catch (err) {
         console.error('Failed to load GPUs:', err);
+    }
+}
+
+/* ─── Hero Statistics (live counts) ─────────────────────────────── */
+function animateCount(el, target, suffix = '') {
+    if (!el) return;
+    const start = 0;
+    const duration = 800;
+    const startTime = performance.now();
+    const tick = (now) => {
+        const progress = Math.min((now - startTime) / duration, 1);
+        const eased = 1 - Math.pow(1 - progress, 3); // ease-out cubic
+        el.textContent = Math.round(start + (target - start) * eased) + suffix;
+        if (progress < 1) requestAnimationFrame(tick);
+    };
+    requestAnimationFrame(tick);
+}
+
+async function loadHeroStats() {
+    try {
+        const stats = await fetch(`${API}/api/gpus/stats`).then(r => r.json());
+        animateCount(document.getElementById('statGpus'), stats.gpu_total || 0);
+        animateCount(document.getElementById('statAvail'), stats.gpu_avail || 0);
+        animateCount(document.getElementById('statUsers'), stats.user_count || 0);
+    } catch (err) {
+        // フォールバック: loadGpus の結果を使う
+        console.warn('Stats API not available, using GPU list fallback');
     }
 }
 
@@ -633,8 +804,10 @@ document.getElementById('submitReserve').addEventListener('click', async () => {
     try {
         const toISO = dt => {
             const pad = n => String(n).padStart(2, '0');
-            return `${dt.getFullYear()}-${pad(dt.getMonth() + 1)}-${pad(dt.getDate())}T${pad(dt.getHours())}:00`;
+            // JST明示のISO8601形式で送信（+09:00）
+            return `${dt.getFullYear()}-${pad(dt.getMonth() + 1)}-${pad(dt.getDate())}T${pad(dt.getHours())}:00:00+09:00`;
         };
+
         const data = await apiFetch('/reservations', {
             method: 'POST',
             body: JSON.stringify({
@@ -721,15 +894,49 @@ async function startPod(reservationId) {
     }
 }
 
-async function cancelReservation(id) {
-    if (!confirm('この予約をキャンセルしますか？')) return;
+function cancelReservation(id) {
+    // 既存モーダルを削除
+    document.getElementById('cancelResModal')?.remove();
+
+    const modal = document.createElement('div');
+    modal.id = 'cancelResModal';
+    modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.75);backdrop-filter:blur(4px);display:flex;align-items:center;justify-content:center;z-index:9999';
+    modal.innerHTML = `
+        <div style="background:#13132a;border:1px solid rgba(255,71,87,.35);border-radius:16px;padding:1.75rem;width:400px;max-width:95vw;text-align:center">
+            <div style="font-size:2rem;margin-bottom:0.75rem">🗑️</div>
+            <h3 style="font-size:1rem;font-weight:800;margin-bottom:0.5rem;color:#e8e8f0">予約のキャンセル</h3>
+            <p style="color:#9898b8;font-size:0.85rem;margin-bottom:1.25rem">
+                この予約をキャンセルしますか？<br>
+                <span style="color:#ff4757;font-size:0.78rem">※ キャンセル後は取り消せません。</span>
+            </p>
+            <div style="display:flex;gap:0.75rem;justify-content:flex-end">
+                <button onclick="document.getElementById('cancelResModal').remove()"
+                    style="padding:8px 20px;border-radius:8px;border:1px solid #2a2a5a;background:transparent;color:#9898b8;cursor:pointer;font-size:0.85rem">
+                    戻る
+                </button>
+                <button id="confirmCancelResBtn"
+                    onclick="executeCancel(${id})"
+                    style="padding:8px 20px;border-radius:8px;border:none;background:linear-gradient(135deg,#ff4757,#ff6b6b);color:#fff;cursor:pointer;font-size:0.85rem;font-weight:700">
+                    キャンセルする
+                </button>
+            </div>
+        </div>`;
+    document.body.appendChild(modal);
+    modal.addEventListener('click', (e) => { if (e.target === modal) modal.remove(); });
+}
+
+async function executeCancel(id) {
+    const btn = document.getElementById('confirmCancelResBtn');
+    if (btn) { btn.disabled = true; btn.textContent = '処理中...'; }
     try {
         await apiFetch(`/reservations/${id}`, { method: 'DELETE' });
+        document.getElementById('cancelResModal')?.remove();
         showToast('予約をキャンセルしました', 'info');
         loadMyReservations();
         loadGpus();
     } catch (err) {
-        showToast(err.message, 'error');
+        document.getElementById('cancelResModal')?.remove();
+        showToast(err.message || 'キャンセルに失敗しました', 'error');
     }
 }
 
@@ -868,38 +1075,107 @@ function openAuthFromGuide() {
     document.getElementById('authOverlay').classList.remove('hidden');
 }
 
-// GPU自動検出（APIから取得）
+// GPU自動検出（WebGL でローカルPC のGPU取得）
 async function checkGpuLocal() {
     const btn = document.querySelector('.gs-check-btn');
     const result = document.getElementById('gpuDetectResult');
     btn.textContent = '🔍 検出中...';
     btn.disabled = true;
     result.classList.add('hidden');
+
     try {
-        const gpus = await apiFetch('/gpus');
-        result.classList.remove('hidden');
-        if (gpus && gpus.length > 0) {
-            const g = gpus[0];
-            result.innerHTML = `✅ <strong>GPU検出成功！</strong><br>
-<strong>GPU:</strong> ${g.name}<br>
-<strong>VRAM:</strong> ${Math.round((g.vram_total || 0) / 1024)} GB<br>
-<strong>ドライバー:</strong> ${g.driver_version || '不明'}<br>
-<strong>ステータス:</strong> ${g.status}<br>
-<br>
-→ このシステムのGPUはすでに登録済みです。<br>
-あなた自身のPCのGPUを登録するには、Step 3へ進んでください。`;
-            // チェック項目をチェック済みに
-            document.getElementById('chkGpu').querySelector('.gs-check-icon').textContent = '✅';
-        } else {
-            result.innerHTML = `⬜ プラットフォームに接続中のGPUは検出されませんでした。<br>
-→ 自分のPCのNVIDIA GPUを <code>nvidia-smi</code> で確認してから Step 3に進んでください。`;
+        // ── WebGL でブラウザ（ローカルPC）のGPUレンダラー名を取得 ──
+        const canvas = document.createElement('canvas');
+        const gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl');
+        let rendererRaw = '';
+        if (gl) {
+            const dbg = gl.getExtension('WEBGL_debug_renderer_info');
+            rendererRaw = dbg
+                ? gl.getParameter(dbg.UNMASKED_RENDERER_WEBGL)
+                : gl.getParameter(gl.RENDERER);
         }
-    } catch {
-        result.innerHTML = `⚠️ サーバーに接続できません。localhost:3000 が起動しているか確認してください。`;
+
+        result.classList.remove('hidden');
+
+        if (!gl || !rendererRaw) {
+            result.innerHTML = `❌ <strong>WebGL が無効です</strong><br>
+<span style="font-size:0.82rem;color:var(--text3)">WebGLを有効にするか、対応ブラウザ（Chrome / Edge）をお使いください。</span>`;
+            return;
+        }
+
+        // ── GPU名を整形（"ANGLE (NVIDIA, NVIDIA GeForce RTX xxxx ...)" → 短縮） ──
+        let gpuName = rendererRaw;
+        const angleMatch = rendererRaw.match(/ANGLE\s*\([^,]+,\s*([^,\(]+)/i);
+        if (angleMatch) gpuName = angleMatch[1].trim();
+        // 末尾の不要な文字列を除去
+        gpuName = gpuName.replace(/\s*\(.*\)$/, '').replace(/Direct3D.*$/i, '').trim();
+
+        // ── GPUカタログと照合 ──
+        const GPU_CATALOG = [
+            { keywords: ['H100'], name: 'NVIDIA H100', vram: 80, price: 1800 },
+            { keywords: ['A100'], name: 'NVIDIA A100', vram: 80, price: 1500 },
+            { keywords: ['A6000'], name: 'NVIDIA RTX A6000', vram: 48, price: 1200 },
+            { keywords: ['4090'], name: 'NVIDIA RTX 4090', vram: 24, price: 1200 },
+            { keywords: ['4080'], name: 'NVIDIA RTX 4080', vram: 16, price: 900 },
+            { keywords: ['4070'], name: 'NVIDIA RTX 4070', vram: 12, price: 700 },
+            { keywords: ['4060'], name: 'NVIDIA RTX 4060', vram: 8, price: 500 },
+            { keywords: ['A4500'], name: 'NVIDIA RTX A4500', vram: 20, price: 800 },
+            { keywords: ['A4000'], name: 'NVIDIA RTX A4000', vram: 16, price: 600 },
+            { keywords: ['3090'], name: 'NVIDIA RTX 3090', vram: 24, price: 900 },
+            { keywords: ['3080'], name: 'NVIDIA RTX 3080', vram: 10, price: 700 },
+            { keywords: ['3070'], name: 'NVIDIA RTX 3070', vram: 8, price: 550 },
+            { keywords: ['3060'], name: 'NVIDIA RTX 3060', vram: 12, price: 400 },
+            { keywords: ['2080 Ti', '2080Ti'], name: 'NVIDIA RTX 2080 Ti', vram: 11, price: 500 },
+            { keywords: ['2080'], name: 'NVIDIA RTX 2080', vram: 8, price: 400 },
+            { keywords: ['2070'], name: 'NVIDIA RTX 2070', vram: 8, price: 350 },
+            { keywords: ['1080 Ti', '1080Ti'], name: 'NVIDIA GTX 1080 Ti', vram: 11, price: 350 },
+            { keywords: ['1080'], name: 'NVIDIA GTX 1080', vram: 8, price: 280 },
+            { keywords: ['1070'], name: 'NVIDIA GTX 1070', vram: 8, price: 230 },
+            { keywords: ['RX 7900', 'RX7900'], name: 'AMD RX 7900 XTX', vram: 24, price: 800 },
+            { keywords: ['RX 6900', 'RX6900'], name: 'AMD RX 6900 XT', vram: 16, price: 600 },
+            { keywords: ['RX 6800', 'RX6800'], name: 'AMD RX 6800 XT', vram: 16, price: 500 },
+        ];
+
+        const matchedEntry = GPU_CATALOG.find(entry =>
+            entry.keywords.some(kw => gpuName.toUpperCase().includes(kw.toUpperCase()))
+        );
+
+        const supported = !!matchedEntry;
+        const displayName = matchedEntry ? matchedEntry.name : gpuName;
+        const vramText = matchedEntry ? `${matchedEntry.vram} GB` : '—';
+        const priceText = matchedEntry ? `¥${matchedEntry.price.toLocaleString()}/時間` : '—';
+
+        const badge = supported
+            ? `<span style="background:rgba(0,229,160,.15);color:var(--success);font-size:0.7rem;padding:1px 7px;border-radius:4px;font-weight:700">✅ 対応済み</span>`
+            : `<span style="background:rgba(255,179,0,.15);color:var(--warning);font-size:0.7rem;padding:1px 7px;border-radius:4px;font-weight:700">⚠️ 要確認</span>`;
+
+        result.innerHTML = `✅ <strong>ローカルPCのGPUを検出しました！</strong><br><br>
+<div style="background:rgba(0,229,160,.06);border:1px solid rgba(0,229,160,.2);border-radius:8px;padding:0.75rem;margin-bottom:0.5rem">
+  <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px"><strong>${displayName}</strong>${badge}</div>
+  <div style="font-size:0.82rem;color:var(--text2)">
+    ${matchedEntry ? `<strong>VRAM:</strong> ${vramText} &nbsp; <strong>推奨単価:</strong> ${priceText}` : ''}
+    <div style="margin-top:4px;font-size:0.75rem;color:var(--text3)">検出値: ${gpuName}</div>
+  </div>
+</div>
+${supported
+                ? `→ Step 3へ進み、上記のGPUを登録してください。`
+                : `⚠️ カタログに見つかりませんでしたが、手動で登録できます。`}`;
+
+        // チェックリストをチェック済みに
+        if (supported) {
+            const chk = document.getElementById('chkGpu');
+            if (chk) chk.querySelector('.gs-check-icon').textContent = '✅';
+        }
+
+    } catch (e) {
+        result.classList.remove('hidden');
+        result.innerHTML = `⚠️ GPU検出に失敗しました: ${e.message}`;
     }
     btn.textContent = '🔍 再検出する';
     btn.disabled = false;
 }
+
+
 
 // 月収シミュレーター
 function calcEarnings() {
@@ -1359,4 +1635,14 @@ document.addEventListener('DOMContentLoaded', () => {
         nav.insertBefore(balSpan, nav.firstChild);
     }
     loadPointBalance();
+
+    // ── ヒーロー統計を動的ロード ──
+    loadHeroStats();
+    loadGpus();
+    // 30秒ごとに自動更新
+    setInterval(() => {
+        loadHeroStats();
+        loadGpus();
+    }, 30000);
 });
+

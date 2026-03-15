@@ -241,7 +241,8 @@ function updateMonitor(s) {
     document.getElementById('monPstate').textContent = s.pstate || '-';
 
     // Chart data
-    const now = new Date().toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+    const now = new Date().toLocaleTimeString('ja-JP', { timeZone: 'Asia/Tokyo', hour: '2-digit', minute: '2-digit', second: '2-digit' });
+
     gpuChartData.labels.push(now);
     gpuChartData.gpu.push(s.gpuUtil);
     gpuChartData.vram.push(vramPct);
@@ -378,40 +379,76 @@ async function uploadFile(file) {
 }
 
 /* ─── Tabs ──────────────────────────────────────────────────────── */
-document.getElementById('tabTerminal').addEventListener('click', () => {
-    document.getElementById('tabTerminal').classList.add('active');
-    document.getElementById('tabRender').classList.remove('active');
-    document.getElementById('terminalPane').classList.remove('hidden');
-    document.getElementById('renderPane').classList.add('hidden');
-    if (term) term.focus();
-});
-document.getElementById('tabRender').addEventListener('click', () => {
-    document.getElementById('tabRender').classList.add('active');
-    document.getElementById('tabTerminal').classList.remove('active');
-    document.getElementById('renderPane').classList.remove('hidden');
-    document.getElementById('terminalPane').classList.add('hidden');
-});
+// ※ タブ切り替えは DOMContentLoaded 内の汎用ロジックで処理（重複登録を防ぐため削除）
 
 /* ─── Stop Pod ──────────────────────────────────────────────────── */
-document.getElementById('btnStopPod').addEventListener('click', async () => {
-    if (!confirm('セッションを終了しますか？\n未保存のデータは失われる可能性があります。')) return;
+document.getElementById('btnStopPod').addEventListener('click', () => {
+    openStopSessionModal();
+});
+
+function openStopSessionModal() {
+    document.getElementById('stopSessionModal')?.remove();
+    const modal = document.createElement('div');
+    modal.id = 'stopSessionModal';
+    modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.8);backdrop-filter:blur(6px);display:flex;align-items:center;justify-content:center;z-index:9999';
+    modal.innerHTML = `
+        <div style="background:#13132a;border:1px solid rgba(255,71,87,.4);border-radius:18px;padding:2rem;width:440px;max-width:95vw;text-align:center">
+            <div style="font-size:2.5rem;margin-bottom:0.75rem">🛑</div>
+            <h3 style="font-size:1.05rem;font-weight:800;margin-bottom:0.5rem;color:#e8e8f0">セッションを終了しますか？</h3>
+            <p style="color:#9898b8;font-size:0.85rem;margin-bottom:1.5rem;line-height:1.6">
+                未保存のデータは失われる可能性があります。<br>
+                <span style="color:#ffa502;font-size:0.8rem">⏸ 一時停止：予約時間内は再接続できます。</span><br>
+                <span style="color:#ff4757;font-size:0.8rem">⏹ 完全終了：セッションを完全に終了します。</span>
+            </p>
+            <div style="display:flex;gap:0.75rem;justify-content:center;flex-wrap:wrap">
+                <button onclick="document.getElementById('stopSessionModal').remove()"
+                    style="padding:9px 20px;border-radius:9px;border:1px solid #2a2a5a;background:transparent;color:#9898b8;cursor:pointer;font-size:0.85rem">
+                    戻る
+                </button>
+                <button onclick="doStopPod(false)"
+                    style="padding:9px 20px;border-radius:9px;border:1px solid rgba(255,165,2,.4);background:rgba(255,165,2,.12);color:#ffa502;cursor:pointer;font-size:0.85rem;font-weight:700">
+                    ⏸ 一時停止
+                </button>
+                <button onclick="doStopPod(true)"
+                    style="padding:9px 20px;border-radius:9px;border:none;background:linear-gradient(135deg,#ff4757,#ff6b6b);color:#fff;cursor:pointer;font-size:0.85rem;font-weight:700">
+                    ⏹ 完全終了
+                </button>
+            </div>
+        </div>`;
+    document.body.appendChild(modal);
+    modal.addEventListener('click', (e) => { if (e.target === modal) modal.remove(); });
+}
+
+async function doStopPod(force) {
+    document.getElementById('stopSessionModal')?.remove();
     try {
-        await apiFetch(`/pods/${pod.id}/stop`, { method: 'POST' });
+        await apiFetch(`/pods/${pod.id}/stop`, {
+            method: 'POST',
+            body: JSON.stringify({ force }),
+        });
         clearInterval(timerInterval);
         clearInterval(costInterval);
-        alert('セッションを終了しました。ありがとうございました。');
-        window.location.href = '/portal/';
+        if (force) {
+            showNotif('セッションを終了しました。ありがとうございました。', 'success');
+            setTimeout(() => { window.location.href = '/portal/'; }, 1500);
+        } else {
+            showNotif('⏸ 一時停止しました。予約時間内は再接続できます。', 'info');
+            setTimeout(() => { window.location.href = '/portal/'; }, 1500);
+        }
     } catch (err) {
-        alert('エラー: ' + err.message);
+        showNotif('エラー: ' + err.message, 'error');
     }
-});
+}
+
 
 /* ─── Render ────────────────────────────────────────────────────── */
 document.getElementById('btnStartRender').addEventListener('click', () => {
     const input = document.getElementById('renderInput').value;
-    if (!input) { alert('ファイルを選択してください'); return; }
+    if (!input) { showNotif('入力ファイルを選択してください', 'error'); return; }
+    const outputDir = document.getElementById('renderOutput').value.trim() || '/outputs/';
     const settings = {
         input,
+        outputDir,
         format: document.getElementById('renderFormat').value,
         resolution: document.getElementById('renderRes').value,
         fps: document.getElementById('renderFps').value,
@@ -424,9 +461,259 @@ document.getElementById('btnStartRender').addEventListener('click', () => {
     };
     addToQueue(settings);
 });
+
+/* ─── レンダリング入力ファイル選択 ─────────────────────────────── */
 document.getElementById('btnSelectRenderFile').addEventListener('click', () => {
-    showNotif('ファイルツリーからファイルを選択してください', 'info');
+    openFilePickerModal();
 });
+
+/* ─── 出力先フォルダ選択 ────────────────────────────────────────── */
+document.getElementById('btnSelectOutputDir').addEventListener('click', () => {
+    openOutputDirPickerModal();
+});
+
+function openOutputDirPickerModal() {
+    document.getElementById('outDirModal')?.remove();
+    const modal = document.createElement('div');
+    modal.id = 'outDirModal';
+    modal.style.cssText = 'position:fixed;inset:0;z-index:9999;background:rgba(5,5,15,0.85);display:flex;align-items:center;justify-content:center';
+    modal.innerHTML = `
+        <div style="background:#12122a;border:1px solid rgba(108,71,255,0.35);border-radius:14px;width:520px;max-width:95vw;max-height:80vh;display:flex;flex-direction:column;overflow:hidden">
+            <div style="padding:16px 20px;border-bottom:1px solid rgba(255,255,255,0.07);display:flex;align-items:center;justify-content:space-between">
+                <span style="font-weight:600;font-size:0.95rem">📁 出力先フォルダを選択</span>
+                <button id="odClose" style="background:none;border:none;color:#888;font-size:1.2rem;cursor:pointer;line-height:1">✕</button>
+            </div>
+            <div style="padding:10px 20px 6px;font-size:0.78rem;color:#666">標準フォルダまたはワークスペース内のフォルダ</div>
+            <div id="odDirList" style="flex:1;overflow-y:auto;padding:0 12px 12px">
+                <div style="color:#888;font-size:0.83rem;padding:16px 8px">読み込み中...</div>
+            </div>
+            <div style="padding:12px 20px;border-top:1px solid rgba(255,255,255,0.07)">
+                <div style="font-size:0.78rem;color:#888;margin-bottom:6px">手動入力または新規フォルダを作成:</div>
+                <div style="display:flex;gap:8px">
+                    <input id="odManualInput" placeholder="例: /outputs/my_project/"
+                        style="flex:1;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.12);border-radius:7px;color:#eee;padding:8px 12px;font-size:0.82rem"/>
+                    <button id="odMkdir" style="padding:8px 12px;background:rgba(108,71,255,0.2);border:1px solid rgba(108,71,255,0.4);border-radius:7px;color:#a78bfa;font-size:0.8rem;cursor:pointer;white-space:nowrap">📂 作成</button>
+                    <button id="odConfirm" style="padding:8px 16px;background:linear-gradient(135deg,#6c47ff,#8b5cf6);border:none;border-radius:7px;color:#fff;font-weight:600;font-size:0.83rem;cursor:pointer">確定</button>
+                </div>
+            </div>
+        </div>`;
+    document.body.appendChild(modal);
+    modal.addEventListener('click', (e) => { if (e.target === modal) modal.remove(); });
+    document.getElementById('odClose').addEventListener('click', () => modal.remove());
+
+    document.getElementById('odConfirm').addEventListener('click', () => {
+        const val = document.getElementById('odManualInput').value.trim();
+        if (val) { setOutputDir(val); modal.remove(); }
+        else showNotif('フォルダを選択またはパスを入力してください', 'info');
+    });
+
+    document.getElementById('odMkdir').addEventListener('click', async () => {
+        const dirPath = document.getElementById('odManualInput').value.trim();
+        if (!dirPath || !pod?.id) return;
+        try {
+            await apiFetch(`/files/${pod.id}/mkdir`, { method: 'POST', body: JSON.stringify({ dirPath }) });
+            showNotif(`📁 フォルダ作成: ${dirPath}`, 'success');
+            loadOutputDirList();
+        } catch (e) { showNotif('フォルダ作成失敗: ' + e.message, 'error'); }
+    });
+
+    loadOutputDirList();
+}
+
+async function loadOutputDirList() {
+    const listEl = document.getElementById('odDirList');
+    if (!listEl) return;
+    const candidates = [
+        { name: '/outputs/', label: '標準出力先' },
+        { name: '/render_out/', label: 'レンダリング出力' },
+        { name: '/workspace/', label: 'ワークスペース' },
+        { name: '/uploads/', label: 'アップロード' },
+    ];
+    let dirs = [...candidates];
+    if (pod?.id) {
+        try {
+            const files = await apiFetch(`/files/${pod.id}`);
+            const items = Array.isArray(files) ? files : [];
+            items.filter(f => f.type === 'dir').forEach(f => {
+                dirs.push({ name: (f.path || f.name) + '/', label: '' });
+            });
+        } catch (_) { }
+    }
+    listEl.innerHTML = '';
+    dirs.forEach(d => {
+        const el = document.createElement('div');
+        el.style.cssText = 'display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:7px;cursor:pointer;transition:background 0.15s';
+        el.innerHTML = `<span style="font-size:1rem">📁</span>
+            <span style="font-size:0.83rem;color:${d.label ? '#a78bfa' : '#e8e8f0'};flex:1">${d.name}</span>
+            ${d.label ? `<span style="font-size:0.68rem;color:#555;background:rgba(108,71,255,0.15);padding:1px 6px;border-radius:4px">${d.label}</span>` : ''}`;
+        el.addEventListener('mouseenter', () => el.style.background = 'rgba(108,71,255,0.18)');
+        el.addEventListener('mouseleave', () => el.style.background = 'transparent');
+        el.addEventListener('click', () => {
+            setOutputDir(d.name);
+            document.getElementById('odManualInput').value = d.name;
+            listEl.querySelectorAll('[data-sel]').forEach(x => { x.removeAttribute('data-sel'); x.style.background = 'transparent'; });
+            el.setAttribute('data-sel', '1');
+            el.style.background = 'rgba(108,71,255,0.3)';
+        });
+        listEl.appendChild(el);
+    });
+}
+
+function setOutputDir(path) {
+    const dir = path.endsWith('/') ? path : path + '/';
+    const inp = document.getElementById('renderOutput');
+    if (inp) {
+        inp.value = dir;
+        inp.style.borderColor = 'rgba(0,229,160,0.5)';
+        setTimeout(() => { if (inp) inp.style.borderColor = ''; }, 2000);
+    }
+    showNotif(`📁 出力先設定: ${dir}`, 'success');
+}
+
+/* ─── ファイルピッカーモーダル ──────────────────────────────────── */
+function openFilePickerModal() {
+    let modal = document.getElementById('filePickerModal');
+    if (!modal) {
+        modal = document.createElement('div');
+        modal.id = 'filePickerModal';
+        modal.style.cssText = [
+            'position:fixed', 'inset:0', 'z-index:9999',
+            'background:rgba(5,5,15,0.85)', 'display:flex',
+            'align-items:center', 'justify-content:center',
+        ].join(';');
+        modal.innerHTML = `
+            <div style="background:#12122a;border:1px solid rgba(108,71,255,0.35);border-radius:14px;
+                        width:520px;max-width:95vw;max-height:80vh;display:flex;flex-direction:column;overflow:hidden">
+                <div style="padding:16px 20px;border-bottom:1px solid rgba(255,255,255,0.07);
+                            display:flex;align-items:center;justify-content:space-between">
+                    <span style="font-weight:600;font-size:0.95rem">📂 入力ファイルを選択</span>
+                    <button id="fpClose" style="background:none;border:none;color:#888;font-size:1.2rem;
+                                               cursor:pointer;line-height:1">✕</button>
+                </div>
+                <div style="padding:12px 20px;border-bottom:1px solid rgba(255,255,255,0.07)">
+                    <button id="fpUploadBtn" style="display:inline-flex;align-items:center;gap:6px;padding:7px 14px;
+                        background:rgba(108,71,255,0.15);border:1px solid rgba(108,71,255,0.4);
+                        border-radius:7px;color:#a78bfa;font-size:0.83rem;cursor:pointer">
+                        ⬆ PCからファイルをアップロード
+                    </button>
+                    <input type="file" id="fpFileInput" style="display:none"
+                           accept="video/*,image/*,.mp4,.mov,.avi,.mkv,.webm,.png,.jpg,.jpeg,.tif,.tiff,.exr,.dpx">
+                </div>
+                <div style="padding:10px 20px 6px;font-size:0.78rem;color:#666">ワークスペース内のファイル</div>
+                <div id="fpFileList" style="flex:1;overflow-y:auto;padding:0 12px 12px">
+                    <div style="color:#888;font-size:0.83rem;padding:16px 8px">読み込み中...</div>
+                </div>
+                <div style="padding:12px 20px;border-top:1px solid rgba(255,255,255,0.07);display:flex;gap:10px">
+                    <input id="fpManualInput" placeholder="または手動でパスを入力例: /workspace/input.mp4"
+                        style="flex:1;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.12);
+                               border-radius:7px;color:#eee;padding:8px 12px;font-size:0.82rem"/>
+                    <button id="fpConfirm" style="padding:8px 16px;background:linear-gradient(135deg,#6c47ff,#8b5cf6);
+                        border:none;border-radius:7px;color:#fff;font-weight:600;font-size:0.83rem;cursor:pointer">確定</button>
+                </div>
+            </div>`;
+        document.body.appendChild(modal);
+
+        modal.addEventListener('click', (e) => { if (e.target === modal) closeFilePickerModal(); });
+        document.getElementById('fpClose').addEventListener('click', closeFilePickerModal);
+        document.getElementById('fpConfirm').addEventListener('click', () => {
+            const manual = document.getElementById('fpManualInput').value.trim();
+            if (manual) { setRenderInput(manual); closeFilePickerModal(); }
+            else showNotif('ファイルを選択またはパスを入力してください', 'info');
+        });
+        document.getElementById('fpUploadBtn').addEventListener('click', () => {
+            document.getElementById('fpFileInput').click();
+        });
+        document.getElementById('fpFileInput').addEventListener('change', async (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+            showNotif(`📤 アップロード中: ${file.name}`, 'info');
+            try {
+                const formData = new FormData();
+                formData.append('file', file);
+                const resp = await fetch(`${API}/api/files/${pod.id}/upload`, {
+                    method: 'POST',
+                    headers: { Authorization: `Bearer ${token}` },
+                    body: formData,
+                });
+                if (!resp.ok) throw new Error((await resp.json()).error);
+                const data = await resp.json();
+                const uploadedPath = data.path || `/workspace/${file.name}`;
+                showNotif(`✅ アップロード完了: ${file.name}`, 'success');
+                setRenderInput(uploadedPath);
+                closeFilePickerModal();
+                loadFiles();
+            } catch (err) {
+                showNotif(`アップロード失敗: ${err.message}`, 'error');
+            }
+        });
+    }
+
+    modal.style.display = 'flex';
+    loadFileListForPicker();
+}
+
+
+
+async function loadFileListForPicker() {
+    const listEl = document.getElementById('fpFileList');
+    if (!listEl) return;
+    listEl.innerHTML = '<div style="color:#888;font-size:0.83rem;padding:16px 8px">読み込み中...</div>';
+    try {
+        if (!pod || !pod.id) {
+            listEl.innerHTML = '<div style="color:#f87171;font-size:0.83rem;padding:16px 8px">アクティブなPodがありません。<br>手動でファイルパスを入力してください。</div>';
+            return;
+        }
+        const files = await apiFetch(`/files/${pod.id}`);
+        const items = Array.isArray(files) ? files : (files.files || files.items || []);
+        if (!items.length) {
+            listEl.innerHTML = '<div style="color:#666;font-size:0.83rem;padding:16px 8px">ファイルがありません。上のボタンからアップロードしてください。</div>';
+            return;
+        }
+        // 動画・画像のみフィルタ
+        const videoExts = /\.(mp4|mov|avi|mkv|webm|png|jpg|jpeg|tif|tiff|exr|dpx|mxf|r3d)$/i;
+        listEl.innerHTML = '';
+        items.forEach(f => {
+            const name = f.name || f.path || String(f);
+            const fullPath = f.fullPath || f.path || name;
+            const isMedia = videoExts.test(name);
+            const el = document.createElement('div');
+            el.style.cssText = 'display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:7px;cursor:pointer;transition:background 0.15s';
+            el.innerHTML = `<span style="font-size:1rem">${isMedia ? '🎬' : '📄'}</span>
+                            <span style="font-size:0.83rem;color:${isMedia ? '#e8e8f0' : '#888'};flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${name}</span>
+                            <span style="font-size:0.72rem;color:#555">${f.size ? Math.round(f.size / 1024 / 1024 * 10) / 10 + 'MB' : ''}</span>`;
+            el.addEventListener('mouseenter', () => el.style.background = 'rgba(108,71,255,0.18)');
+            el.addEventListener('mouseleave', () => el.style.background = 'transparent');
+            el.addEventListener('click', () => {
+                setRenderInput(fullPath);
+                document.getElementById('fpManualInput').value = fullPath;
+                // ハイライト
+                listEl.querySelectorAll('div[data-selected]').forEach(d => d.removeAttribute('data-selected'));
+                el.setAttribute('data-selected', '1');
+                el.style.background = 'rgba(108,71,255,0.3)';
+            });
+            listEl.appendChild(el);
+        });
+    } catch (err) {
+        listEl.innerHTML = `<div style="color:#f87171;font-size:0.83rem;padding:16px 8px">ファイル一覧の取得に失敗しました: ${err.message}<br>手動でパスを入力してください。</div>`;
+    }
+}
+
+
+
+function setRenderInput(path) {
+    const inp = document.getElementById('renderInput');
+    if (inp) {
+        inp.value = path;
+        inp.style.borderColor = 'rgba(0,229,160,0.5)';
+        setTimeout(() => { if (inp) inp.style.borderColor = ''; }, 2000);
+    }
+    showNotif(`✅ 入力ファイル設定: ${path.split('/').pop() || path}`, 'success');
+}
+
+function closeFilePickerModal() {
+    const modal = document.getElementById('filePickerModal');
+    if (modal) modal.style.display = 'none';
+}
 
 function addToQueue(settings) {
     const queue = document.getElementById('renderQueue');
@@ -538,6 +825,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (b) b.classList.toggle('active', t.btn === btn);
                 if (p) p.classList.toggle('hidden', t.pane !== pane);
             });
+            // ターミナルタブに戻ったときフォーカス
+            if (btn === 'tabTerminal' && term) setTimeout(() => term.focus(), 50);
             // 接続情報タブを開いた時にSSH情報をセット
             if (btn === 'tabConnect') initConnectTab();
         });

@@ -197,6 +197,15 @@ jupyter lab --ip=0.0.0.0 --port=8888 --no-browser --NotebookApp.token='gpurental
                                 </div>
                             </div>
                             <div class="rform-group">
+                                <label>出力先フォルダ</label>
+                                <div class="file-select-row">
+                                    <input type="text" id="renderOutput" placeholder="/outputs/" value="/outputs/" />
+                                    <button class="btn btn-ghost btn-sm" id="btnSelectOutputDir">選択</button>
+                                </div>
+                                <div style="font-size:0.72rem;color:var(--text3);margin-top:3px">出力ファイル名は自動生成されます（例:
+                                    output_20260307_230000.mp4）</div>
+                            </div>
+                            <div class="rform-group">
                                 <label>出力フォーマット</label>
                                 <select id="renderFormat">
                                     <option value="h264">H.264 (MP4)</option>
@@ -342,6 +351,24 @@ jupyter lab --ip=0.0.0.0 --port=8888 --no-browser --NotebookApp.token='gpurental
         </div>
         <span id="uploadPct">0%</span>
     </div>
+
+    <!-- FOOTER -->
+    <footer
+        style="border-top:1px solid rgba(255,255,255,.07);padding:1.2rem 2rem;text-align:center;font-size:0.75rem;color:rgba(255,255,255,.3);flex-shrink:0">
+        <div
+            style="display:flex;justify-content:center;align-items:center;gap:1.5rem;flex-wrap:wrap;margin-bottom:.5rem">
+            <a href="/landing/" style="color:rgba(255,255,255,.45);text-decoration:none"
+                onmouseover="this.style.color='#fff'" onmouseout="this.style.color='rgba(255,255,255,.45)'">🏠
+                トップページ</a>
+            <a href="/portal/" style="color:rgba(255,255,255,.45);text-decoration:none"
+                onmouseover="this.style.color='#fff'" onmouseout="this.style.color='rgba(255,255,255,.45)'">ポータル</a>
+            <a href="/provider/" style="color:rgba(255,255,255,.45);text-decoration:none"
+                onmouseover="this.style.color='#fff'" onmouseout="this.style.color='rgba(255,255,255,.45)'">プロバイダー</a>
+            <a href="/landing/terms.html" style="color:rgba(255,255,255,.45);text-decoration:none"
+                onmouseover="this.style.color='#fff'" onmouseout="this.style.color='rgba(255,255,255,.45)'">利用規約</a>
+        </div>
+        <span>© 2026 GPURental by METADATALAB.INC.</span>
+    </footer>
 
     <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/xterm@5.3.0/lib/xterm.min.js"></script>

@@ -23,16 +23,34 @@ function matchCatalog(smiName, db) {
         ...DEFAULT_CATALOG.map(d => ({ model: d.model, price_per_hour: d.default_price, source: 'default' })),
     ];
 
-    // 部分一致で照合 (大文字小文字無視)
-    const upper = smiName.toUpperCase();
+    // nvidia-smi の名称を正規化（NVIDIA / GeForce / NVIDIA GeForce 除去）
+    const normalize = (s) => s.toUpperCase()
+        .replace(/\bNVIDIA\s+GEFORCE\b/g, '')
+        .replace(/\bNVIDIA\b/g, '')
+        .replace(/\bGEFORCE\b/g, '')
+        .trim();
+
+    const normSmi = normalize(smiName);
+
+    // Step1: 完全一致（正規化後）
     for (const entry of allModels) {
-        const m = entry.model.toUpperCase().replace('NVIDIA ', '').replace('GEFORCE ', '');
-        if (upper.includes(m) || upper.replace('NVIDIA ', '').replace('GEFORCE ', '').includes(m)) {
+        if (normalize(entry.model) === normSmi) {
             return { ...entry, supported: true };
         }
     }
+
+    // Step2: 部分一致 — 長いモデル名から先にチェック（短い名前の誤マッチ防止）
+    const sortedModels = [...allModels].sort((a, b) => b.model.length - a.model.length);
+    for (const entry of sortedModels) {
+        const m = normalize(entry.model);
+        if (normSmi === m || normSmi.includes(m) && m.length >= 5) {
+            return { ...entry, supported: true };
+        }
+    }
+
     return { model: null, price_per_hour: null, source: null, supported: false };
 }
+
 
 /**
  * GET /api/providers/detect-gpu

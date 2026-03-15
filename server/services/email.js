@@ -303,13 +303,108 @@ function mailPayoutRequest({ to, username, amount, account, payout }) {
   });
 }
 
+/**
+ * パスワードリセットメール
+ */
+function mailPasswordReset({ to, username, token }) {
+  const siteUrl = process.env.BASE_URL || 'http://localhost:3000';
+  const resetUrl = `${siteUrl}/portal/?reset_token=${token}`;
+  return sendMail({
+    to,
+    subject: 'パスワードリセットのご案内 — GPURental',
+    html: `<!DOCTYPE html><html><head><style>${BASE_STYLE}</style></head><body>
+<div class="wrap">
+  <div class="card">
+    <div class="header">
+      <h1>⚡ GPURental</h1>
+      <p>パスワードリセットのご案内</p>
+    </div>
+    <div class="body">
+      <p>こんにちは、<strong>${username}</strong> さん</p>
+      <p>パスワードリセットのリクエストを受け付けました。<br>
+         以下のボタンをクリックして、新しいパスワードを設定してください。</p>
+      <div style="text-align:center">
+        <a href="${resetUrl}" class="btn">🔑 パスワードをリセットする</a>
+      </div>
+      <div class="warn">
+        ⚠️ このリンクは<strong>1時間</strong>で無効になります。<br>
+        このメールに心当たりのない場合は無視してください。
+      </div>
+      <p style="font-size:0.8rem;color:#6a6a9a;word-break:break-all">
+        ボタンが機能しない場合は以下のURLにアクセスしてください：<br>
+        <a href="${resetUrl}" style="color:#6c47ff">${resetUrl}</a>
+      </p>
+    </div>
+    <div class="footer">© 2026 METADATALAB.INC — GPURental</div>
+  </div>
+</div>
+</body></html>`,
+    text: `GPURentalのパスワードリセット\n\n${username}さん、\nパスワードをリセットするには以下のリンク（有効期限1時間）にアクセスしてください：\n${resetUrl}\n\nこのメールに心当たりがない場合は無視してください。`,
+  });
+}
+
 module.exports = {
   sendMail,
   mailWelcome,
+  mailPasswordReset,
   mailReservationConfirmed,
   mailReminderStart,
   mailReminderEnd,
   mailSessionExpired,
   mailPayoutRequest,
 };
+
+/**
+ * 出金申請通知メール（運営向け）
+ */
+function mailPayoutRequestAdmin({ to, username, email, amount, account, payout }) {
+  const typeLabel = account.account_type === 'checking' ? '当座' : '普通';
+  const fmtJp = dt => new Date(dt).toLocaleString('ja-JP', { timeZone: 'Asia/Tokyo', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' });
+  const siteUrl = process.env.BASE_URL || 'https://gpurental.jp';
+
+  return sendMail({
+    to,
+    subject: `⚠️ 【要対応】出金申請 #${payout.id} — ${username} ¥${Math.round(amount).toLocaleString()}`,
+    html: `<!DOCTYPE html><html><head><style>${BASE_STYLE}</style></head><body>
+<div class="wrap">
+  <div class="card">
+    <div class="header" style="background:linear-gradient(135deg,#ff4757,#ffa502)">
+      <h1>⚠️ 出金申請 — 管理者通知</h1>
+      <p>新しい出金申請が届いています。対応が必要です。</p>
+    </div>
+    <div class="body">
+      <div class="info-row"><span class="info-label">申請番号</span><span class="info-val mono">#${payout.id}</span></div>
+      <div class="info-row"><span class="info-label">申請日時</span><span class="info-val">📅 ${fmtJp(payout.created_at)}</span></div>
+      <div class="info-row"><span class="info-label">申請者</span><span class="info-val">${username} (${email})</span></div>
+      <div class="price">¥${Math.round(amount).toLocaleString()}</div>
+      <div class="info-row"><span class="info-label">振込先銀行</span><span class="info-val">🏦 ${account.bank_name}${account.bank_code ? ` (${account.bank_code})` : ''}</span></div>
+      <div class="info-row"><span class="info-label">支店</span><span class="info-val">${account.branch_name}${account.branch_code ? ` (${account.branch_code})` : ''}</span></div>
+      <div class="info-row"><span class="info-label">口座種類</span><span class="info-val">${typeLabel}</span></div>
+      <div class="info-row"><span class="info-label">口座番号</span><span class="info-val mono">${account.account_number}</span></div>
+      <div class="info-row"><span class="info-label">口座名義</span><span class="info-val">${account.account_holder}</span></div>
+      ${payout.notes ? `<div class="info-row"><span class="info-label">備考</span><span class="info-val">${payout.notes}</span></div>` : ''}
+      <div style="text-align:center;margin-top:20px">
+        <a href="${siteUrl}/admin/" class="btn">🛠️ 管理画面で確認する</a>
+      </div>
+    </div>
+    <div class="footer">© 2026 GPU Rental — 管理者専用通知</div>
+  </div>
+</div>
+</body></html>`,
+    text: `【出金申請 管理者通知】\n申請番号: #${payout.id}\n申請者: ${username} (${email})\n金額: ¥${Math.round(amount).toLocaleString()}\n振込先: ${account.bank_name} ${account.branch_name} ${typeLabel} ${account.account_number}\n口座名義: ${account.account_holder}\n管理画面: ${siteUrl}/admin/`,
+  });
+}
+
+module.exports = {
+  sendMail,
+  mailWelcome,
+  mailPasswordReset,
+  mailReservationConfirmed,
+  mailReminderStart,
+  mailReminderEnd,
+  mailSessionExpired,
+  mailPayoutRequest,
+  mailPayoutRequestAdmin,
+};
+
 

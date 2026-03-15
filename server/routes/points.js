@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Points & Tickets API
  * GET  /api/points/balance          - my point balance
  * GET  /api/points/logs             - my point history
@@ -12,6 +12,8 @@ const router = express.Router();
 const { getDb } = require('../db/database');
 const { authMiddleware } = require('../middleware/auth');
 const crypto = require('crypto');
+const couponRouter = require('./coupons');
+const validateCoupon = couponRouter.validateCoupon;
 
 // 1 point = 10 yen
 const POINT_RATE = 10;
@@ -75,13 +77,42 @@ router.post('/purchase', authMiddleware, (req, res) => {
     const user = db.prepare('SELECT id, username, email FROM users WHERE id = ?').get(req.user.id);
     const p = calcPlan(plan);
 
+    // ── クーポン適用 ──────────────────────────────────────────────────────
+    const { coupon_code } = req.body;
+    let couponResult = null;
+    let finalAmountYen = p.amount_yen;
+    let couponDiscountYen = 0;
+    let appliedCouponId = null;
+
+    if (coupon_code) {
+        couponResult = validateCoupon(db, coupon_code.trim(), req.user.id, p.amount_yen);
+        if (!couponResult.ok) {
+            return res.status(400).json({ error: couponResult.error });
+        }
+        couponDiscountYen = couponResult.discount_yen;
+        finalAmountYen = couponResult.final_yen;
+        appliedCouponId = couponResult.coupon.id;
+    }
+
+    // ポイント数は割引後の金額から算出
+    const finalPoints = finalAmountYen / POINT_RATE;
+
     // Create pending purchase record
     const orderNum = `GPU${Date.now()}${req.user.id}`;
     const purchase = db.prepare(`
         INSERT INTO point_purchases
-          (user_id, plan_name, hours, points, amount_yen, status, epsilon_order, gpu_id)
-        VALUES (?, ?, ?, ?, ?, 'pending', ?, 1)
-    `).run(user.id, plan.name, plan.hours, p.points, p.amount_yen, orderNum);
+          (user_id, plan_name, hours, points, amount_yen, coupon_id, coupon_discount_yen, status, epsilon_order, gpu_id)
+        VALUES (?, ?, ?, ?, ?, ?, ?, 'pending', ?, 1)
+    `).run(user.id, plan.name, plan.hours, finalPoints, finalAmountYen, appliedCouponId, couponDiscountYen, orderNum);
+
+    // クーポン使用回数を更新
+    if (appliedCouponId) {
+        db.prepare('UPDATE coupons SET used_count = used_count + 1 WHERE id = ?').run(appliedCouponId);
+        db.prepare(`
+            INSERT INTO coupon_uses (coupon_id, user_id, purchase_id, discount_yen)
+            VALUES (?, ?, ?, ?)
+        `).run(appliedCouponId, user.id, purchase.lastInsertRowid, couponDiscountYen);
+    }
 
     // Build GMO Epsilon payment params
     // Docs: https://www.epsilon.jp/api_manual.html
@@ -89,34 +120,32 @@ router.post('/purchase', authMiddleware, (req, res) => {
         contract_code: EPSILON_CONTRACT_CODE,
         order_number: orderNum,
         item_code: plan.id,
-        item_name: encodeURIComponent(plan.name),
-        item_price: p.amount_yen,
+        item_name: encodeURIComponent(
+            couponDiscountYen > 0
+                ? `${plan.name} (${couponResult.label})`
+                : plan.name
+        ),
+        item_price: finalAmountYen,   // クーポン割引後の金額
         user_id: `user_${user.id}`,
         user_name: encodeURIComponent(user.username),
         user_mail_add: user.email,
-        st_code: '10',               // 10=クレジットカード
-        mission_code: '1',                // 1=単発
-        process_code: '1',                // 1=購入
+        st_code: '10',
+        mission_code: '1',
+        process_code: '1',
         success_url: `${EPSILON_CALLBACK}?status=success&order=${orderNum}&purchase_id=${purchase.lastInsertRowid}`,
         failure_url: `${EPSILON_CALLBACK}?status=failure&order=${orderNum}`,
         cancel_url: `${EPSILON_CALLBACK}?status=cancel&order=${orderNum}`,
     });
 
-    // For testing, if no contract code is set, simulate success immediately
-    if (EPSILON_CONTRACT_CODE === 'TEST_CONTRACT') {
-        const pid = purchase.lastInsertRowid;
-        // Auto-approve in test mode
-        db.prepare("UPDATE point_purchases SET status='completed', paid_at=CURRENT_TIMESTAMP WHERE id=?").run(pid);
-        db.prepare("UPDATE users SET point_balance = point_balance + ? WHERE id=?").run(p.points, user.id);
-        db.prepare(`INSERT INTO point_logs (user_id, points, type, description, ref_id)
-                    VALUES (?, ?, 'purchase', ?, ?)`).run(user.id, p.points, `${plan.name}を購入`, pid);
 
+    // ── TEST MODE: redirect to mock payment page (shows realistic card UI) ──
+    // Used when EPSILON_CONTRACT_CODE is not yet set (demo / Epsilon review)
+    if (EPSILON_CONTRACT_CODE === 'TEST_CONTRACT') {
+        const mockUrl = `/epsilon_mock/?${params.toString()}`;
         return res.json({
-            success: true,
-            test_mode: true,
-            points_added: p.points,
-            amount_yen: p.amount_yen,
-            message: `✅ テストモード: ${p.points}pt (¥${p.amount_yen.toLocaleString()}) を付与しました`,
+            redirect_url: mockUrl,
+            order_number: orderNum,
+            mock_mode: true,
         });
     }
 

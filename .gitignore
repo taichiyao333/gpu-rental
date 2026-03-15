@@ -8,6 +8,13 @@ yarn-error.log*
 .env
 .env.local
 .env.*.local
+.env.production
+.env.staging
+
+# Debug / admin scripts (sensitive)
+server/db/reset_admin.js
+server/db/check_db.js
+server/db/test_reset_table.js
 
 # Database
 *.db

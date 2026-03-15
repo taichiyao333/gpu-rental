@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="ja">
 
 <head>
@@ -766,12 +766,78 @@
 
         /* ── RESPONSIVE ── */
         @media(max-width:768px) {
+            body {
+                flex-direction: column;
+                overflow: auto;
+                height: auto;
+            }
+
             .sidebar {
-                display: none
+                width: 100%;
+                flex-direction: row;
+                align-items: center;
+                padding: 0.5rem;
+                border-right: none;
+                border-bottom: 1px solid var(--border);
+                overflow-x: auto;
+                flex-shrink: 0;
+                height: auto;
+            }
+
+            .sidebar-brand {
+                white-space: nowrap;
+                padding-right: 0.75rem;
+                font-size: 0.9rem;
+            }
+
+            .sidebar-nav {
+                flex-direction: row;
+                gap: 4px;
+                overflow-x: auto;
+            }
+
+            .sidebar-nav-item,
+            .nav-item {
+                padding: 6px 10px;
+                font-size: 0.75rem;
+                white-space: nowrap;
+            }
+
+            .main-content {
+                overflow-y: auto;
+                padding: 1rem;
             }
 
             .chart-row {
                 grid-template-columns: 1fr
+            }
+
+            .table-scroll {
+                overflow-x: auto;
+                -webkit-overflow-scrolling: touch;
+            }
+
+            table {
+                min-width: 580px;
+            }
+
+            .modal-content {
+                width: calc(100vw - 2rem);
+            }
+        }
+
+        @media(max-width:480px) {
+            .header {
+                padding: 0 0.75rem;
+            }
+
+            .header-right {
+                gap: 0.5rem;
+            }
+
+            .header-right .btn {
+                padding: 4px 8px;
+                font-size: 0.72rem;
             }
         }
     </style>
@@ -806,8 +872,14 @@
 
             <div class="nav-section">システム</div>
             <button class="nav-item" data-section="users"><span class="nav-icon">👥</span>ユーザー</button>
+            <button class="nav-item" data-section="bonus"><span class="nav-icon">🎁</span>ボーナスPT</button>
             <button class="nav-item" data-section="alerts"><span class="nav-icon">🔔</span>アラート<span class="nav-badge"
                     id="alertsBadge" style="display:none">0</span></button>
+            <button class="nav-item" data-section="maintenance" id="navMaintenance">
+                <span class="nav-icon">🔧</span>メンテモード
+                <span class="nav-badge" id="maintBadge" style="display:none;background:#ff4757">ON</span>
+            </button>
+
 
             <div class="sidebar-footer">
                 <div class="provider-info">
@@ -1085,6 +1157,7 @@
                                 <th>ロール</th>
                                 <th>ステータス</th>
                                 <th>ウォレット</th>
+                                <th>ポイント残高</th>
                                 <th>登録日</th>
                                 <th>操作</th>
                             </tr>
@@ -1092,6 +1165,54 @@
                         <tbody id="userTableBody">
                             <tr>
                                 <td colspan="8" style="text-align:center;color:var(--text3);padding:2rem">
+                                    <div class="spinner"></div>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- ═══ BONUS POINTS ═══ -->
+            <div class="section" id="section-bonus">
+                <div class="section-header">
+                    <div>
+                        <div class="section-title">🎁 ボーナスポイント管理</div>
+                        <div class="section-sub">ユーザーへのポイント付与・履歴</div>
+                    </div>
+                </div>
+                <!-- Quick Grant Card -->
+                <div
+                    style="background:linear-gradient(135deg,rgba(108,71,255,0.15),rgba(0,212,255,0.08));border:1px solid rgba(108,71,255,0.3);border-radius:12px;padding:1.25rem;margin-bottom:1.5rem;display:flex;align-items:center;gap:1rem;flex-wrap:wrap">
+                    <span style="font-size:2rem">🎁</span>
+                    <div style="flex:1;min-width:200px">
+                        <div style="font-weight:700;margin-bottom:2px">ボーナスポイントを付与</div>
+                        <div style="font-size:0.82rem;color:var(--text2)">ユーザー管理タブからも個別に付与できます</div>
+                    </div>
+                    <button class="btn btn-primary" onclick="openBonusModalManual()" style="white-space:nowrap">
+                        🎁 ユーザーを選んで付与
+                    </button>
+                </div>
+                <!-- Bonus History Table -->
+                <div class="table-card">
+                    <div
+                        style="display:flex;justify-content:space-between;align-items:center;padding:0.75rem 1rem;border-bottom:1px solid var(--border)">
+                        <span style="font-weight:600;font-size:0.9rem">付与履歴</span>
+                        <button class="btn btn-ghost btn-sm" onclick="loadBonusLogs()">🔄 更新</button>
+                    </div>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>日時</th>
+                                <th>対象ユーザー</th>
+                                <th>ポイント</th>
+                                <th>理由</th>
+                                <th>付与者</th>
+                            </tr>
+                        </thead>
+                        <tbody id="bonusLogTableBody">
+                            <tr>
+                                <td colspan="5" style="text-align:center;color:var(--text3);padding:2rem">
                                     <div class="spinner"></div>
                                 </td>
                             </tr>
@@ -1128,35 +1249,244 @@
                 </div>
             </div>
 
+            <!-- ── MAINTENANCE SECTION ───────────────────────────── -->
+            <div class="section" id="section-maintenance">
+                <div class="section-header">
+                    <div>
+                        <h2 class="section-title">🔧 メンテナンスモード</h2>
+                        <p class="section-sub">サイト全体のメンテナンスモードをON/OFFします</p>
+                    </div>
+                </div>
+
+                <!-- Status Card -->
+                <div id="maintStatusCard" style="background:rgba(255,71,87,.08);border:1px solid rgba(255,71,87,.3);
+                border-radius:16px;padding:1.5rem 2rem;margin-bottom:1.5rem;display:flex;
+                align-items:center;gap:1rem;transition:all .3s">
+                    <span id="maintStatusIcon" style="font-size:2rem">🟢</span>
+                    <div>
+                        <div id="maintStatusTitle" style="font-size:1.1rem;font-weight:700;margin-bottom:.25rem">
+                            通常稼働中
+                        </div>
+                        <div id="maintStatusSub" style="font-size:.85rem;color:var(--text2)">
+                            サービスは正常に稼働しています
+                        </div>
+                    </div>
+                    <div style="margin-left:auto">
+                        <span id="maintStatusBadge" style="padding:.4rem 1rem;border-radius:100px;
+                        font-size:.8rem;font-weight:700;background:var(--success);color:#000">
+                            ONLINE
+                        </span>
+                    </div>
+                </div>
+
+                <!-- Toggle Card -->
+                <div
+                    style="background:var(--card);border:1px solid var(--border);border-radius:16px;padding:1.75rem 2rem;margin-bottom:1.5rem">
+                    <h3 style="margin-bottom:1.25rem;font-size:.95rem;display:flex;align-items:center;gap:.5rem">
+                        ⚡ モード切替
+                    </h3>
+                    <div style="display:flex;align-items:center;gap:1rem;margin-bottom:1.5rem">
+                        <label style="display:flex;align-items:center;gap:.75rem;cursor:pointer;user-select:none">
+                            <div style="position:relative">
+                                <input type="checkbox" id="maintToggle"
+                                    style="width:0;height:0;opacity:0;position:absolute">
+                                <div id="maintToggleTrack" onclick="toggleMaintenance()" style="
+                                width:56px;height:28px;background:#2a2a4a;border-radius:100px;
+                                cursor:pointer;transition:background .3s;border:1px solid rgba(120,120,200,.2)">
+                                    <div id="maintToggleThumb" style="
+                                    width:22px;height:22px;background:#5a5a7a;border-radius:50%;
+                                    margin:2px;transition:all .3s;box-shadow:0 2px 6px rgba(0,0,0,.4)">
+                                    </div>
+                                </div>
+                            </div>
+                            <span id="maintToggleLabel" style="font-weight:600;font-size:.9rem">メンテナンスモードをONにする</span>
+                        </label>
+                    </div>
+
+                    <div style="margin-bottom:1.25rem">
+                        <label style="font-size:.82rem;color:var(--text2);margin-bottom:.5rem;display:block">
+                            ⚠️ ユーザーに表示するメッセージ
+                        </label>
+                        <textarea id="maintMessage" rows="3" style="
+                        width:100%;background:#0a0a1a;border:1px solid var(--border);
+                        border-radius:10px;padding:.75rem 1rem;color:var(--text);
+                        font-family:inherit;font-size:.85rem;resize:vertical;outline:none;
+                        transition:border-color .2s" placeholder="メンテナンス中のメッセージを入力..."
+                            onfocus="this.style.borderColor='var(--primary)'"
+                            onblur="this.style.borderColor='var(--border)'">
+ただいまメンテナンス中です。しばらくお待ちください。</textarea>
+                    </div>
+
+                    <div style="display:flex;gap:.75rem;flex-wrap:wrap">
+                        <button onclick="applyMaintenance(true)" id="btnMaintOn" style="padding:.6rem 1.5rem;background:linear-gradient(135deg,#ff4757,#c0392b);
+                        color:#fff;border:none;border-radius:8px;font-weight:600;cursor:pointer;font-size:.85rem;
+                        transition:opacity .2s" onmouseover="this.style.opacity='.85'"
+                            onmouseout="this.style.opacity='1'">
+                            🔴 メンテモードをONにする
+                        </button>
+                        <button onclick="applyMaintenance(false)" id="btnMaintOff" style="padding:.6rem 1.5rem;background:linear-gradient(135deg,#00e5a0,#00b37a);
+                        color:#000;border:none;border-radius:8px;font-weight:600;cursor:pointer;font-size:.85rem;
+                        transition:opacity .2s" onmouseover="this.style.opacity='.85'"
+                            onmouseout="this.style.opacity='1'">
+                            🟢 メンテモードをOFFにする
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Info Card -->
+                <div style="background:rgba(108,71,255,.06);border:1px solid rgba(108,71,255,.2);
+                border-radius:12px;padding:1rem 1.25rem;font-size:.83rem;color:var(--text2)">
+                    <strong style="color:var(--text)">⚠️ 注意事項</strong><br>
+                    <ul style="margin-top:.5rem;padding-left:1.25rem;line-height:2">
+                        <li>メンテモードON中、ユーザーはすべてのページでメンテナンス画面が表示されます</li>
+                        <li>管理者 (<code>/admin/</code>) は引き続きアクセス可能です</li>
+                        <li>サーバーを再起動するとメンテモードはOFFにリセットされます</li>
+                        <li>APIへの影響: <code>/api/auth</code>・<code>/api/admin</code>・<code>/api/health</code> はバイパスされます
+                        </li>
+                    </ul>
+                </div>
+            </div>
+
         </main>
     </div>
 
     <!-- GPU EDIT MODAL -->
     <div class="modal-overlay" id="gpuModal">
-        <div class="modal">
+        <div class="modal" style="width:560px">
             <button class="modal-close" onclick="closeModal('gpuModal')">✕</button>
             <h3 id="gpuModalTitle">GPU設定</h3>
             <input type="hidden" id="editGpuId" />
+
+            <!-- GPU情報 -->
+            <div
+                style="background:rgba(108,71,255,.06);border:1px solid rgba(108,71,255,.2);border-radius:8px;padding:0.75rem;margin-bottom:1rem;font-size:0.78rem;color:var(--text2)">
+                🖥 <strong style="color:var(--text)">GPU基本情報</strong>
+            </div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.75rem;margin-bottom:0.75rem">
+                <div class="form-group" style="margin:0">
+                    <label>GPU名 *</label>
+                    <input type="text" id="editGpuName" placeholder="NVIDIA RTX A4000" />
+                </div>
+                <div class="form-group" style="margin:0">
+                    <label>VRAM (GB) *</label>
+                    <input type="number" id="editGpuVram" placeholder="16" min="1" max="200" />
+                </div>
+            </div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.75rem;margin-bottom:1rem">
+                <div class="form-group" style="margin:0">
+                    <label>ドライバーバージョン</label>
+                    <input type="text" id="editGpuDriver" placeholder="552.74" />
+                </div>
+                <div class="form-group" style="margin:0">
+                    <label>設置場所</label>
+                    <select id="editGpuLocation">
+                        <option value="Home PC">🏠 自宅PC</option>
+                        <option value="Enterprise">🏢 企業サーバー</option>
+                        <option value="Data Center">🏭 データセンター</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- 運用設定 -->
+            <div
+                style="background:rgba(0,229,160,.06);border:1px solid rgba(0,229,160,.2);border-radius:8px;padding:0.75rem;margin-bottom:1rem;font-size:0.78rem;color:var(--text2)">
+                ⚙️ <strong style="color:var(--text)">運用設定</strong>
+            </div>
             <div class="form-group"><label>ステータス</label>
                 <select id="editGpuStatus">
-                    <option value="available">利用可能</option>
-                    <option value="maintenance">メンテ中</option>
-                    <option value="offline">オフライン</option>
+                    <option value="available">✅ 利用可能</option>
+                    <option value="rented">🔒 使用中</option>
+                    <option value="maintenance">🔧 メンテ中</option>
+                    <option value="offline">⚫ オフライン</option>
                 </select>
             </div>
-            <div class="form-group"><label>時間単価 (円/時間)</label><input type="number" id="editGpuPrice" min="100" /></div>
-            <div class="form-group"><label>温度閾値 (°C)</label><input type="number" id="editGpuTemp" min="60" max="100" />
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.75rem">
+                <div class="form-group" style="margin:0">
+                    <label>時間単価 (円/時間)</label>
+                    <input type="number" id="editGpuPrice" min="100" step="50" />
+                </div>
+                <div class="form-group" style="margin:0">
+                    <label>温度閾値 (°C)</label>
+                    <input type="number" id="editGpuTemp" min="60" max="100" />
+                </div>
             </div>
+
             <div class="modal-actions">
                 <button class="btn btn-ghost" onclick="closeModal('gpuModal')">キャンセル</button>
-                <button class="btn btn-primary" onclick="saveGpu()">保存</button>
+                <button class="btn btn-primary" onclick="saveGpu()">💾 保存</button>
             </div>
         </div>
     </div>
 
+    <!-- BONUS POINT MODAL -->
+    <div class="modal-overlay" id="bonusModal" style="display:none">
+        <div class="modal" style="width:480px;max-width:96vw">
+            <button class="modal-close" onclick="closeBonusModal()">✕</button>
+            <h3 style="font-size:1.1rem;font-weight:700;margin-bottom:1.25rem">🎁 ボーナスポイント付与</h3>
+            <div id="bonusTargetInfo"
+                style="background:rgba(108,71,255,0.08);border:1px solid rgba(108,71,255,0.25);border-radius:8px;padding:0.875rem;margin-bottom:1rem;font-size:0.85rem;display:none">
+                <div style="color:var(--text3);font-size:0.75rem;margin-bottom:2px">付与対象</div>
+                <div id="bonusTargetName" style="font-weight:700"></div>
+                <div id="bonusTargetBalance" style="color:var(--text2);font-size:0.8rem;margin-top:2px"></div>
+            </div>
+            <div class="form-group">
+                <label>ユーザー選択</label>
+                <select id="bonusUserId" onchange="onBonusUserChange()">
+                    <option value="">-- ユーザーを選択 --</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>付与ポイント数（マイナスで減算）</label>
+                <div style="display:flex;align-items:center;gap:0.5rem">
+                    <input type="number" id="bonusPoints" placeholder="例: 100" step="1" style="flex:1" />
+                    <span style="color:var(--text2);font-size:0.85rem">pt</span>
+                </div>
+                <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:6px">
+                    <button type="button" class="btn btn-ghost btn-sm" onclick="setBonusPt(50)">+50</button>
+                    <button type="button" class="btn btn-ghost btn-sm" onclick="setBonusPt(100)">+100</button>
+                    <button type="button" class="btn btn-ghost btn-sm" onclick="setBonusPt(500)">+500</button>
+                    <button type="button" class="btn btn-ghost btn-sm" onclick="setBonusPt(1000)">+1,000</button>
+                    <button type="button" class="btn btn-ghost btn-sm" onclick="setBonusPt(5000)">+5,000</button>
+                </div>
+            </div>
+            <div class="form-group">
+                <label>理由（オプション）</label>
+                <input type="text" id="bonusReason" placeholder="例: キャンペーン報酬、障害補償 など" />
+            </div>
+            <div id="bonusError"
+                style="background:rgba(255,71,87,0.1);border:1px solid rgba(255,71,87,0.3);border-radius:8px;padding:0.75rem;font-size:0.85rem;color:var(--danger);margin-bottom:0.75rem;display:none">
+            </div>
+            <div id="bonusSuccess"
+                style="background:rgba(0,229,160,0.1);border:1px solid rgba(0,229,160,0.3);border-radius:8px;padding:0.75rem;font-size:0.85rem;color:#00e5a0;margin-bottom:0.75rem;display:none">
+            </div>
+            <div class="modal-actions">
+                <button class="btn btn-ghost" onclick="closeBonusModal()">キャンセル</button>
+                <button class="btn btn-primary" id="bonusSubmitBtn" onclick="submitBonus()">🎁 付与する</button>
+            </div>
+        </div>
+    </div>
+    <!-- FOOTER -->
+    <footer
+        style="border-top:1px solid rgba(255,255,255,.07);padding:1.5rem 2rem;margin-top:2rem;text-align:center;font-size:0.78rem;color:rgba(255,255,255,.35)">
+        <div
+            style="display:flex;justify-content:center;align-items:center;gap:1.5rem;flex-wrap:wrap;margin-bottom:.75rem">
+            <a href="/landing/" style="color:rgba(255,255,255,.5);text-decoration:none;transition:color .2s"
+                onmouseover="this.style.color='#fff'" onmouseout="this.style.color='rgba(255,255,255,.5)'">🏠 トップページ</a>
+            <a href="/portal/" style="color:rgba(255,255,255,.5);text-decoration:none;transition:color .2s"
+                onmouseover="this.style.color='#fff'" onmouseout="this.style.color='rgba(255,255,255,.5)'">ポータル</a>
+            <a href="/provider/" style="color:rgba(255,255,255,.5);text-decoration:none;transition:color .2s"
+                onmouseover="this.style.color='#fff'" onmouseout="this.style.color='rgba(255,255,255,.5)'">プロバイダー</a>
+            <a href="/landing/terms.html" style="color:rgba(255,255,255,.5);text-decoration:none;transition:color .2s"
+                onmouseover="this.style.color='#fff'" onmouseout="this.style.color='rgba(255,255,255,.5)'">利用規約</a>
+            <a href="/landing/privacy.html" style="color:rgba(255,255,255,.5);text-decoration:none;transition:color .2s"
+                onmouseover="this.style.color='#fff'" onmouseout="this.style.color='rgba(255,255,255,.5)'">プライバシー</a>
+        </div>
+        <span>© 2026 GPURental by METADATALAB.INC.</span>
+    </footer>
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
     <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
     <script src="app.js"></script>
+    <script src="bonus.js"></script>
 </body>
 
 </html>

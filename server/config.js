@@ -7,8 +7,17 @@ module.exports = {
     nodeEnv: process.env.NODE_ENV || 'development',
 
     jwt: {
-        secret: process.env.JWT_SECRET || 'fallback-secret',
-        expiresIn: process.env.JWT_EXPIRES_IN || '24h',
+        secret: (() => {
+            if (!process.env.JWT_SECRET) {
+                if (process.env.NODE_ENV === 'production') {
+                    throw new Error('JWT_SECRET must be set in production!');
+                }
+                console.warn('⚠️  JWT_SECRET not set, using insecure default (dev only)');
+                return 'dev-only-insecure-fallback-secret';
+            }
+            return process.env.JWT_SECRET;
+        })(),
+        expiresIn: process.env.JWT_EXPIRES_IN || '8h',
     },
 
     storage: {

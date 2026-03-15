@@ -129,7 +129,7 @@ async function runMigrations() {
   // ─── Seed admin/provider user ────────────────────────────────────────
   const existing = db.prepare('SELECT id FROM users WHERE email = ?').get(config.admin.email);
   if (!existing) {
-    const hash = bcrypt.hashSync(config.admin.password, 10);
+    const hash = bcrypt.hashSync(config.admin.password, 12);
     const res = db.prepare(`
       INSERT INTO users (username, email, password_hash, role)
       VALUES (?, ?, ?, 'admin')
@@ -247,6 +247,61 @@ async function runMigrations() {
   for (const sql of alterList) {
     try { db.exec(sql); } catch (_) { /* column already exists */ }
   }
+
+  // ─── Coupons (クーポンコード) ──────────────────────────────────────
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS coupons (
+      id             INTEGER PRIMARY KEY AUTOINCREMENT,
+      code           TEXT UNIQUE NOT NULL COLLATE NOCASE,
+      description    TEXT,
+      discount_type  TEXT NOT NULL DEFAULT 'percent', -- 'percent' | 'fixed'
+      discount_value INTEGER NOT NULL,                -- % or yen
+      max_uses       INTEGER DEFAULT NULL,            -- NULL = unlimited
+      used_count     INTEGER DEFAULT 0,
+      valid_from     DATETIME DEFAULT CURRENT_TIMESTAMP,
+      valid_until    DATETIME DEFAULT NULL,           -- NULL = no expiry
+      is_active      INTEGER DEFAULT 1,
+      created_by     INTEGER,
+      created_at     DATETIME DEFAULT CURRENT_TIMESTAMP
+    );
+  `);
+
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS coupon_uses (
+      id          INTEGER PRIMARY KEY AUTOINCREMENT,
+      coupon_id   INTEGER NOT NULL,
+      user_id     INTEGER NOT NULL,
+      purchase_id INTEGER,
+      discount_yen INTEGER NOT NULL,
+      used_at     DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (coupon_id) REFERENCES coupons(id),
+      FOREIGN KEY (user_id) REFERENCES users(id)
+    );
+  `);
+
+  // Add coupon columns to point_purchases
+  const couponAlter = [
+    "ALTER TABLE point_purchases ADD COLUMN coupon_id INTEGER REFERENCES coupons(id)",
+    "ALTER TABLE point_purchases ADD COLUMN coupon_discount_yen INTEGER DEFAULT 0",
+  ];
+  for (const sql of couponAlter) {
+    try { db.exec(sql); } catch (_) { /* already exists */ }
+  }
+
+  // ─── RunPod Pricing Snapshots ─────────────────────────────────────────
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS runpod_pricing_snapshots (
+      id                  INTEGER PRIMARY KEY AUTOINCREMENT,
+      gpu_name            TEXT NOT NULL,
+      runpod_price_usd    REAL,          -- RunPod $/hr
+      runpod_price_jpy    INTEGER,       -- RunPod 円/hr
+      suggested_price_jpy INTEGER,       -- 推奨GPURental価格 (15%上乗せ)
+      spot_price_jpy      INTEGER,       -- RunPod スポット価格
+      vram_gb             REAL,
+      fetched_at          DATETIME DEFAULT CURRENT_TIMESTAMP,
+      UNIQUE(gpu_name)    -- 最新のみ保持
+    );
+  `);
 
   console.log('✅ Database migrations complete');
 }

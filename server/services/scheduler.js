@@ -6,6 +6,7 @@ const {
     mailReminderEnd,
     mailSessionExpired,
 } = require('./email');
+const { runPricingSnapshot } = require('./pricingMonitor');
 
 let io = null;
 
@@ -223,7 +224,38 @@ function startScheduler(socketIo) {
     scheduleReservationStart();  // 自動起動
     scheduleEndReminder();       // 終了10分前メール
     scheduleReservationEnd();    // 強制切断
-    console.log('✅ Scheduler started (with email reminders)');
+
+    // ── RunPod 価格監視: 毎日 午前0時に実行 ──────────────────────────────
+    cron.schedule('0 0 * * *', async () => {
+        try {
+            const db = getDb();
+            const result = await runPricingSnapshot(db);
+            console.log(`[PricingMonitor] Snapshot done: ${result.count} GPUs, ${result.needs_review.length} need review`);
+            // 管理者に通知 (Socket.IO)
+            if (io && result.needs_review.length > 0) {
+                io.emit('admin:pricing_alert', {
+                    message: `⚠️ ${result.needs_review.length}件のGPUが価格見直しを推奨しています`,
+                    needs_review: result.needs_review,
+                    fetched_at: result.fetched_at,
+                });
+            }
+        } catch (e) {
+            console.error('[PricingMonitor] Cron error:', e.message);
+        }
+    });
+
+    // 起動時にも一度実行 (最新価格を取得)
+    setTimeout(async () => {
+        try {
+            const db = getDb();
+            await runPricingSnapshot(db);
+            console.log('[PricingMonitor] Initial snapshot done');
+        } catch (e) {
+            console.warn('[PricingMonitor] Initial snapshot failed:', e.message);
+        }
+    }, 10000); // サーバー起動10秒後
+
+    console.log('✅ Scheduler started (with email reminders + RunPod pricing monitor)');
 }
 
 module.exports = { startScheduler, setIo };

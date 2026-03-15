@@ -23,7 +23,7 @@
         <div class="nav-links" id="navLinks">
             <a href="#gpus" class="nav-link">GPU一覧</a>
             <a href="#how" class="nav-link">使い方</a>
-            <a href="#pricing" class="nav-link">料金</a>
+            <a href="/pricing.html" class="nav-link" target="_blank">料金</a>
         </div>
         <div class="nav-auth" id="navAuth">
             <button class="btn btn-ghost" id="btnLogin">ログイン</button>
@@ -33,6 +33,7 @@
             <span class="nav-username" id="navUsername"></span>
             <button class="btn btn-secondary" id="btnProvideGuide" title="自分のGPUを公開する手順">🏭 GPUを公開する</button>
             <button class="btn btn-ghost" id="btnWithdraw" title="出金管理" style="display:none">💰 出金管理</button>
+            <a href="/mypage/" class="btn btn-ghost" id="btnMyPage">👤 マイページ</a>
             <a href="/workspace/" class="btn btn-ghost" id="btnWorkspace">ワークスペース</a>
             <a href="/admin/" class="btn btn-ghost hidden" id="btnAdmin">管理画面</a>
             <button class="btn btn-ghost" id="btnLogout">ログアウト</button>
@@ -53,12 +54,20 @@
                 <button class="btn btn-outline btn-lg" id="heroProvide">GPUを貸し出す</button>
             </div>
             <div class="hero-stats">
-                <div class="stat"><span class="stat-val" id="statGpus">1</span><span class="stat-label">GPU</span></div>
-                <div class="stat-div"></div>
-                <div class="stat"><span class="stat-val" id="statUsers">-</span><span class="stat-label">ユーザー</span>
+                <div class="stat">
+                    <span class="stat-val" id="statGpus">—</span>
+                    <span class="stat-label">GPU登録数</span>
                 </div>
                 <div class="stat-div"></div>
-                <div class="stat"><span class="stat-val">24/7</span><span class="stat-label">稼働</span></div>
+                <div class="stat">
+                    <span class="stat-val" id="statAvail" style="color:#00e5a0">—</span>
+                    <span class="stat-label">稼働中GPU</span>
+                </div>
+                <div class="stat-div"></div>
+                <div class="stat">
+                    <span class="stat-val" id="statUsers">—</span>
+                    <span class="stat-label">ユーザー数</span>
+                </div>
             </div>
         </div>
         <div class="hero-visual">
@@ -246,6 +255,11 @@
                 </div>
                 <div class="form-error hidden" id="loginError"></div>
                 <button type="submit" class="btn btn-primary btn-full">ログイン</button>
+                <p style="text-align:center;margin-top:0.75rem;font-size:0.8rem">
+                    <a href="#" id="forgotPasswordLink" style="color:var(--primary);text-decoration:underline">
+                        パスワードをお忘れの方？
+                    </a>
+                </p>
             </form>
             <!-- Register -->
             <form id="registerForm" class="auth-form hidden">
@@ -266,6 +280,60 @@
             </form>
         </div>
     </div>
+
+    <!-- PASSWORD RESET MODAL -->
+    <div class="modal-overlay hidden" id="resetOverlay">
+        <div class="modal modal-sm" id="resetModal" style="max-width:400px">
+            <button class="modal-close" id="resetClose">✕</button>
+            <h3 style="font-size:1.1rem;font-weight:700;margin-bottom:1.25rem">🔑 パスワードのリセット</h3>
+
+            <!-- Step 1: メールアドレス入力 -->
+            <div id="resetStep1">
+                <p style="font-size:0.85rem;color:var(--text2);margin-bottom:1rem">
+                    登録済みのメールアドレスを入力してください。<br>パスワードリセット用のリンクをお送りします。
+                </p>
+                <form id="forgotForm">
+                    <div class="form-group">
+                        <label>メールアドレス</label>
+                        <input type="email" id="forgotEmail" placeholder="you@example.com" required />
+                    </div>
+                    <div class="form-error hidden" id="forgotError"></div>
+                    <div class="form-success hidden" id="forgotSuccess"
+                        style="background:rgba(0,229,160,0.1);border:1px solid rgba(0,229,160,0.3);border-radius:8px;padding:0.75rem;font-size:0.85rem;color:#00e5a0;margin-bottom:0.75rem">
+                    </div>
+                    <button type="submit" class="btn btn-primary btn-full" id="forgotSubmitBtn">
+                        リセットメールを送信
+                    </button>
+                </form>
+            </div>
+
+            <!-- Step 2: 新しいパスワード設定（URLトークンがある場合に表示） -->
+            <div id="resetStep2" class="hidden">
+                <p style="font-size:0.85rem;color:var(--text2);margin-bottom:1rem">
+                    新しいパスワードを入力してください。
+                </p>
+                <form id="resetPasswordForm">
+                    <div class="form-group">
+                        <label>新しいパスワード</label>
+                        <input type="password" id="newPassword" placeholder="6文字以上" required minlength="6" />
+                    </div>
+                    <div class="form-group">
+                        <label>パスワード（確認）</label>
+                        <input type="password" id="newPasswordConfirm" placeholder="もう一度入力" required minlength="6" />
+                    </div>
+                    <div class="form-error hidden" id="resetError"></div>
+                    <div class="form-success hidden" id="resetSuccess"
+                        style="background:rgba(0,229,160,0.1);border:1px solid rgba(0,229,160,0.3);border-radius:8px;padding:0.75rem;font-size:0.85rem;color:#00e5a0;margin-bottom:0.75rem">
+                    </div>
+                    <button type="submit" class="btn btn-primary btn-full">パスワードを変更する</button>
+                </form>
+            </div>
+            <p style="text-align:center;margin-top:1rem;font-size:0.8rem">
+                <a href="#" id="backToLoginLink" style="color:var(--primary)">← ログインに戻る</a>
+            </p>
+        </div>
+    </div>
+
 
     <!-- MY RESERVATIONS PANEL -->
     <div class="side-panel hidden" id="myPanel">
@@ -634,10 +702,29 @@
     </div>
 
     <!-- FOOTER -->
-    <footer class="footer">
-        <div class="container">
-            <div class="footer-brand">⚡ GPU<span class="accent">Rental</span></div>
-            <p class="footer-copy">© 2026 GPU Rental Platform. RTX A4500 · 20GB VRAM</p>
+    <footer class="footer site-footer">
+        <div class="sf-inner">
+            <div class="sf-brand">
+                <div class="sf-logo">⚡ GPU<span style="color:var(--primary)">Rental</span></div>
+                <p class="sf-desc">日本初の個人・法人GPU貸出プラットフォーム。<br>アイドルGPUリソースをAI開発者・クリエイターへ。</p>
+            </div>
+            <div class="sf-col">
+                <h4>サービス</h4>
+                <a href="/portal/">GPU利用（ポータル）</a>
+                <a href="/provider/">GPU貸出（プロバイダー）</a>
+                <a href="/workspace/">ワークスペース</a>
+                <a href="/landing/">🏠 トップページへ</a>
+            </div>
+            <div class="sf-col">
+                <h4>サポート</h4>
+                <a href="/landing/terms.html">利用規約</a>
+                <a href="/landing/privacy.html">プライバシーポリシー</a>
+                <a href="mailto:info@metadatalab.net">お問い合わせ</a>
+            </div>
+        </div>
+        <div class="sf-bottom">
+            <span>© 2026 GPURental by METADATALAB.INC. All rights reserved.</span>
+            <span>Made with ⚡ in Japan</span>
         </div>
     </footer>
 

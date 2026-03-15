@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="ja">
 
 <head>
@@ -757,6 +757,22 @@
         <div class="gpu-visual anim" style="animation-delay:.4s">
             <div class="mini-card">
                 <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.25rem">
+                    <div class="mini-card-name">RTX A4000</div>
+                    <div>
+                        <div class="mc-status"></div><span style="font-size:.68rem;color:var(--success)">空きあり</span>
+                    </div>
+                </div>
+                <div class="mini-card-spec">16 GB VRAM · 自宅PC</div>
+                <div class="mini-bar">
+                    <div class="mini-fill mc-gpu" style="width:28%"></div>
+                </div>
+                <div class="mini-bar">
+                    <div class="mini-fill mc-vram" style="width:22%"></div>
+                </div>
+                <div class="mini-card-price">¥380<span>/時間</span></div>
+            </div>
+            <div class="mini-card" style="border-color:rgba(108,71,255,.35)">
+                <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.25rem">
                     <div class="mini-card-name">RTX A4500</div>
                     <div>
                         <div class="mc-status"></div><span style="font-size:.68rem;color:var(--success)">空きあり</span>
@@ -775,36 +791,20 @@
                 <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.25rem">
                     <div class="mini-card-name">RTX 4090</div>
                     <div>
-                        <div class="mc-status"></div><span style="font-size:.68rem;color:var(--success)">空きあり</span>
-                    </div>
-                </div>
-                <div class="mini-card-spec">24 GB VRAM · 自宅PC</div>
-                <div class="mini-bar">
-                    <div class="mini-fill mc-gpu" style="width:5%"></div>
-                </div>
-                <div class="mini-bar">
-                    <div class="mini-fill mc-vram" style="width:3%"></div>
-                </div>
-                <div class="mini-card-price">¥650<span>/時間</span></div>
-            </div>
-            <div class="mini-card">
-                <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.25rem">
-                    <div class="mini-card-name">A100 80GB</div>
-                    <div>
                         <div
                             style="display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--warning);margin-right:4px">
                         </div>
                         <span style="font-size:.68rem;color:var(--warning)">使用中</span>
                     </div>
                 </div>
-                <div class="mini-card-spec">80 GB VRAM · データセンター</div>
+                <div class="mini-card-spec">24 GB VRAM · 自宅PC</div>
                 <div class="mini-bar">
-                    <div class="mini-fill mc-gpu" style="width:78%"></div>
+                    <div class="mini-fill mc-gpu" style="width:82%"></div>
                 </div>
                 <div class="mini-bar">
-                    <div class="mini-fill mc-vram" style="width:65%"></div>
+                    <div class="mini-fill mc-vram" style="width:68%"></div>
                 </div>
-                <div class="mini-card-price">¥2,100<span>/時間</span></div>
+                <div class="mini-card-price">¥650<span>/時間</span></div>
             </div>
         </div>
 
@@ -914,69 +914,52 @@
         <p class="section-sub">時間単位の従量課金。最低利用時間なし。運営統一価格でわかりやすい料金体系。</p>
 
         <div class="pricing-grid">
-            <!-- RTX 3090 -->
+            <!-- RTX A4000 -->
             <div class="price-card">
-                <div class="price-gpu">NVIDIA RTX 3090</div>
-                <div class="price-val">¥500</div>
+                <div class="price-gpu">NVIDIA RTX A4000</div>
+                <div class="price-val">¥380</div>
                 <div class="price-period">/時間</div>
-                <div class="price-vram">24 GB VRAM</div>
-                <div class="price-runpod">RunPod参考: ~$0.39-0.49/h</div>
+                <div class="price-vram">16 GB VRAM</div>
+                <div class="price-runpod">RunPod参考: ~$0.24-0.34/h</div>
                 <ul class="price-features">
-                    <li>LLM推論・大規模モデル学習</li>
-                    <li>Stable Diffusion XL 高速生成</li>
+                    <li>中規模LLM推論・機械学習</li>
+                    <li>Stable Diffusion 高速生成</li>
                     <li>CUDA 12.4 対応</li>
-                    <li>コスパ重視のエントリー</li>
+                    <li>コスパ重視のスタンダードモデル</li>
                 </ul>
                 <a href="/portal/" class="btn btn-outline"
                     style="width:100%;justify-content:center;margin-top:.5rem">予約する →</a>
             </div>
 
-            <!-- RTX 4090 (featured) -->
+            <!-- RTX A4500 (featured) -->
             <div class="price-card featured">
+                <div class="price-gpu">NVIDIA RTX A4500</div>
+                <div class="price-val">¥450</div>
+                <div class="price-period">/時間</div>
+                <div class="price-vram">20 GB VRAM ・ プロフェッショナル</div>
+                <div class="price-runpod">RunPod参考: ~$0.40/h</div>
+                <ul class="price-features">
+                    <li>AI学習・プロレンダリング</li>
+                    <li>Stable Diffusion ・ 映像制作</li>
+                    <li>ECC メモリ対応</li>
+                    <li>プロフェッショナル向ケ人気No.1</li>
+                </ul>
+                <a href="/portal/" class="btn btn-primary"
+                    style="width:100%;justify-content:center;margin-top:.5rem">予約する →</a>
+            </div>
+
+            <!-- RTX 4090 -->
+            <div class="price-card">
                 <div class="price-gpu">NVIDIA RTX 4090</div>
                 <div class="price-val">¥650</div>
                 <div class="price-period">/時間</div>
-                <div class="price-vram">24 GB VRAM</div>
+                <div class="price-vram">24 GB VRAM ・ ハイエンド</div>
                 <div class="price-runpod">RunPod参考: ~$0.39-0.74/h</div>
                 <ul class="price-features">
                     <li>大規模LLM・最高速推論</li>
                     <li>Stable Diffusion XL 超高速</li>
                     <li>最高のコスパ・人気No.1</li>
                     <li>Ada Lovelace最終世代</li>
-                </ul>
-                <a href="/portal/" class="btn btn-primary"
-                    style="width:100%;justify-content:center;margin-top:.5rem">予約する →</a>
-            </div>
-
-            <!-- A100 80GB -->
-            <div class="price-card">
-                <div class="price-gpu">NVIDIA A100 80GB</div>
-                <div class="price-val">¥2,100</div>
-                <div class="price-period">/時間</div>
-                <div class="price-vram">80 GB VRAM</div>
-                <div class="price-runpod">RunPod参考: ~$1.89-2.30/h</div>
-                <ul class="price-features">
-                    <li>超大規模LLM学習</li>
-                    <li>マルチモーダルモデル</li>
-                    <li>データセンター品質</li>
-                    <li>NVLink / MIG対応</li>
-                </ul>
-                <a href="/portal/" class="btn btn-outline"
-                    style="width:100%;justify-content:center;margin-top:.5rem">予約する →</a>
-            </div>
-
-            <!-- H100 SXM5 -->
-            <div class="price-card">
-                <div class="price-gpu">NVIDIA H100 SXM5</div>
-                <div class="price-val">¥3,500</div>
-                <div class="price-period">/時間</div>
-                <div class="price-vram">80 GB VRAM</div>
-                <div class="price-runpod">RunPod参考: ~$2.69-3.89/h</div>
-                <ul class="price-features">
-                    <li>GPT-4クラスモデル学習</li>
-                    <li>次世代HPC最高性能</li>
-                    <li>Transformer Engine搭載</li>
-                    <li>FP8精度対応</li>
                 </ul>
                 <a href="/portal/" class="btn btn-outline"
                     style="width:100%;justify-content:center;margin-top:.5rem">予約する →</a>
@@ -1087,17 +1070,17 @@
             </div>
             <div class="footer-col">
                 <h4>サポート</h4>
-                <a href="/terms.html">利用規約</a>
-                <a href="/privacy.html">プライバシーポリシー</a>
-                <a href="mailto:taichi.yao@gmail.com">お問い合わせ</a>
-                <a href="https://github.com/taichiyao333/janction" target="_blank" rel="noopener">GitHub</a>
+                <a href="/landing/terms.html">利用規約</a>
+                <a href="/landing/privacy.html">プライバシーポリシー</a>
+                <a href="mailto:info@metadatalab.net">お問い合わせ</a>
+                <a href="https://github.com/taichiyao333/GPURental" target="_blank" rel="noopener">GitHub</a>
             </div>
             <div class="footer-col">
                 <h4>開発者向け</h4>
                 <a href="/api/health" target="_blank" rel="noopener">API Status</a>
                 <a href="/api/prices" target="_blank" rel="noopener">料金API</a>
                 <a href="/admin/">管理ダッシュボード</a>
-                <a href="https://github.com/taichiyao333/janction" target="_blank" rel="noopener">ソースコード</a>
+                <a href="https://github.com/taichiyao333/GPURental" target="_blank" rel="noopener">ソースコード</a>
             </div>
         </div>
         <div class="footer-bottom">

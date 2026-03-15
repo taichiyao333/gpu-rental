@@ -1,4 +1,4 @@
-/* ── STATE ─────────────────────────────────────────────────────── */
+﻿/* ── STATE ─────────────────────────────────────────────────────── */
 const token = localStorage.getItem('gpu_token');
 const user = JSON.parse(localStorage.getItem('gpu_user') || 'null');
 
@@ -21,8 +21,15 @@ async function api(path, opts = {}) {
         ...opts,
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}`, ...opts.headers },
     });
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.error || 'API Error');
+    // Try to parse as JSON - if rate limited (429), server returns plain text
+    let data;
+    try {
+        data = await res.json();
+    } catch (_) {
+        if (res.status === 429) throw new Error('リクエストが多すぎます。少し待ってから再度お試しください。');
+        throw new Error('HTTP ' + res.status + ' - サーバーエラーが発生しました');
+    }
+    if (!res.ok) throw new Error(data.error || data.message || 'API Error');
     return data;
 }
 
@@ -554,3 +561,103 @@ async function enrichOverview(ovr) {
 initCharts();
 refreshAll();
 setInterval(() => { if (currentSection === 'overview') refreshAll(); }, 8000);
+
+/* ── MAINTENANCE MODE ────────────────────────────────────────────── */
+let _maintEnabled = false;
+
+async function loadMaintenanceStatus() {
+    try {
+        const data = await api('/admin/maintenance');
+        _maintEnabled = data.enabled;
+        updateMaintUI(data);
+    } catch (e) {
+        showToast('メンテモード状態の取得に失敗しました', 'error');
+    }
+}
+
+function updateMaintUI(data) {
+    const enabled = data.enabled;
+    const card = document.getElementById('maintStatusCard');
+    const icon = document.getElementById('maintStatusIcon');
+    const title = document.getElementById('maintStatusTitle');
+    const sub = document.getElementById('maintStatusSub');
+    const badge = document.getElementById('maintStatusBadge');
+    const togLabel = document.getElementById('maintToggleLabel');
+    const track = document.getElementById('maintToggleTrack');
+    const thumb = document.getElementById('maintToggleThumb');
+    const navBadge = document.getElementById('maintBadge');
+
+    if (enabled) {
+        // ON state
+        card.style.background = 'rgba(255,71,87,.12)';
+        card.style.borderColor = 'rgba(255,71,87,.5)';
+        icon.textContent = '🔴';
+        title.textContent = 'メンテナンス中';
+        sub.textContent = `メッセージ: ${data.message || ''} / 設定者: ${data.updated_by || '—'}`;
+        badge.style.background = '#ff4757';
+        badge.style.color = '#fff';
+        badge.textContent = 'MAINTENANCE';
+        togLabel.textContent = 'メンテナンスモードがONです';
+        track.style.background = '#ff4757';
+        thumb.style.marginLeft = '32px';
+        thumb.style.background = '#fff';
+        if (navBadge) navBadge.style.display = 'inline';
+        if (data.message) {
+            const ta = document.getElementById('maintMessage');
+            if (ta) ta.value = data.message;
+        }
+    } else {
+        // OFF state
+        card.style.background = 'rgba(0,229,160,.06)';
+        card.style.borderColor = 'rgba(0,229,160,.3)';
+        icon.textContent = '🟢';
+        title.textContent = '通常稼働中';
+        sub.textContent = 'サービスは正常に稼働しています';
+        badge.style.background = '#00e5a0';
+        badge.style.color = '#000';
+        badge.textContent = 'ONLINE';
+        togLabel.textContent = 'メンテナンスモードをONにする';
+        track.style.background = '#2a2a4a';
+        thumb.style.marginLeft = '2px';
+        thumb.style.background = '#5a5a7a';
+        if (navBadge) navBadge.style.display = 'none';
+    }
+}
+
+function toggleMaintenance() {
+    _maintEnabled = !_maintEnabled;
+    applyMaintenance(_maintEnabled);
+}
+
+async function applyMaintenance(enable) {
+    const message = document.getElementById('maintMessage')?.value?.trim()
+        || 'ただいまメンテナンス中です。しばらくお待ちください。';
+
+    const confirmMsg = enable
+        ? '⚠️ メンテナンスモードをONにします。\nユーザーはサービスにアクセスできなくなります。\n本当によろしいですか？'
+        : 'メンテナンスモードをOFFにしてサービスを再開します。\nよろしいですか？';
+
+    if (!confirm(confirmMsg)) return;
+
+    try {
+        const data = await api('/admin/maintenance', {
+            method: 'POST',
+            body: JSON.stringify({ enabled: enable, message }),
+        });
+        _maintEnabled = enable;
+        updateMaintUI(data);
+        showToast(
+            enable ? '🔴 メンテナンスモードをONにしました' : '🟢 メンテナンスモードをOFFにしました',
+            enable ? 'warning' : 'success'
+        );
+    } catch (e) {
+        showToast('エラー: ' + e.message, 'error');
+    }
+}
+
+// セクション切り替え時にメンテ状態をロード
+const _origNavClick = document.querySelectorAll('.nav-item');
+document.addEventListener('click', e => {
+    const btn = e.target.closest('[data-section="maintenance"]');
+    if (btn) loadMaintenanceStatus();
+});
