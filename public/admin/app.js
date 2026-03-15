@@ -57,6 +57,8 @@ function loadSection(sec) {
         case 'payouts': loadPayouts(); break;
         case 'users': loadUsers(); break;
         case 'alerts': loadAlerts(); break;
+        case 'coupons': loadCoupons(); break;
+        case 'pricing': loadPricingCompare(); break;
     }
 }
 
@@ -661,3 +663,197 @@ document.addEventListener('click', e => {
     const btn = e.target.closest('[data-section="maintenance"]');
     if (btn) loadMaintenanceStatus();
 });
+
+// ============================================================
+// 🎟️ クーポン管理
+// ============================================================
+
+async function loadCoupons() {
+    // 統計
+    try {
+        const stats = await api('/admin/coupons/stats');
+        document.getElementById('couponStats').innerHTML = [
+            { label: '有効クーポン', value: stats.active_coupons, color: 'var(--success)' },
+            { label: '総発行数', value: stats.total_coupons, color: 'var(--accent)' },
+            { label: '総使用回数', value: stats.total_uses, color: 'var(--primary)' },
+            { label: '総割引額', value: '¥' + (stats.total_discount_yen || 0).toLocaleString(), color: 'var(--warning)' },
+        ].map(s => `<div class="stat-card" style="border-left:3px solid ${s.color}">
+            <div style="font-size:1.6rem;font-weight:700;color:${s.color}">${s.value}</div>
+            <div style="font-size:.8rem;color:var(--text2);margin-top:.25rem">${s.label}</div>
+        </div>`).join('');
+    } catch (_) { }
+
+    // クーポン一覧
+    try {
+        const coupons = await api('/coupons');
+        const tbody = coupons.map(c => {
+            const expired = c.valid_until && new Date(c.valid_until) < new Date();
+            const status = !c.is_active ? '無効' : expired ? '期限切れ' : '有効';
+            const stColor = !c.is_active ? 'var(--danger)' : expired ? 'var(--warning)' : 'var(--success)';
+            return `<tr>
+                <td><code style="background:rgba(108,71,255,.15);padding:.2rem .6rem;border-radius:4px;font-size:.9rem">${c.code}</code></td>
+                <td>${c.discount_type === 'percent' ? c.discount_value + '%OFF' : '¥' + c.discount_value.toLocaleString() + '割引'}</td>
+                <td>${c.description || '—'}</td>
+                <td>${c.used_count}${c.max_uses ? ' / ' + c.max_uses : ' / 無限'}</td>
+                <td>${c.valid_until ? c.valid_until.split('T')[0] : '無期限'}</td>
+                <td><span style="color:${stColor};font-weight:600">${status}</span></td>
+                <td>
+                    <button class="btn btn-ghost" style="font-size:.8rem;padding:.3rem .6rem" onclick="toggleCoupon(${c.id})">
+                        ${c.is_active ? '無効化' : '有効化'}
+                    </button>
+                    <button class="btn btn-ghost" style="font-size:.8rem;padding:.3rem .6rem;color:var(--danger)" onclick="deleteCoupon(${c.id})">削除</button>
+                </td>
+            </tr>`;
+        }).join('');
+        document.getElementById('couponList').innerHTML = `
+        <table style="width:100%;border-collapse:collapse;font-size:.875rem">
+            <thead><tr style="color:var(--text2);border-bottom:1px solid var(--border)">
+                <th style="padding:.75rem;text-align:left">コード</th>
+                <th style="padding:.75rem;text-align:left">割引</th>
+                <th style="padding:.75rem;text-align:left">説明</th>
+                <th style="padding:.75rem;text-align:left">使用回数</th>
+                <th style="padding:.75rem;text-align:left">有効期限</th>
+                <th style="padding:.75rem;text-align:left">ステータス</th>
+                <th style="padding:.75rem;text-align:left">操作</th>
+            </tr></thead>
+            <tbody>${tbody || '<tr><td colspan="7" style="padding:2rem;text-align:center;color:var(--text3)">クーポンなし</td></tr>'}</tbody>
+        </table>`;
+    } catch (e) {
+        document.getElementById('couponList').innerHTML = `<div style="padding:1rem;color:var(--danger)">${e.message}</div>`;
+    }
+}
+
+function openCreateCouponModal() {
+    const m = document.getElementById('couponModal');
+    m.style.display = 'flex';
+    document.getElementById('cpCode').value = '';
+    document.getElementById('cpDesc').value = '';
+    document.getElementById('cpValue').value = '';
+    document.getElementById('cpMaxUses').value = '100';
+    document.getElementById('cpUntil').value = '';
+}
+function closeCouponModal() {
+    document.getElementById('couponModal').style.display = 'none';
+}
+
+async function submitCreateCoupon() {
+    const code = document.getElementById('cpCode').value.trim().toUpperCase();
+    const desc = document.getElementById('cpDesc').value.trim();
+    const type = document.getElementById('cpType').value;
+    const val = parseInt(document.getElementById('cpValue').value);
+    const maxUses = parseInt(document.getElementById('cpMaxUses').value) || null;
+    const validUntil = document.getElementById('cpUntil').value || null;
+    if (!code || !val) return showToast('コードと値は必須です', 'error');
+    try {
+        await api('/coupons', {
+            method: 'POST',
+            body: JSON.stringify({ code, description: desc, discount_type: type, discount_value: val, max_uses: maxUses, valid_until: validUntil }),
+        });
+        showToast(`✅ クーポン「${code}」を発行しました！`, 'success');
+        closeCouponModal();
+        loadCoupons();
+    } catch (e) {
+        showToast('発行エラー: ' + e.message, 'error');
+    }
+}
+
+async function toggleCoupon(id) {
+    try {
+        const r = await api(`/coupons/${id}/toggle`, { method: 'PATCH' });
+        showToast(r.is_active ? '✅ 有効化しました' : '無効化しました', 'info');
+        loadCoupons();
+    } catch (e) { showToast(e.message, 'error'); }
+}
+
+async function deleteCoupon(id) {
+    if (!confirm('このクーポンを削除しますか？')) return;
+    try {
+        await api(`/coupons/${id}`, { method: 'DELETE' });
+        showToast('削除しました', 'success');
+        loadCoupons();
+    } catch (e) { showToast(e.message, 'error'); }
+}
+
+// ============================================================
+// 📊 RunPod 価格監視
+// ============================================================
+
+async function loadPricingCompare() {
+    document.getElementById('pricingTable').innerHTML = '<div style="padding:2rem;text-align:center;color:var(--text2)">読み込み中...</div>';
+    try {
+        const data = await api('/admin/pricing/compare');
+        if (data.last_fetched) {
+            document.getElementById('pricingLastFetch').textContent =
+                `最終取得: ${new Date(data.last_fetched).toLocaleString('ja-JP')} — ${data.count}種類`;
+        } else {
+            document.getElementById('pricingLastFetch').textContent = '未取得。《今すぐ取得》をクリックしてください。';
+        }
+        renderPricingTable(data.comparisons || []);
+    } catch (e) {
+        document.getElementById('pricingTable').innerHTML = `<div style="padding:1rem;color:var(--danger)">${e.message}</div>`;
+    }
+}
+
+function renderPricingTable(comparisons) {
+    if (!comparisons.length) {
+        document.getElementById('pricingTable').innerHTML = '<div style="padding:2rem;text-align:center;color:var(--text3)">データなし（《今すぐ取得》で取得）</div>';
+        return;
+    }
+    const rows = comparisons.map(c => {
+        const status = c.is_competitive === null ? '' : c.is_competitive ? '✅' : '⚠️';
+        const gpuRentalCell = c.gpurental_price
+            ? `¥${c.gpurental_price.toLocaleString()}/hr`
+            : '<span style="color:var(--text3)">未登録</span>';
+        const diffCell = c.diff_jpy !== null
+            ? `<span style="color:${c.diff_jpy > 0 ? 'var(--warning)' : 'var(--success)'}">${c.diff_jpy > 0 ? '+' : ''}¥${c.diff_jpy.toLocaleString()}</span>`
+            : '—';
+        const applybtn = c.suggested_price_jpy
+            ? `<button class="btn btn-ghost" style="font-size:.75rem;padding:.25rem .5rem" onclick="applyPrice('${c.gpu_name}',${c.suggested_price_jpy})">適用</button>`
+            : '';
+        return `<tr style="border-bottom:1px solid var(--border)">
+            <td style="padding:.6rem .75rem">${status}</td>
+            <td style="padding:.6rem .75rem;font-size:.85rem">${c.gpu_name}</td>
+            <td style="padding:.6rem .75rem;text-align:right;color:var(--text2)">${c.vram_gb}GB</td>
+            <td style="padding:.6rem .75rem;text-align:right">¥${(c.runpod_price_jpy || 0).toLocaleString()}/hr</td>
+            <td style="padding:.6rem .75rem;text-align:right">${gpuRentalCell}</td>
+            <td style="padding:.6rem .75rem;text-align:right">${diffCell}</td>
+            <td style="padding:.6rem .75rem;text-align:right;color:var(--accent)">¥${(c.suggested_price_jpy || 0).toLocaleString()}/hr</td>
+            <td style="padding:.6rem .75rem">${applybtn}</td>
+        </tr>`;
+    }).join('');
+    document.getElementById('pricingTable').innerHTML = `
+    <table style="width:100%;border-collapse:collapse;font-size:.85rem">
+        <thead><tr style="color:var(--text2);border-bottom:1px solid var(--border)">
+            <th style="padding:.6rem .75rem">状態</th>
+            <th style="padding:.6rem .75rem;text-align:left">GPU名</th>
+            <th style="padding:.6rem .75rem;text-align:right">VRAM</th>
+            <th style="padding:.6rem .75rem;text-align:right">RunPod</th>
+            <th style="padding:.6rem .75rem;text-align:right">GPURental</th>
+            <th style="padding:.6rem .75rem;text-align:right">差額</th>
+            <th style="padding:.6rem .75rem;text-align:right">推奨価格</th>
+            <th style="padding:.6rem .75rem">適用</th>
+        </tr></thead>
+        <tbody>${rows}</tbody>
+    </table>`;
+}
+
+async function fetchRunPodPrices() {
+    showToast('🔄 RunPodから価格を取得中...', 'info');
+    try {
+        const result = await api('/admin/pricing/fetch', { method: 'POST' });
+        showToast(`✅ ${result.count}種類GPUの価格を取得しました`, 'success');
+        loadPricingCompare();
+    } catch (e) { showToast('取得エラー: ' + e.message, 'error'); }
+}
+
+async function applyPrice(gpuName, priceJpy) {
+    if (!confirm(`${gpuName} の価格を ¥${priceJpy.toLocaleString()}/hr に変更しますか？`)) return;
+    try {
+        const r = await api('/admin/pricing/apply', {
+            method: 'POST',
+            body: JSON.stringify({ gpu_name: gpuName, price_jpy: priceJpy }),
+        });
+        showToast(r.changes > 0 ? `✅ 価格を適用しました` : '該当GPUなし', r.changes > 0 ? 'success' : 'warning');
+        loadPricingCompare();
+    } catch (e) { showToast(e.message, 'error'); }
+}

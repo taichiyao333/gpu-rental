@@ -873,6 +873,8 @@
             <div class="nav-section">システム</div>
             <button class="nav-item" data-section="users"><span class="nav-icon">👥</span>ユーザー</button>
             <button class="nav-item" data-section="bonus"><span class="nav-icon">🎁</span>ボーナスPT</button>
+            <button class="nav-item" data-section="coupons"><span class="nav-icon">🎟️</span>クーポン</button>
+            <button class="nav-item" data-section="pricing"><span class="nav-icon">📊</span>RunPod価格</button>
             <button class="nav-item" data-section="alerts"><span class="nav-icon">🔔</span>アラート<span class="nav-badge"
                     id="alertsBadge" style="display:none">0</span></button>
             <button class="nav-item" data-section="maintenance" id="navMaintenance">
@@ -1465,6 +1467,94 @@
             </div>
         </div>
     </div>
+    <!-- COUPON SECTION -->
+    <div class="section" id="section-coupons">
+        <div class="section-header">
+            <div>
+                <div class="section-title">🎟️ クーポン管理</div>
+                <div class="section-sub">クーポンコードの発行・管理・使用履歴</div>
+            </div>
+            <button class="btn btn-primary" onclick="openCreateCouponModal()">➕ 新規発行</button>
+        </div>
+        <!-- 統計 -->
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:1rem;margin-bottom:1.5rem"
+            id="couponStats"></div>
+        <!-- クーポン一覧 -->
+        <div class="card">
+            <div class="card-header"><span class="card-title">発行済みクーポン</span></div>
+            <div id="couponList" style="overflow-x:auto"></div>
+        </div>
+    </div>
+
+    <!-- PRICING SECTION -->
+    <div class="section" id="section-pricing">
+        <div class="section-header">
+            <div>
+                <div class="section-title">📊 RunPod価格監視</div>
+                <div class="section-sub">毎敥0時30分に自動取得・コンペティター比較</div>
+            </div>
+            <button class="btn btn-primary" onclick="fetchRunPodPrices()">🔄 今すぐ取得</button>
+        </div>
+        <div id="pricingLastFetch" style="font-size:.8rem;color:var(--text3);margin-bottom:1rem"></div>
+        <!-- 比較テーブル -->
+        <div class="card">
+            <div class="card-header"><span class="card-title">GPU価格比較（RunPod vs GPURental）</span></div>
+            <div id="pricingTable" style="overflow-x:auto"></div>
+        </div>
+    </div>
+
+    <!-- COUPON CREATE MODAL -->
+    <div id="couponModal"
+        style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);backdrop-filter:blur(6px);z-index:1000;align-items:center;justify-content:center">
+        <div
+            style="background:var(--card);border:1px solid var(--border-h);border-radius:16px;padding:2rem;width:min(480px,95vw)">
+            <h3 style="margin-bottom:1.5rem">🎟️ クーポン発行</h3>
+            <div style="display:grid;gap:1rem">
+                <div>
+                    <label style="font-size:.85rem;color:var(--text2)">クーポンコード *</label>
+                    <input id="cpCode" placeholder="BETA2025"
+                        style="width:100%;margin-top:.35rem;padding:.6rem .9rem;background:rgba(255,255,255,.06);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:.9rem" />
+                </div>
+                <div>
+                    <label style="font-size:.85rem;color:var(--text2)">説明</label>
+                    <input id="cpDesc" placeholder="ベータユーザー限定"
+                        style="width:100%;margin-top:.35rem;padding:.6rem .9rem;background:rgba(255,255,255,.06);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:.9rem" />
+                </div>
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:.75rem">
+                    <div>
+                        <label style="font-size:.85rem;color:var(--text2)">割引タイプ</label>
+                        <select id="cpType"
+                            style="width:100%;margin-top:.35rem;padding:.6rem;background:var(--bg3);border:1px solid var(--border);border-radius:8px;color:var(--text)">
+                            <option value="percent">割引率 (%)</option>
+                            <option value="fixed">固定額 (円)</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label style="font-size:.85rem;color:var(--text2)">値 *</label>
+                        <input id="cpValue" type="number" placeholder="20"
+                            style="width:100%;margin-top:.35rem;padding:.6rem .9rem;background:rgba(255,255,255,.06);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:.9rem" />
+                    </div>
+                </div>
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:.75rem">
+                    <div>
+                        <label style="font-size:.85rem;color:var(--text2)">最大使用回数 (0=無限)</label>
+                        <input id="cpMaxUses" type="number" placeholder="100"
+                            style="width:100%;margin-top:.35rem;padding:.6rem .9rem;background:rgba(255,255,255,.06);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:.9rem" />
+                    </div>
+                    <div>
+                        <label style="font-size:.85rem;color:var(--text2)">有効期限</label>
+                        <input id="cpUntil" type="date"
+                            style="width:100%;margin-top:.35rem;padding:.6rem .9rem;background:rgba(255,255,255,.06);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:.9rem" />
+                    </div>
+                </div>
+            </div>
+            <div style="display:flex;gap:.75rem;justify-content:flex-end;margin-top:1.5rem">
+                <button class="btn btn-ghost" onclick="closeCouponModal()">キャンセル</button>
+                <button class="btn btn-primary" onclick="submitCreateCoupon()">🎟️ 発行する</button>
+            </div>
+        </div>
+    </div>
+
     <!-- FOOTER -->
     <footer
         style="border-top:1px solid rgba(255,255,255,.07);padding:1.5rem 2rem;margin-top:2rem;text-align:center;font-size:0.78rem;color:rgba(255,255,255,.35)">

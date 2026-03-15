@@ -1475,18 +1475,19 @@ async function purchaseTicket(planId, event) {
     if (!plan) return;
     const btn = event?.target;
     if (btn) { btn.disabled = true; btn.textContent = '処理中...'; }
+    // クーポンコードを取得
+    const couponInput = document.getElementById('couponCodeInput');
+    const couponCode = couponInput?.value.trim() || '';
     try {
         const result = await apiFetch('/points/purchase', {
             method: 'POST',
-            body: JSON.stringify({ plan_id: planId }),
+            body: JSON.stringify({ plan_id: planId, coupon_code: couponCode || undefined }),
         });
         if (result.test_mode) {
-            // テストモード：即時付与
             showToast(`✅ ${result.points_added}pt 付与されました！（テストモード）`, 'success');
             loadPointBalance();
             renderTicketPlans();
         } else if (result.redirect_url) {
-            // 本番：GMOイプシロン決済ページへリダイレクト
             showToast('GMOイプシロン決済ページに移動します...', 'info');
             setTimeout(() => { window.location.href = result.redirect_url; }, 1000);
         }
@@ -1510,6 +1511,18 @@ function createTicketModal() {
         <div class="ticket-plans-note">
           <span>💡 1ポイント = 10円。ポイントはGPUレンタル予約時に自動消費されます。</span>
         </div>
+
+        <!-- クーポンコード入力 -->
+        <div style="display:flex;gap:.5rem;align-items:center;margin-bottom:1rem;padding:0.75rem;background:rgba(108,71,255,0.08);border:1px solid rgba(108,71,255,0.2);border-radius:10px">
+          <span style="font-size:1.1rem">🎟️</span>
+          <input id="couponCodeInput" type="text" placeholder="クーポンコードを入力（例: BETA2025）"
+            style="flex:1;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);border-radius:6px;padding:.5rem .75rem;color:var(--text);font-size:.875rem;outline:none"
+            oninput="couponInputChanged(this.value)" />
+          <button onclick="applyCoupon()" style="padding:.5rem .9rem;background:var(--primary);border:none;border-radius:6px;color:#fff;font-size:.85rem;cursor:pointer;white-space:nowrap">適用</button>
+        </div>
+        <!-- クーポン適用結果 -->
+        <div id="couponResult" style="display:none;margin-bottom:0.75rem;padding:.6rem 1rem;border-radius:8px;font-size:.85rem"></div>
+
         <div class="ticket-plans-grid" id="ticketPlansContainer">
           <div style="text-align:center;padding:2rem;color:var(--text2)">読み込み中...</div>
         </div>
@@ -1523,6 +1536,43 @@ function createTicketModal() {
     document.body.appendChild(modal);
     modal.addEventListener('click', (e) => { if (e.target === modal) closeTicketModal(); });
     renderTicketPlans();
+}
+
+// クーポン入力変化時にリセット
+function couponInputChanged(val) {
+    if (!val) {
+        const r = document.getElementById('couponResult');
+        if (r) r.style.display = 'none';
+    }
+}
+
+// クーポン適用ボタン
+let _appliedCoupon = null;
+async function applyCoupon() {
+    const input = document.getElementById('couponCodeInput');
+    const result = document.getElementById('couponResult');
+    const code = input?.value.trim();
+    if (!code) { showToast('クーポンコードを入力してください', 'error'); return; }
+    try {
+        const data = await apiFetch('/coupons/validate', {
+            method: 'POST',
+            body: JSON.stringify({ code, amount_yen: 800 }), // 最小プランで仮計算
+        });
+        _appliedCoupon = data;
+        result.style.display = 'block';
+        result.style.background = 'rgba(0,229,160,0.1)';
+        result.style.border = '1px solid rgba(0,229,160,0.3)';
+        result.style.color = '#00e5a0';
+        result.innerHTML = `✅ <strong>${data.code}</strong> — ${data.label} が適用されます！`;
+        showToast(`🎟️ クーポン「${data.code}」を適用しました`, 'success');
+    } catch (e) {
+        _appliedCoupon = null;
+        result.style.display = 'block';
+        result.style.background = 'rgba(255,71,87,0.1)';
+        result.style.border = '1px solid rgba(255,71,87,0.3)';
+        result.style.color = '#ff4757';
+        result.innerHTML = `❌ ${e.message}`;
+    }
 }
 
 /* ─── Reconnect (再接続) ─────────────────────────────────────────── */
