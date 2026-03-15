@@ -9,7 +9,7 @@
     // ── Config (injected by deploy script) ──────────────────────────────────
     var BETA_PASSWORD = '__BETA_PASSWORD__';
     var STORAGE_KEY = 'gpurental_beta_auth';
-    var SKIP_PATHS = ['/maintenance.html', '/admin'];
+    var SKIP_PATHS = ['/maintenance.html', '/admin', '/epsilon_mock', '/epsilon_mock/'];
 
     // ── Skip on admin / maintenance pages ───────────────────────────────────
     var path = location.pathname;

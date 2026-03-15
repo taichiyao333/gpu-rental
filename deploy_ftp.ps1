@@ -161,7 +161,7 @@ $maintSnippet = @"
 
 
 $htmlFiles = Get-ChildItem "$tempDir" -Recurse -Include "*.html" |
-Where-Object { $_.Name -notmatch "admin|maintenance" }
+Where-Object { $_.Name -notmatch "admin|maintenance" -and $_.FullName -notmatch "epsilon_mock" }
 foreach ($f in $htmlFiles) {
     $c = [System.IO.File]::ReadAllText($f.FullName, [System.Text.Encoding]::UTF8)
 

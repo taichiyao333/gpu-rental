@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>クレジットカード決済 — GPURental</title>
+    <title>クレジットカード決済 — GPURental (審査確認用デモ)</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link
         href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Noto+Sans+JP:wght@400;500;600&display=swap"
@@ -129,6 +129,26 @@
             display: flex;
             align-items: center;
             gap: 8px;
+        }
+
+        /* Review banner */
+        .review-banner {
+            background: linear-gradient(135deg, #1e40af, #1d4ed8);
+            color: #fff;
+            padding: 12px 20px;
+            font-size: 0.82rem;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            border-bottom: 2px solid #3b82f6;
+        }
+        .review-banner strong { font-size: 0.88rem; }
+        .review-banner a {
+            margin-left: auto;
+            color: #bfdbfe;
+            text-decoration: underline;
+            font-size: 0.75rem;
+            white-space: nowrap;
         }
 
         /* Form */
@@ -363,6 +383,12 @@
             <div class="order-num">注文番号: <span id="orderNum">GPU-TEST</span></div>
         </div>
 
+        <!-- Review notice -->
+        <div class="review-banner">
+            📋 <div><strong>GMOイプシロン 審査確認用ページ</strong><br>GPURental (gpurental.jp) の決済フロー確認用デモ画面です。</div>
+            <a href="https://gpurental.jp/" target="_blank">サービストップ →</a>
+        </div>
+
         <!-- Test mode notice -->
         <div class="test-badge">
             ⚠️ <strong>テスト環境</strong> — このページはGMOイプシロン審査確認用のデモ画面です。実際の課金は発生しません。
@@ -443,13 +469,13 @@
     <script>
         // Parse URL params
         var params = new URLSearchParams(location.search);
-        var itemName = decodeURIComponent(params.get('item_name') || '1時間チケット');
-        var itemPrice = params.get('item_price') || '800';
-        var orderNum = params.get('order_number') || 'GPU-TEST';
+        var itemName = decodeURIComponent(params.get('item_name') || 'GPUクラウドポイント 1,000pt（¥1,000相当）');
+        var itemPrice = params.get('item_price') || '1000';
+        var orderNum = params.get('order_number') || 'REVIEW-' + Math.random().toString(36).substr(2,6).toUpperCase();
         var successUrl = params.get('success_url') || '/portal/?payment=success';
         var cancelUrl = params.get('cancel_url') || '/portal/?payment=cancelled';
         var purchaseId = params.get('purchase_id') || '0';
-        var contractCode = params.get('contract_code') || '';
+        var contractCode = params.get('contract_code') || '74359780'; // GPURental審査用コード
 
         // Set display values
         document.getElementById('itemName').textContent = itemName;
