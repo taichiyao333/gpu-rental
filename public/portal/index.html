@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="ja">
 
 <head>
@@ -159,18 +159,19 @@
                         <button class="cal-nav-btn" id="calNext">›</button>
                     </div>
                     <div class="cal-grid">
-                        <div class="cal-day-hdr">日</div>
-                        <div class="cal-day-hdr">月</div>
-                        <div class="cal-day-hdr">火</div>
-                        <div class="cal-day-hdr">水</div>
-                        <div class="cal-day-hdr">木</div>
+                                                <div class="cal-day-hdr">木</div>
                         <div class="cal-day-hdr">金</div>
                         <div class="cal-day-hdr">土</div>
                         <div id="calDays" style="display:contents"></div>
                     </div>
 
+                    <!-- Docker Template -->
+                    <div class="cal-section-title" style="margin-top:1.25rem">🐳 環境テンプレート</div>
+                    <div id="dockerTemplates" style="display:grid;grid-template-columns:1fr 1fr;gap:.4rem;margin-bottom:.5rem"></div>
+                    <div id="templateDetail" style="display:none;background:rgba(108,71,255,.08);border:1px solid rgba(108,71,255,.2);border-radius:8px;padding:.5rem .75rem;font-size:.78rem;color:var(--text2);margin-bottom:.5rem"></div>
+
                     <!-- Purpose -->
-                    <div class="cal-section-title" style="margin-top:1.25rem">🎯 利用目的</div>
+                    <div class="cal-section-title" style="margin-top:.75rem">🎯 利用目的</div>
                     <select id="notes" class="cal-select">
                         <option value="AI/機械学習">🤖 AI / 機械学習</option>
                         <option value="動画レンダリング">🎬 動画レンダリング</option>

@@ -1,4 +1,4 @@
-﻿/* ─── State ─────────────────────────────────────────────────────── */
+/* ─── State ─────────────────────────────────────────────────────── */
 const state = {
     token: localStorage.getItem('gpu_token') || null,
     user: JSON.parse(localStorage.getItem('gpu_user') || 'null'),
@@ -495,6 +495,118 @@ function openReserveModal(gpuId) {
 
     // Fetch availability for current month in background
     calFetchAvailability();
+
+    // Dockerテンプレートを描画
+    renderDockerTemplates();
+}
+
+// ── Docker Templates ─────────────────────────────────────────────
+const DOCKER_TEMPLATES = [
+    {
+        id: 'pytorch',
+        icon: '🔥',
+        name: 'PyTorch 2.1',
+        desc: 'CUDA 12.1 + PyTorch 2.1\nTransformers / Diffusers 付属',
+        purpose: 'AI/機械学習',
+        color: '#ee4c2c',
+        tags: ['AI', 'LLM', 'SD'],
+    },
+    {
+        id: 'comfyui',
+        icon: '🎨',
+        name: 'ComfyUI',
+        desc: 'Stable Diffusion WebUI\nComfyUI + 主要ノード同梱',
+        purpose: 'AI/機械学習',
+        color: '#7c5cbf',
+        tags: ['画像生成', 'SD'],
+    },
+    {
+        id: 'jupyter',
+        icon: '📓',
+        name: 'JupyterLab',
+        desc: 'CUDA + JupyterLab 4.x\npandas / scikit-learn / matplotlib',
+        purpose: '科学計算',
+        color: '#f37626',
+        tags: ['分析', 'Python'],
+    },
+    {
+        id: 'ollama',
+        icon: '🦙',
+        name: 'Ollama LLM',
+        desc: 'Ollama + モデル自動ダウンロード\nllama3、mistral等をすぐ実行',
+        purpose: 'AI/機械学習',
+        color: '#00a67e',
+        tags: ['LLM', 'Chat'],
+    },
+    {
+        id: 'blender',
+        icon: '🎬',
+        name: 'Blender',
+        desc: 'Blender 4.x + EEVEE GPU\n動画・3DCGレンダリング',
+        purpose: '動画レンダリング',
+        color: '#ea7600',
+        tags: ['3DCG', 'Render'],
+    },
+    {
+        id: 'base',
+        icon: '🐧',
+        name: 'Ubuntu 22.04',
+        desc: 'CUDA 12.1 + Python 3.11\nカスタム環境ベース',
+        purpose: 'その他',
+        color: '#4a90d9',
+        tags: ['汎用'],
+    },
+];
+
+let _selectedTemplate = null;
+
+function renderDockerTemplates() {
+    const container = document.getElementById('dockerTemplates');
+    if (!container) return;
+    _selectedTemplate = null;
+    container.innerHTML = DOCKER_TEMPLATES.map(t => `
+        <div class="docker-tpl-card" id="tpl_${t.id}" onclick="selectDockerTemplate('${t.id}')"
+            style="border:1px solid rgba(255,255,255,0.1);border-radius:8px;padding:.5rem .6rem;cursor:pointer;transition:all .2s;display:flex;align-items:center;gap:.5rem">
+            <span style="font-size:1.3rem;line-height:1">${t.icon}</span>
+            <div style="min-width:0">
+                <div style="font-size:.8rem;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${t.name}</div>
+                <div style="font-size:.7rem;color:var(--text3)">${t.tags.join(' · ')}</div>
+            </div>
+        </div>
+    `).join('');
+
+    // デフォルトで最初のテンプレートを選択
+    selectDockerTemplate('pytorch');
+}
+
+function selectDockerTemplate(id) {
+    _selectedTemplate = DOCKER_TEMPLATES.find(t => t.id === id);
+    if (!_selectedTemplate) return;
+
+    // カードのハイライト
+    document.querySelectorAll('.docker-tpl-card').forEach(el => {
+        el.style.border = '1px solid rgba(255,255,255,0.1)';
+        el.style.background = 'transparent';
+    });
+    const selected = document.getElementById(`tpl_${id}`);
+    if (selected) {
+        selected.style.border = `1px solid ${_selectedTemplate.color}`;
+        selected.style.background = `${_selectedTemplate.color}18`;
+    }
+
+    // 詳細パネル
+    const detail = document.getElementById('templateDetail');
+    if (detail) {
+        detail.style.display = 'block';
+        detail.innerHTML = `<strong>${_selectedTemplate.icon} ${_selectedTemplate.name}</strong><br>${_selectedTemplate.desc.replace(/\n/g, '<br>')}`;
+    }
+
+    // 利用目的を自動セット
+    const notes = document.getElementById('notes');
+    if (notes) {
+        const opt = Array.from(notes.options).find(o => o.value === _selectedTemplate.purpose);
+        if (opt) notes.value = _selectedTemplate.purpose;
+    }
 }
 
 /* ── Calendar rendering ── */
@@ -815,6 +927,7 @@ document.getElementById('submitReserve').addEventListener('click', async () => {
                 start_time: toISO(startDt),
                 end_time: toISO(endDt),
                 notes: document.getElementById('notes').value,
+                docker_template: _selectedTemplate?.id || 'pytorch',
             }),
         });
         document.getElementById('modalOverlay').classList.add('hidden');
