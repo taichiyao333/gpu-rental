@@ -588,6 +588,7 @@
             <button class="tab-btn" data-tab="gpus" onclick="switchTab('gpus')">🖥️ マイGPU &amp; 収益</button>
             <button class="tab-btn" data-tab="reservations" onclick="switchTab('reservations')">📅 予約履歴</button>
             <button class="tab-btn" data-tab="payout" onclick="switchTab('payout')">💸 出金申請</button>
+            <button class="tab-btn" data-tab="apikeys" onclick="switchTab('apikeys')">🔑 APIキー</button>
         </div>
 
         <!-- ── TAB: POINTS ── -->
@@ -873,7 +874,98 @@
             </div>
         </div>
 
+        <!-- ── TAB: API KEYS ── -->
+        <div class="tab-pane" id="tab-apikeys">
+            <div class="table-card">
+                <div class="table-header">
+                    <span class="table-title">🔑 APIキー管理</span>
+                    <button onclick="openCreateApiKeyModal()"
+                        style="border:none;background:linear-gradient(135deg,var(--primary),#8b5cf6);color:#fff;padding:.4rem .9rem;border-radius:6px;cursor:pointer;font-size:.82rem;font-weight:600">➕
+                        新規発行</button>
+                </div>
+                <div
+                    style="padding:1rem 1.25rem;font-size:.82rem;color:var(--text2);border-bottom:1px solid var(--border)">
+                    APIキーを使うとCLI・スクリプトからGPURentalのリソースにプログラム的にアクセスできます。最大5本まで。
+                </div>
+                <div id="apiKeysList" style="padding:1rem 1.25rem">
+                    <div class="spinner"></div>
+                </div>
+            </div>
+
+            <!-- APIキードキュメント -->
+            <div class="table-card" style="margin-top:1.25rem">
+                <div class="table-header"><span class="table-title">📚 API クイックスタート</span></div>
+                <div style="padding:1.25rem;font-size:.875rem;line-height:2">
+                    <div style="margin-bottom:1rem">
+                        <strong style="color:var(--accent)">認証方法</strong><br>
+                        <code
+                            style="background:var(--bg3);padding:.2rem .5rem;border-radius:4px;font-size:.8rem">Authorization: Bearer YOUR_API_KEY</code>
+                    </div>
+                    <div style="margin-bottom:1rem">
+                        <strong style="color:var(--accent)">使用例 (curl)</strong>
+                        <pre
+                            style="background:var(--bg3);padding:.75rem 1rem;border-radius:8px;margin-top:.5rem;font-size:.78rem;overflow-x:auto">curl https://gpurental.jp/api/points/balance \
+  -H "Authorization: Bearer gpr_xxxxxxxxxxxx"</pre>
+                    </div>
+                    <div>
+                        <strong style="color:var(--accent)">主なエンドポイント</strong>
+                        <table style="margin-top:.5rem;font-size:.8rem">
+                            <thead>
+                                <tr>
+                                    <th>メソッド</th>
+                                    <th>パス</th>
+                                    <th>説明</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td><span style="color:var(--success)">GET</span></td>
+                                    <td>/api/points/balance</td>
+                                    <td>ポイント残高確認</td>
+                                </tr>
+                                <tr>
+                                    <td><span style="color:var(--success)">GET</span></td>
+                                    <td>/api/reservations</td>
+                                    <td>予約一覧</td>
+                                </tr>
+                                <tr>
+                                    <td><span style="color:var(--primary)">POST</span></td>
+                                    <td>/api/reservations</td>
+                                    <td>新規予約作成</td>
+                                </tr>
+                                <tr>
+                                    <td><span style="color:var(--success)">GET</span></td>
+                                    <td>/api/prices</td>
+                                    <td>GPU料金一覧</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
     </div><!-- /.page-content -->
+
+    <!-- API KEY CREATE MODAL -->
+    <div id="apiKeyModal"
+        style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.75);backdrop-filter:blur(6px);z-index:1000;align-items:center;justify-content:center">
+        <div
+            style="background:#13132a;border:1px solid rgba(108,71,255,.4);border-radius:16px;padding:2rem;width:min(460px,95vw)">
+            <h3 style="margin-bottom:1.25rem">🔑 APIキー発行</h3>
+            <label style="font-size:.85rem;color:var(--text2)">キー名（任意）</label>
+            <input id="apiKeyName" placeholder="例: CI/CD用"
+                style="width:100%;margin:.4rem 0 1.25rem;padding:.65rem .9rem;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.12);border-radius:8px;color:var(--text);font-size:.9rem">
+            <div id="apiKeyResult" style="display:none;margin-bottom:1.25rem"></div>
+            <div style="display:flex;gap:.75rem;justify-content:flex-end">
+                <button onclick="closeApiKeyModal()"
+                    style="padding:.6rem 1.2rem;border:1px solid rgba(255,255,255,.15);background:none;color:var(--text);border-radius:8px;cursor:pointer">キャンセル</button>
+                <button id="apiKeySubmitBtn" onclick="submitCreateApiKey()"
+                    style="padding:.6rem 1.4rem;background:linear-gradient(135deg,var(--primary),#8b5cf6);color:#fff;border:none;border-radius:8px;cursor:pointer;font-weight:700">🔑
+                    発行する</button>
+            </div>
+        </div>
+    </div>
 
     <script>
         // ── CONFIG ──────────────────────────────────────────────────
@@ -941,6 +1033,7 @@
                 if (name === 'gpus') { loadMyGpus(); loadEarnings(); }
                 if (name === 'reservations') { loadReservations(); }
                 if (name === 'payout') { loadPayoutTab(); }
+                if (name === 'apikeys') { loadApiKeys(); }
             }
         }
 
@@ -1247,6 +1340,106 @@
         loaded['points'] = true;
         loadPointBalance();
         loadPointLogs();
+
+        // ── API KEYS ─────────────────────────────────────────────────
+        async function loadApiKeys() {
+            const container = document.getElementById('apiKeysList');
+            container.innerHTML = '<div class="spinner"></div>';
+            try {
+                const keys = await apiGet('/user/apikeys');
+                if (!keys.length) {
+                    container.innerHTML = '<div class="empty"><div class="empty-icon">🔑</div>APIキーがありません<br><small style="color:var(--text3)">「新規発行」ボタンからキーを作成してください</small></div>';
+                    return;
+                }
+                container.innerHTML = keys.map(k => `
+                    <div style="display:flex;align-items:center;gap:1rem;padding:.75rem 0;border-bottom:1px solid var(--border)">
+                        <div style="flex:1;min-width:0">
+                            <div style="font-weight:600;font-size:.9rem">${k.name}</div>
+                            <div style="font-size:.78rem;color:var(--text2);margin-top:.15rem">
+                                <code style="background:var(--bg3);padding:.15rem .4rem;border-radius:4px">${k.key_prefix}</code>
+                                &nbsp;·&nbsp; 作成: ${fmt(k.created_at)}
+                                ${k.last_used_at ? '&nbsp;·&nbsp; 最終使用: ' + fmt(k.last_used_at) : '&nbsp;·&nbsp; <span style="color:var(--text3)">未使用</span>'}
+                            </div>
+                        </div>
+                        <span class="badge ${k.is_active ? 'badge-success' : 'badge-danger'}">${k.is_active ? '有効' : '無効'}</span>
+                        <button onclick="toggleApiKey(${k.id})" style="padding:.3rem .6rem;background:rgba(108,71,255,.2);border:none;border-radius:6px;color:#a08cff;font-size:.78rem;cursor:pointer">${k.is_active ? '無効化' : '有効化'}</button>
+                        <button onclick="deleteApiKey(${k.id})" style="padding:.3rem .6rem;background:rgba(255,71,87,.15);border:none;border-radius:6px;color:var(--danger);font-size:.78rem;cursor:pointer">削除</button>
+                    </div>
+                `).join('');
+            } catch (e) {
+                container.innerHTML = `<div style="color:var(--danger);padding:1rem">${e.message}</div>`;
+            }
+        }
+
+        function openCreateApiKeyModal() {
+            document.getElementById('apiKeyModal').style.display = 'flex';
+            document.getElementById('apiKeyName').value = '';
+            document.getElementById('apiKeyResult').style.display = 'none';
+            document.getElementById('apiKeySubmitBtn').style.display = '';
+        }
+
+        function closeApiKeyModal() {
+            document.getElementById('apiKeyModal').style.display = 'none';
+            loadApiKeys();
+        }
+
+        async function submitCreateApiKey() {
+            const name = document.getElementById('apiKeyName').value.trim() || 'My API Key';
+            const resultEl = document.getElementById('apiKeyResult');
+            const submitBtn = document.getElementById('apiKeySubmitBtn');
+            submitBtn.disabled = true;
+            submitBtn.textContent = '発行中...';
+            try {
+                const res = await fetch(`${API_BASE}/api/user/apikeys`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+                    body: JSON.stringify({ name }),
+                });
+                const data = await res.json();
+                if (!res.ok) throw new Error(data.error);
+
+                resultEl.style.display = 'block';
+                resultEl.innerHTML = `
+                    <div style="background:rgba(0,229,160,.08);border:1px solid rgba(0,229,160,.3);border-radius:10px;padding:1rem">
+                        <div style="font-weight:700;color:var(--success);margin-bottom:.5rem">✅ APIキーを発行しました！</div>
+                        <div style="font-size:.8rem;color:var(--text2);margin-bottom:.5rem">このキーは1度しか表示されません。今すぐコピーして安全な場所に保存してください。</div>
+                        <div style="display:flex;align-items:center;gap:.5rem">
+                            <code id="newApiKey" style="flex:1;background:var(--bg3);padding:.5rem .75rem;border-radius:6px;font-size:.85rem;word-break:break-all">${data.api_key}</code>
+                            <button onclick="copyApiKey()" style="padding:.4rem .75rem;background:var(--primary);border:none;border-radius:6px;color:#fff;font-size:.8rem;cursor:pointer;white-space:nowrap">コピー</button>
+                        </div>
+                    </div>`;
+                submitBtn.style.display = 'none';
+            } catch (e) {
+                resultEl.style.display = 'block';
+                resultEl.innerHTML = `<div style="color:var(--danger);font-size:.85rem">❌ ${e.message}</div>`;
+                submitBtn.disabled = false;
+                submitBtn.textContent = '🔑 発行する';
+            }
+        }
+
+        function copyApiKey() {
+            const el = document.getElementById('newApiKey');
+            navigator.clipboard.writeText(el.textContent).then(() => {
+                alert('クリップボードにコピーしました！');
+            });
+        }
+
+        async function deleteApiKey(id) {
+            if (!confirm('このAPIキーを削除しますか？削除後は使用できなくなります。')) return;
+            const res = await fetch(`${API_BASE}/api/user/apikeys/${id}`, {
+                method: 'DELETE',
+                headers: { Authorization: `Bearer ${token}` },
+            });
+            if (res.ok) loadApiKeys();
+        }
+
+        async function toggleApiKey(id) {
+            await fetch(`${API_BASE}/api/user/apikeys/${id}/toggle`, {
+                method: 'PATCH',
+                headers: { Authorization: `Bearer ${token}` },
+            });
+            loadApiKeys();
+        }
     </script>
 </body>
 

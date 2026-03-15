@@ -303,6 +303,21 @@ async function runMigrations() {
     );
   `);
 
+  // ─── User API Keys ─────────────────────────────────────────────────────
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS user_api_keys (
+      id           INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id      INTEGER NOT NULL,
+      name         TEXT NOT NULL DEFAULT 'My API Key',
+      key_hash     TEXT NOT NULL UNIQUE,   -- SHA-256 of raw key
+      key_prefix   TEXT NOT NULL,          -- 最初の12文字+"..." (表示用)
+      is_active    INTEGER NOT NULL DEFAULT 1,
+      created_at   DATETIME DEFAULT CURRENT_TIMESTAMP,
+      last_used_at DATETIME,
+      FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+    );
+  `);
+
   console.log('✅ Database migrations complete');
 }
 
