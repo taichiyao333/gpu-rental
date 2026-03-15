@@ -391,12 +391,31 @@
 
         <!-- Test mode notice -->
         <div class="test-badge">
-            ⚠️ <strong>テスト環境</strong> — このページはGMOイプシロン審査確認用のデモ画面です。実際の課金は発生しません。
+            ⚠️ <strong>テスト環境 — 実際のカード情報は不要です。</strong>下の「テストデータを自動入力」ボタンを押してそのまま送信できます。実際の課金は一切発生しません。
         </div>
 
         <!-- Payment form -->
         <div class="pay-form">
-            <div class="section-title">💳 クレジットカード情報</div>
+            <div class="section-title" style="display:flex;align-items:center;justify-content:space-between;">
+                <span>💳 クレジットカード情報</span>
+                <button type="button" id="autoFillBtn" onclick="autoFillTestCard()" style="
+                    font-size:0.75rem;font-weight:600;padding:5px 12px;
+                    background:linear-gradient(135deg,#059669,#10b981);
+                    color:#fff;border:none;border-radius:6px;cursor:pointer;
+                    display:flex;align-items:center;gap:5px;
+                    transition:opacity 0.2s,transform 0.1s;
+                " onmouseover="this.style.opacity='0.88'" onmouseout="this.style.opacity='1'">
+                    ✨ テストデータを自動入力
+                </button>
+            </div>
+            <div id="testCardHint" style="
+                background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;
+                padding:10px 14px;margin-bottom:16px;font-size:0.78rem;color:#166534;
+                display:flex;align-items:flex-start;gap:8px;
+            ">
+                <span style="font-size:1rem;">💡</span>
+                <span>実際のカード情報は入力しないでください。上の「テストデータを自動入力」ボタンを押すと、テスト用ダミーカード情報が自動入力されます。</span>
+            </div>
 
             <div class="card-icons">
                 <span class="card-icon visa">VISA</span>
@@ -531,6 +550,40 @@
                 }
                 location.href = url;
             }, 1800);
+        }
+
+        // ── Auto-fill test card data ─────────────────────────────────────────
+        function autoFillTestCard() {
+            // Standard test card numbers (no real charge possible)
+            var testCards = [
+                { num: '4111 1111 1111 1111', brand: 'VISA' },
+                { num: '5555 5555 5555 4444', brand: 'Mastercard' },
+                { num: '3530 1113 3330 0000', brand: 'JCB' },
+            ];
+            var card = testCards[0]; // VISA by default
+
+            document.getElementById('cardNumber').value = card.num;
+            document.getElementById('cardName').value = 'REVIEW TARO';
+            document.getElementById('cardExpiry').value = '12 / 28';
+            document.getElementById('cardCvc').value = '123';
+
+            // Visual feedback on button
+            var btn = document.getElementById('autoFillBtn');
+            btn.textContent = '✅ 入力済み (' + card.brand + ')';
+            btn.style.background = 'linear-gradient(135deg,#0284c7,#0369a1)';
+
+            // Hide the hint box
+            var hint = document.getElementById('testCardHint');
+            if (hint) hint.style.display = 'none';
+
+            // Show filled card badge
+            var badge = document.createElement('div');
+            badge.style.cssText = 'background:#eff6ff;border:1px solid #93c5fd;border-radius:8px;padding:10px 14px;margin-top:12px;font-size:0.78rem;color:#1d4ed8;display:flex;align-items:center;gap:8px;';
+            badge.innerHTML = '<span style="font-size:1rem;">💳</span>' +
+                '<span><strong>' + card.brand + ' テストカード</strong>  ' + card.num + '<br>' +
+                '名義: REVIEW TARO &nbsp;|&nbsp; 有効期限: 12/28 &nbsp;|&nbsp; CVC: 123<br>' +
+                '<span style="color:#6b7280;font-size:0.72rem;">※ このカード番号は業界標準のテスト番号です。実際の課金は発生しません。</span></span>';
+            btn.closest('.section-title').insertAdjacentElement('afterend', badge);
         }
 
         function cancelPayment() {
