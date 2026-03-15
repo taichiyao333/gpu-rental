@@ -167,7 +167,7 @@ function scheduleReservationEnd() {
 
         for (const pod of expired) {
             try {
-                const result = stopPod(pod.id, 'expired');
+                const result = await stopPod(pod.id, 'expired');
 
                 // WebSocket強制切断通知
                 if (io) {
@@ -197,6 +197,7 @@ function scheduleReservationEnd() {
                 console.error(`Failed to stop pod ${pod.id}:`, err.message);
             }
         }
+
     });
 }
 

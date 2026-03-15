@@ -30,7 +30,7 @@ router.get('/', authMiddleware, (req, res) => {
 
 // POST /api/reservations - create new reservation
 router.post('/', authMiddleware, (req, res) => {
-  const { gpu_id, start_time, end_time, notes } = req.body;
+  const { gpu_id, start_time, end_time, notes, docker_template } = req.body;
   if (!gpu_id || !start_time || !end_time)
     return res.status(400).json({ error: 'gpu_id, start_time, end_time required' });
 
@@ -59,10 +59,14 @@ router.post('/', authMiddleware, (req, res) => {
   const durationHours = (end - start) / 3600000;
   const total_price = durationHours * gpu.price_per_hour;
 
+  // Validate docker_template
+  const { TEMPLATES } = require('../services/dockerTemplates');
+  const templateId = (docker_template && TEMPLATES[docker_template]) ? docker_template : 'pytorch';
+
   const result = db.prepare(`
-    INSERT INTO reservations (renter_id, gpu_id, start_time, end_time, status, total_price, notes)
-    VALUES (?, ?, ?, ?, 'confirmed', ?, ?)
-  `).run(req.user.id, gpu_id, start_time, end_time, total_price, notes || '');
+    INSERT INTO reservations (renter_id, gpu_id, start_time, end_time, status, total_price, notes, docker_template)
+    VALUES (?, ?, ?, ?, 'confirmed', ?, ?, ?)
+  `).run(req.user.id, gpu_id, start_time, end_time, total_price, notes || '', templateId);
 
   const reservation = db.prepare('SELECT * FROM reservations WHERE id = ?').get(result.lastInsertRowid);
   const resWithGpu = { ...reservation, gpu_name: gpu.name };

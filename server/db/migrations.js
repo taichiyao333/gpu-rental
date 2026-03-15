@@ -1,4 +1,4 @@
-﻿const { getDb, initDb } = require('./database');
+const { getDb, initDb } = require('./database');
 const bcrypt = require('bcryptjs');
 const config = require('../config');
 
@@ -243,6 +243,14 @@ async function runMigrations() {
     // interrupted flag on usage_logs
     "ALTER TABLE usage_logs ADD COLUMN interrupted INTEGER DEFAULT 0",
     "ALTER TABLE usage_logs ADD COLUMN interrupt_reason TEXT",
+    // Docker template selection (added with reservation)
+    "ALTER TABLE reservations ADD COLUMN docker_template TEXT DEFAULT 'pytorch'",
+    // Docker container tracking (added to pods)
+    "ALTER TABLE pods ADD COLUMN container_id TEXT",
+    "ALTER TABLE pods ADD COLUMN container_status TEXT DEFAULT 'pending'",
+    "ALTER TABLE pods ADD COLUMN jupyter_port INTEGER",
+    "ALTER TABLE pods ADD COLUMN webui_port INTEGER",
+    "ALTER TABLE pods ADD COLUMN ssh_port INTEGER",
   ];
   for (const sql of alterList) {
     try { db.exec(sql); } catch (_) { /* column already exists */ }
