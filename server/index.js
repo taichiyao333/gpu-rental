@@ -30,6 +30,7 @@ const pointRoutes = require('./routes/points');
 const outageRoutes = require('./routes/outage');
 const couponRoutes = require('./routes/coupons');
 const { router: apiKeyRoutes } = require('./routes/apikeys');
+const diagnosticsRoutes = require('./routes/diagnostics');
 
 
 // ─── Startup Environment Validation ────────────────────────────────────────
@@ -197,6 +198,7 @@ app.use('/api/outage', outageRoutes);
 app.use('/api/prices', priceRoutes);
 app.use('/api/coupons', couponRoutes);
 app.use('/api/user/apikeys', apiKeyRoutes);
+app.use('/api/diagnose', diagnosticsRoutes);
 app.use('/api/admin', adminRoutes);
 
 

@@ -1,0 +1,969 @@
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>GPUプロバイダー診断ツール — GPURental</title>
+    <meta name="description" content="GPU貸し出しの問題を自動診断。nvidia-smi・CUDA・接続性・エージェント状態をワンクリックでチェック。" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap"
+        rel="stylesheet" />
+    <style>
+        :root {
+            --bg: #05050f;
+            --bg2: #0d0d20;
+            --bg3: #141428;
+            --border: rgba(255, 255, 255, .08);
+            --primary: #6c47ff;
+            --accent: #00d4ff;
+            --success: #00e5a0;
+            --warning: #ffb302;
+            --danger: #ff4757;
+            --text: #f0f0ff;
+            --text2: rgba(255, 255, 255, .55);
+            --text3: rgba(255, 255, 255, .3);
+            --radius: 12px;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            min-height: 100vh;
+        }
+
+        /* ── NAV ── */
+        .nav {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            padding: 0 2rem;
+            height: 60px;
+            background: rgba(5, 5, 15, .95);
+            border-bottom: 1px solid var(--border);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            backdrop-filter: blur(12px);
+        }
+
+        .nav-brand {
+            font-size: 1.1rem;
+            font-weight: 800;
+            text-decoration: none;
+            color: var(--text);
+        }
+
+        .nav-brand span {
+            color: var(--accent);
+        }
+
+        .nav-sep {
+            flex: 1;
+        }
+
+        /* ── HERO ── */
+        .hero {
+            text-align: center;
+            padding: 4rem 1.5rem 2rem;
+            background: linear-gradient(180deg, #0c0c25 0%, var(--bg) 100%);
+        }
+
+        .hero-badge {
+            display: inline-block;
+            background: rgba(108, 71, 255, .12);
+            border: 1px solid rgba(108, 71, 255, .3);
+            border-radius: 20px;
+            padding: .3rem 1rem;
+            font-size: .75rem;
+            font-weight: 700;
+            color: #a08cff;
+            text-transform: uppercase;
+            letter-spacing: .05em;
+            margin-bottom: 1.25rem;
+        }
+
+        .hero h1 {
+            font-size: clamp(1.8rem, 4vw, 2.8rem);
+            font-weight: 800;
+            letter-spacing: -1px;
+            line-height: 1.2;
+            margin-bottom: .75rem;
+        }
+
+        .hero h1 span {
+            background: linear-gradient(135deg, #6c47ff, #00d4ff);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .hero p {
+            color: var(--text2);
+            font-size: 1rem;
+            max-width: 520px;
+            margin: 0 auto 2rem;
+            line-height: 1.7;
+        }
+
+        /* ── MAIN ── */
+        .container {
+            max-width: 860px;
+            margin: 0 auto;
+            padding: 0 1.5rem 4rem;
+        }
+
+        /* ── WIZARD STEPS ── */
+        .wizard-steps {
+            display: flex;
+            gap: 0;
+            margin-bottom: 2.5rem;
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            overflow: hidden;
+        }
+
+        .wstep {
+            flex: 1;
+            padding: .875rem 1rem;
+            text-align: center;
+            font-size: .82rem;
+            font-weight: 600;
+            color: var(--text3);
+            background: var(--bg2);
+            border-right: 1px solid var(--border);
+            cursor: pointer;
+            transition: all .2s;
+            position: relative;
+        }
+
+        .wstep:last-child {
+            border-right: none;
+        }
+
+        .wstep.active {
+            color: #fff;
+            background: rgba(108, 71, 255, .2);
+        }
+
+        .wstep.done {
+            color: var(--success);
+        }
+
+        .wstep .step-num {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, .1);
+            font-size: .72rem;
+            font-weight: 800;
+            line-height: 20px;
+            margin-bottom: .25rem;
+        }
+
+        .wstep.active .step-num {
+            background: var(--primary);
+        }
+
+        .wstep.done .step-num {
+            background: var(--success);
+            color: #000;
+        }
+
+        /* ── START CARD ── */
+        .start-card {
+            background: var(--bg2);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 2.5rem;
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+
+        .start-icon {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+        }
+
+        .start-card h2 {
+            font-size: 1.3rem;
+            font-weight: 700;
+            margin-bottom: .5rem;
+        }
+
+        .start-card p {
+            color: var(--text2);
+            font-size: .9rem;
+            margin-bottom: 1.75rem;
+            line-height: 1.7;
+        }
+
+        /* ── BUTTONS ── */
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            gap: .5rem;
+            padding: .75rem 1.75rem;
+            border: none;
+            border-radius: 10px;
+            font-size: .95rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all .2s;
+            text-decoration: none;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, var(--primary), #8b5cf6);
+            color: #fff;
+        }
+
+        .btn-primary:hover {
+            opacity: .88;
+            transform: translateY(-1px);
+        }
+
+        .btn-secondary {
+            background: rgba(255, 255, 255, .06);
+            border: 1px solid var(--border);
+            color: var(--text2);
+        }
+
+        .btn-secondary:hover {
+            background: rgba(255, 255, 255, .1);
+            color: var(--text);
+        }
+
+        .btn-ghost {
+            background: none;
+            border: 1px solid var(--border);
+            color: var(--text2);
+            padding: .5rem 1rem;
+            font-size: .85rem;
+        }
+
+        /* ── CHECK CARD ── */
+        .check-list {
+            display: flex;
+            flex-direction: column;
+            gap: .875rem;
+        }
+
+        .check-card {
+            background: var(--bg2);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            overflow: hidden;
+            transition: border-color .2s;
+        }
+
+        .check-card.status-ok {
+            border-color: rgba(0, 229, 160, .2);
+        }
+
+        .check-card.status-warning {
+            border-color: rgba(255, 179, 2, .2);
+        }
+
+        .check-card.status-error {
+            border-color: rgba(255, 71, 87, .2);
+        }
+
+        .check-header {
+            display: flex;
+            align-items: center;
+            gap: .875rem;
+            padding: 1rem 1.25rem;
+            cursor: pointer;
+        }
+
+        .check-icon-wrap {
+            width: 36px;
+            height: 36px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.1rem;
+            flex-shrink: 0;
+        }
+
+        .status-ok .check-icon-wrap {
+            background: rgba(0, 229, 160, .12);
+        }
+
+        .status-warning .check-icon-wrap {
+            background: rgba(255, 179, 2, .12);
+        }
+
+        .status-error .check-icon-wrap {
+            background: rgba(255, 71, 87, .12);
+        }
+
+        .status-info .check-icon-wrap {
+            background: rgba(108, 71, 255, .12);
+        }
+
+        .status-pending .check-icon-wrap {
+            background: rgba(255, 255, 255, .06);
+        }
+
+        .check-info {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .check-label {
+            font-size: .9rem;
+            font-weight: 600;
+        }
+
+        .check-msg {
+            font-size: .8rem;
+            color: var(--text2);
+            margin-top: .1rem;
+        }
+
+        .status-badge {
+            flex-shrink: 0;
+            padding: .25rem .7rem;
+            border-radius: 6px;
+            font-size: .75rem;
+            font-weight: 700;
+        }
+
+        .badge-ok {
+            background: rgba(0, 229, 160, .12);
+            color: var(--success);
+        }
+
+        .badge-warning {
+            background: rgba(255, 179, 2, .12);
+            color: var(--warning);
+        }
+
+        .badge-error {
+            background: rgba(255, 71, 87, .12);
+            color: var(--danger);
+        }
+
+        .badge-info {
+            background: rgba(108, 71, 255, .12);
+            color: #a08cff;
+        }
+
+        .badge-pending {
+            background: rgba(255, 255, 255, .06);
+            color: var(--text3);
+        }
+
+        .chevron {
+            color: var(--text3);
+            font-size: .75rem;
+            transition: transform .2s;
+        }
+
+        .check-card.open .chevron {
+            transform: rotate(180deg);
+        }
+
+        .check-body {
+            display: none;
+            padding: 0 1.25rem 1.25rem;
+            border-top: 1px solid var(--border);
+        }
+
+        .check-card.open .check-body {
+            display: block;
+        }
+
+        .check-detail {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: .78rem;
+            color: var(--text2);
+            background: var(--bg3);
+            border-radius: 8px;
+            padding: .75rem 1rem;
+            margin-top: .875rem;
+            white-space: pre-wrap;
+            line-height: 1.7;
+        }
+
+        /* Fix Instructions */
+        .fix-box {
+            margin-top: 1rem;
+            background: rgba(255, 71, 87, .06);
+            border: 1px solid rgba(255, 71, 87, .2);
+            border-radius: 10px;
+            padding: 1rem 1.25rem;
+        }
+
+        .fix-title {
+            font-size: .85rem;
+            font-weight: 700;
+            color: var(--danger);
+            margin-bottom: .875rem;
+        }
+
+        .fix-steps {
+            list-style: none;
+        }
+
+        .fix-steps li {
+            font-size: .82rem;
+            color: var(--text2);
+            padding: .25rem 0 .25rem 1.25rem;
+            position: relative;
+            line-height: 1.6;
+        }
+
+        .fix-steps li::before {
+            content: '→';
+            position: absolute;
+            left: 0;
+            color: var(--danger);
+        }
+
+        .fix-commands {
+            margin-top: .75rem;
+            display: flex;
+            flex-direction: column;
+            gap: .4rem;
+        }
+
+        .fix-cmd {
+            display: flex;
+            align-items: center;
+            gap: .5rem;
+            background: var(--bg3);
+            border-radius: 6px;
+            padding: .5rem .75rem;
+        }
+
+        .fix-cmd code {
+            flex: 1;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: .8rem;
+            color: #a08cff;
+        }
+
+        .copy-cmd-btn {
+            border: none;
+            background: rgba(108, 71, 255, .2);
+            color: #a08cff;
+            border-radius: 4px;
+            padding: .2rem .5rem;
+            font-size: .7rem;
+            cursor: pointer;
+        }
+
+        .copy-cmd-btn:hover {
+            background: rgba(108, 71, 255, .4);
+        }
+
+        /* ── SPINNER ── */
+        .spinner {
+            display: inline-block;
+            width: 18px;
+            height: 18px;
+            border: 2px solid rgba(255, 255, 255, .1);
+            border-top-color: var(--primary);
+            border-radius: 50%;
+            animation: spin .7s linear infinite;
+        }
+
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        /* ── PROGRESS BAR ── */
+        .progress-wrap {
+            background: rgba(255, 255, 255, .06);
+            border-radius: 4px;
+            height: 4px;
+            margin-bottom: 2rem;
+            overflow: hidden;
+        }
+
+        .progress-bar {
+            height: 100%;
+            background: linear-gradient(90deg, var(--primary), var(--accent));
+            border-radius: 4px;
+            transition: width .5s;
+            width: 0%;
+        }
+
+        /* ── SUMMARY ── */
+        .summary-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
+
+        .summary-card {
+            background: var(--bg2);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 1.25rem;
+            text-align: center;
+        }
+
+        .summary-val {
+            font-size: 2rem;
+            font-weight: 800;
+            margin-bottom: .25rem;
+        }
+
+        .summary-label {
+            font-size: .78rem;
+            color: var(--text2);
+        }
+
+        .val-ok {
+            color: var(--success);
+        }
+
+        .val-warn {
+            color: var(--warning);
+        }
+
+        .val-err {
+            color: var(--danger);
+        }
+
+        /* ── ACTION ROW ── */
+        .action-row {
+            display: flex;
+            justify-content: center;
+            gap: 1rem;
+            flex-wrap: wrap;
+            margin-top: 2rem;
+        }
+
+        /* ── GUIDE PANEL ── */
+        .guide-panel {
+            display: none;
+            background: var(--bg2);
+            border: 1px solid rgba(0, 212, 255, .15);
+            border-radius: var(--radius);
+            padding: 1.5rem;
+            margin-top: 2rem;
+        }
+
+        .guide-panel h3 {
+            font-size: 1rem;
+            font-weight: 700;
+            margin-bottom: 1rem;
+            color: var(--accent);
+        }
+
+        .guide-step {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 1rem;
+        }
+
+        .guide-step-num {
+            width: 26px;
+            height: 26px;
+            background: var(--primary);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: .8rem;
+            font-weight: 800;
+            flex-shrink: 0;
+        }
+
+        .guide-step-body {
+            flex: 1;
+        }
+
+        .guide-step-body h4 {
+            font-size: .88rem;
+            font-weight: 700;
+            margin-bottom: .3rem;
+        }
+
+        .guide-step-body p {
+            font-size: .82rem;
+            color: var(--text2);
+            line-height: 1.6;
+        }
+
+        @media (max-width: 640px) {
+            .summary-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+
+            .wizard-steps {
+                flex-direction: column;
+            }
+
+            .wstep {
+                border-right: none;
+                border-bottom: 1px solid var(--border);
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <!-- NAV -->
+    <nav class="nav">
+        <a href="/landing/" class="nav-brand">⚡ GPU<span>Rental</span></a>
+        <div class="nav-sep"></div>
+        <a href="/provider/" class="btn btn-ghost">← プロバイダーポータル</a>
+    </nav>
+
+    <!-- HERO -->
+    <div class="hero">
+        <div class="hero-badge">🔧 プロバイダー向けツール</div>
+        <h1>GPU <span>診断アシスタント</span></h1>
+        <p>GPU認識・CUDA・ネットワーク接続をワンクリックで診断。<br>問題が見つかれば、解決手順を自動表示します。</p>
+    </div>
+
+    <!-- MAIN -->
+    <div class="container">
+
+        <!-- WIZARD STEPS -->
+        <div class="wizard-steps">
+            <div class="wstep active" id="wstep1">
+                <div class="step-num" id="snum1">1</div><br>GPU確認
+            </div>
+            <div class="wstep" id="wstep2">
+                <div class="step-num" id="snum2">2</div><br>接続確認
+            </div>
+            <div class="wstep" id="wstep3">
+                <div class="step-num" id="snum3">3</div><br>結果・対処
+            </div>
+        </div>
+
+        <!-- PROGRESS -->
+        <div class="progress-wrap">
+            <div class="progress-bar" id="progressBar"></div>
+        </div>
+
+        <!-- STEP 1: START -->
+        <div id="pane-start">
+            <div class="start-card">
+                <div class="start-icon">🔍</div>
+                <h2>GPU貸し出しの準備チェック</h2>
+                <p>
+                    ボタンを押すと、あなたのPCでGPU貸し出しに必要な環境が<br>
+                    すべて整っているか自動的に確認します。<br>
+                    問題があれば、その場で解決手順をご案内します。
+                </p>
+                <div style="display:flex;gap:1rem;justify-content:center;flex-wrap:wrap">
+                    <button class="btn btn-primary" onclick="startDiagnosis()">
+                        🚀 診断を開始する
+                    </button>
+                    <a href="#guide" class="btn btn-secondary" onclick="showGuide()">
+                        📖 セットアップガイドを見る
+                    </a>
+                </div>
+            </div>
+
+            <!-- セットアップガイド -->
+            <div class="guide-panel" id="guidePanel">
+                <h3>📖 GPU貸し出し はじめからセットアップ</h3>
+                <div class="guide-step">
+                    <div class="guide-step-num">1</div>
+                    <div class="guide-step-body">
+                        <h4>NVIDIAドライバをインストール</h4>
+                        <p><a href="https://www.nvidia.com/drivers" target="_blank"
+                                style="color:var(--accent)">nvidia.com/drivers</a>
+                            から最新ドライバをダウンロードしてインストール。<br>インストール後に再起動が必要です。</p>
+                    </div>
+                </div>
+                <div class="guide-step">
+                    <div class="guide-step-num">2</div>
+                    <div class="guide-step-body">
+                        <h4>Node.js 20 をインストール</h4>
+                        <p><a href="https://nodejs.org/ja/" target="_blank" style="color:var(--accent)">nodejs.org</a>
+                            からLTS版をダウンロード。<br>またはコマンド: <code
+                                style="background:var(--bg3);padding:.15rem .4rem;border-radius:4px;font-size:.8rem">winget install OpenJS.NodeJS.LTS</code>
+                        </p>
+                    </div>
+                </div>
+                <div class="guide-step">
+                    <div class="guide-step-num">3</div>
+                    <div class="guide-step-body">
+                        <h4>GPURentalエージェントを起動</h4>
+                        <p>プロバイダーポータルからエージェントをダウンロードして実行してください。<br>または: <code
+                                style="background:var(--bg3);padding:.15rem .4rem;border-radius:4px;font-size:.8rem">npm start</code>
+                        </p>
+                    </div>
+                </div>
+                <div class="guide-step">
+                    <div class="guide-step-num">4</div>
+                    <div class="guide-step-body">
+                        <h4>GPUを登録する</h4>
+                        <p>エージェント起動後、<a href="/provider/" style="color:var(--accent)">プロバイダーポータル</a>からGPUを登録すれば完了です。</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- STEP 2: RUNNING -->
+        <div id="pane-running" style="display:none">
+            <div class="start-card" style="padding:2rem">
+                <div class="spinner" style="width:36px;height:36px;border-width:3px;margin:0 auto 1rem"></div>
+                <h2 id="runningMsg">GPU情報を取得中...</h2>
+                <p id="runningSubMsg" style="margin-bottom:0">少々お待ちください</p>
+            </div>
+        </div>
+
+        <!-- STEP 3: RESULTS -->
+        <div id="pane-results" style="display:none">
+
+            <!-- サマリー -->
+            <div class="summary-grid">
+                <div class="summary-card">
+                    <div class="summary-val val-ok" id="sumOk">—</div>
+                    <div class="summary-label">✅ 正常</div>
+                </div>
+                <div class="summary-card">
+                    <div class="summary-val val-warn" id="sumWarn">—</div>
+                    <div class="summary-label">⚠️ 警告</div>
+                </div>
+                <div class="summary-card">
+                    <div class="summary-val val-err" id="sumErr">—</div>
+                    <div class="summary-label">❌ エラー</div>
+                </div>
+                <div class="summary-card">
+                    <div class="summary-val" id="sumTotal">—</div>
+                    <div class="summary-label">📋 項目数</div>
+                </div>
+            </div>
+
+            <!-- チェック結果 -->
+            <div class="check-list" id="checkList"></div>
+
+            <!-- アクションボタン -->
+            <div class="action-row">
+                <button class="btn btn-primary" onclick="startDiagnosis()">
+                    🔄 再診断
+                </button>
+                <a href="/provider/" class="btn btn-secondary">
+                    ← プロバイダーポータルへ
+                </a>
+                <button class="btn btn-secondary" onclick="copyReport()">
+                    📋 レポートをコピー
+                </button>
+            </div>
+        </div>
+
+    </div><!-- /.container -->
+
+    <script>
+        const API_BASE = (function () {
+            if (location.hostname === 'localhost' || location.hostname === '127.0.0.1') return '';
+            return 'https://pubmed-apartments-unix-implementation.trycloudflare.com';
+        })();
+
+        let _allChecks = [];
+
+        // ── ガイド表示 ──────────────────────────────────────────────────
+        function showGuide() {
+            const p = document.getElementById('guidePanel');
+            p.style.display = p.style.display === 'block' ? 'none' : 'block';
+        }
+
+        // ── ウィザードステップ切り替え ─────────────────────────────────
+        function setStep(n) {
+            for (let i = 1; i <= 3; i++) {
+                const el = document.getElementById(`wstep${i}`);
+                el.classList.remove('active', 'done');
+                if (i < n) el.classList.add('done');
+                if (i === n) el.classList.add('active');
+            }
+            const pct = ((n - 1) / 2) * 100;
+            document.getElementById('progressBar').style.width = pct + '%';
+        }
+
+        function showPane(id) {
+            ['pane-start', 'pane-running', 'pane-results'].forEach(p => {
+                document.getElementById(p).style.display = p === id ? 'block' : 'none';
+            });
+        }
+
+        // ── 診断開始 ─────────────────────────────────────────────────────
+        async function startDiagnosis() {
+            _allChecks = [];
+            setStep(2);
+            showPane('pane-running');
+
+            try {
+                // Phase 1: GPU診断
+                document.getElementById('runningMsg').textContent = 'GPU・ドライバ情報を確認中...';
+                document.getElementById('runningSubMsg').textContent = 'nvidia-smi を実行しています';
+
+                const gpuRes = await fetch(`${API_BASE}/api/diagnose/gpu`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                });
+                const gpuData = await gpuRes.json();
+                _allChecks.push(...(gpuData.checks || []));
+
+                // Phase 2: サーバー接続確認
+                document.getElementById('runningMsg').textContent = 'サーバー接続・ネットワークを確認中...';
+                document.getElementById('runningSubMsg').textContent = 'GPURentalサーバーへの疎通を確認しています';
+
+                const svrRes = await fetch(`${API_BASE}/api/diagnose/server`);
+                const svrData = await svrRes.json();
+                _allChecks.push(...(svrData.checks || []));
+
+            } catch (e) {
+                _allChecks.push({
+                    id: 'api_error',
+                    icon: '⚠️',
+                    label: '診断API接続エラー',
+                    status: 'error',
+                    message: `診断サーバーに接続できません: ${e.message}`,
+                    detail: '診断ツールを実行するにはGPURentalエージェントが起動している必要があります。\n\n解決策: npm start でエージェントを起動してから再試行してください。',
+                });
+            }
+
+            showResults(_allChecks);
+        }
+
+        // ── 結果表示 ─────────────────────────────────────────────────────
+        function showResults(checks) {
+            setStep(3);
+            showPane('pane-results');
+
+            const ok = checks.filter(c => c.status === 'ok').length;
+            const warn = checks.filter(c => c.status === 'warning').length;
+            const err = checks.filter(c => c.status === 'error').length;
+
+            document.getElementById('sumOk').textContent = ok;
+            document.getElementById('sumWarn').textContent = warn;
+            document.getElementById('sumErr').textContent = err;
+            document.getElementById('sumTotal').textContent = checks.length;
+
+            const list = document.getElementById('checkList');
+            list.innerHTML = checks.map((c, i) => renderCheck(c, i)).join('');
+
+            // エラーがあるカードを自動展開
+            checks.forEach((c, i) => {
+                if (c.status === 'error') toggleCheck(i);
+            });
+        }
+
+        function renderCheck(c, i) {
+            const badgeMap = { ok: ['badge-ok', '✅ 正常'], warning: ['badge-warning', '⚠️ 警告'], error: ['badge-error', '❌ エラー'], info: ['badge-info', 'ℹ️ 情報'], pending: ['badge-pending', '確認中'] };
+            const [badgeCls, badgeLabel] = badgeMap[c.status] || ['badge-pending', '—'];
+            const hasFix = c.fix && (c.status === 'error' || c.status === 'warning');
+
+            return `
+    <div class="check-card status-${c.status}" id="check-${i}">
+        <div class="check-header" onclick="toggleCheck(${i})">
+            <div class="check-icon-wrap">${c.icon || '🔹'}</div>
+            <div class="check-info">
+                <div class="check-label">${c.label}</div>
+                <div class="check-msg">${c.message}</div>
+            </div>
+            <span class="status-badge ${badgeCls}">${badgeLabel}</span>
+            <span class="chevron">▼</span>
+        </div>
+        <div class="check-body">
+            ${c.detail ? `<div class="check-detail">${escHtml(c.detail)}</div>` : ''}
+            ${hasFix ? renderFix(c.fix) : ''}
+            ${c.gpus ? renderGpuCards(c.gpus) : ''}
+        </div>
+    </div>`;
+        }
+
+        function renderFix(fix) {
+            const steps = (fix.steps || []).map(s => `<li>${escHtml(s)}</li>`).join('');
+            const cmds = (fix.commands || []).map(cmd =>
+                `<div class="fix-cmd">
+            <code>${escHtml(cmd)}</code>
+            <button class="copy-cmd-btn" onclick="copyText('${escHtml(cmd)}')">コピー</button>
+        </div>`
+            ).join('');
+            const links = (fix.links || []).map(l =>
+                `<a href="${l}" target="_blank" style="font-size:.8rem;color:var(--accent)">${l}</a>`
+            ).join('<br>');
+
+            return `
+    <div class="fix-box" style="margin-top:.875rem">
+        <div class="fix-title">🛠 ${escHtml(fix.title || '解決手順')}</div>
+        ${steps ? `<ul class="fix-steps">${steps}</ul>` : ''}
+        ${cmds ? `<div class="fix-commands">${cmds}</div>` : ''}
+        ${links ? `<div style="margin-top:.75rem">${links}</div>` : ''}
+    </div>`;
+        }
+
+        function renderGpuCards(gpus) {
+            if (!gpus || !gpus.length) return '';
+            return `<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:.75rem;margin-top:.875rem">
+        ${gpus.map(g => `
+            <div style="background:rgba(108,71,255,.08);border:1px solid rgba(108,71,255,.2);border-radius:10px;padding:.875rem">
+                <div style="font-weight:700;font-size:.9rem;margin-bottom:.5rem">🖥️ GPU[${g.index}]</div>
+                <div style="font-size:.78rem;color:var(--text2);line-height:2">
+                    <div><span style="color:var(--text3)">名称</span> ${escHtml(g.name)}</div>
+                    <div><span style="color:var(--text3)">ドライバ</span> ${escHtml(g.driver)}</div>
+                    <div><span style="color:var(--text3)">VRAM</span> ${g.memTotal}MiB (${g.memFree}MiB 空き)</div>
+                    <div><span style="color:var(--text3)">温度</span> <span style="color:${parseInt(g.temp) > 80 ? 'var(--danger)' : 'var(--success)'}">${g.temp}°C</span></div>
+                    <div><span style="color:var(--text3)">使用率</span> ${g.util}%</div>
+                </div>
+            </div>`).join('')}
+    </div>`;
+        }
+
+        function toggleCheck(i) {
+            const card = document.getElementById(`check-${i}`);
+            if (card) card.classList.toggle('open');
+        }
+
+        function escHtml(s) {
+            return String(s || '')
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;');
+        }
+
+        function copyText(text) {
+            navigator.clipboard.writeText(text).then(() => {
+                showToast('コピーしました！');
+            });
+        }
+
+        function showToast(msg) {
+            const t = document.createElement('div');
+            t.textContent = msg;
+            t.style.cssText = 'position:fixed;bottom:2rem;right:2rem;background:#6c47ff;color:#fff;padding:.6rem 1.2rem;border-radius:10px;font-size:.85rem;font-weight:600;z-index:9999;animation:slideIn .3s ease';
+            document.body.appendChild(t);
+            setTimeout(() => t.remove(), 2500);
+        }
+
+        function copyReport() {
+            const lines = _allChecks.map(c => {
+                const icon = c.status === 'ok' ? '✅' : c.status === 'warning' ? '⚠️' : c.status === 'error' ? '❌' : 'ℹ️';
+                return `${icon} ${c.label}: ${c.message}${c.detail ? '\n  ' + c.detail.split('\n')[0] : ''}`;
+            });
+            const report = `GPURental 診断レポート (${new Date().toLocaleString('ja-JP')})\n${'='.repeat(50)}\n${lines.join('\n\n')}`;
+            navigator.clipboard.writeText(report).then(() => showToast('レポートをコピーしました！'));
+        }
+    </script>
+
+</body>
+
+</html>
