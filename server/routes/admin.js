@@ -44,7 +44,7 @@ router.get('/overview', authMiddleware, adminOnly, (req, res) => {
 router.get('/users', authMiddleware, adminOnly, (req, res) => {
   const db = getDb();
   const users = db.prepare(`
-    SELECT u.id, u.username, u.email, u.role, u.status, u.wallet_balance,
+    SELECT u.id, u.username, u.email, u.role, u.status, u.wallet_balance, u.point_balance,
            u.created_at, u.last_login,
            COUNT(r.id) as total_reservations,
            COALESCE(SUM(ul.cost), 0) as total_spent
@@ -424,4 +424,116 @@ router.get('/coupons/stats', authMiddleware, adminOnly, (req, res) => {
     });
 });
 
+// ─── Render Jobs 管理 ──────────────────────────────────────────────────────
+
+// GET /api/admin/render-jobs — 全レンダリングジョブ一覧（管理者専用）
+router.get('/render-jobs', authMiddleware, adminOnly, (req, res) => {
+    const db = getDb();
+    const { status, limit = 100 } = req.query;
+
+    let sql = `
+        SELECT rj.*,
+               u.username AS user_name,
+               u.email    AS user_email
+        FROM render_jobs rj
+        LEFT JOIN users u ON rj.user_id = u.id
+        ${status ? "WHERE rj.status = ?" : ""}
+        ORDER BY rj.created_at DESC
+        LIMIT ?
+    `;
+    const params = status ? [status, parseInt(limit)] : [parseInt(limit)];
+    const jobs = db.prepare(sql).all(...params);
+
+    res.json(jobs.map(j => ({
+        ...j,
+        output_name: j.output_path ? require('path').basename(j.output_path) : '',
+    })));
+});
+
+// GET /api/admin/render-jobs/stats — 統計情報
+router.get('/render-jobs/stats', authMiddleware, adminOnly, (req, res) => {
+    const db = getDb();
+    const stats = db.prepare(`
+        SELECT
+            COUNT(*) AS total,
+            SUM(CASE WHEN status = 'running'   THEN 1 ELSE 0 END) AS running,
+            SUM(CASE WHEN status = 'done'      THEN 1 ELSE 0 END) AS done,
+            SUM(CASE WHEN status = 'failed'    THEN 1 ELSE 0 END) AS failed,
+            SUM(CASE WHEN status = 'queued'    THEN 1 ELSE 0 END) AS queued,
+            SUM(CASE WHEN status = 'cancelled' THEN 1 ELSE 0 END) AS cancelled
+        FROM render_jobs
+    `).get();
+    res.json(stats);
+});
+
+// GET /api/admin/render-jobs/:id/error — エラーログ取得
+router.get('/render-jobs/:id/error', authMiddleware, adminOnly, (req, res) => {
+    const db = getDb();
+    const job = db.prepare('SELECT id, status, error_log, input_path, output_path, format, ffmpeg_args FROM render_jobs WHERE id = ?').get(req.params.id);
+    if (!job) return res.status(404).json({ error: 'Job not found' });
+    res.json(job);
+});
+
+// POST /api/admin/render-jobs/:id/cancel — 強制キャンセル（管理者）
+router.post('/render-jobs/:id/cancel', authMiddleware, adminOnly, (req, res) => {
+    const db = getDb();
+    const job = db.prepare('SELECT * FROM render_jobs WHERE id = ?').get(req.params.id);
+    if (!job) return res.status(404).json({ error: 'Job not found' });
+
+    // render.js の _procs Map にアクセスするためrequireする
+    try {
+        const renderRouteModule = require('./render');
+        if (renderRouteModule._procs) {
+            const live = renderRouteModule._procs.get(parseInt(req.params.id));
+            if (live?.proc) {
+                live.proc.kill('SIGTERM');
+                setTimeout(() => { try { live.proc?.kill('SIGKILL'); } catch (_) { } }, 3000);
+            }
+            renderRouteModule._procs.delete(parseInt(req.params.id));
+        }
+    } catch (_) { /* renderモジュール未ロード or _procsが未エクスポートの場合を無視 */ }
+
+    db.prepare("UPDATE render_jobs SET status = 'cancelled', finished_at = CURRENT_TIMESTAMP WHERE id = ?")
+        .run(job.id);
+
+    console.log(`🛑 Admin cancelled render job #${job.id} (user #${job.user_id})`);
+    res.json({ success: true, message: `ジョブ #${job.id} をキャンセルしました` });
+});
+
+
+// --- API Key Management (Admin) ---
+
+// GET /api/admin/apikeys — 全ユーザーのAPIキー一覧
+router.get('/apikeys', authMiddleware, adminOnly, (req, res) => {
+    const db = getDb();
+    const keys = db.prepare(
+        'SELECT k.id, k.name, k.key_prefix, k.is_active, k.created_at, k.last_used_at,' +
+        ' u.id as user_id, u.username, u.email, u.role' +
+        ' FROM user_api_keys k' +
+        ' JOIN users u ON u.id = k.user_id' +
+        ' ORDER BY k.created_at DESC'
+    ).all();
+    res.json(keys);
+});
+
+// PATCH /api/admin/apikeys/:id/toggle — 有効化/無効化
+router.patch('/apikeys/:id/toggle', authMiddleware, adminOnly, (req, res) => {
+    const db = getDb();
+    const key = db.prepare('SELECT * FROM user_api_keys WHERE id = ?').get(parseInt(req.params.id));
+    if (!key) return res.status(404).json({ error: 'APIキーが見つかりません' });
+    const newState = key.is_active ? 0 : 1;
+    db.prepare('UPDATE user_api_keys SET is_active = ? WHERE id = ?').run(newState, key.id);
+    res.json({ success: true, is_active: newState === 1 });
+});
+
+// DELETE /api/admin/apikeys/:id — 強制削除
+router.delete('/apikeys/:id', authMiddleware, adminOnly, (req, res) => {
+    const db = getDb();
+    const result = db.prepare('DELETE FROM user_api_keys WHERE id = ?').run(parseInt(req.params.id));
+    if (result.changes === 0) return res.status(404).json({ error: 'APIキーが見つかりません' });
+    res.json({ success: true });
+});
+
 module.exports = router;
+
+

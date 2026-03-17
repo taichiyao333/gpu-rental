@@ -31,6 +31,7 @@ const outageRoutes = require('./routes/outage');
 const couponRoutes = require('./routes/coupons');
 const { router: apiKeyRoutes } = require('./routes/apikeys');
 const diagnosticsRoutes = require('./routes/diagnostics');
+const renderRoutes = require('./routes/render');
 
 
 // ─── Startup Environment Validation ────────────────────────────────────────
@@ -131,6 +132,7 @@ app.use('/portal', express.static(path.join(__dirname, '../public/portal')));
 app.use('/workspace', express.static(path.join(__dirname, '../public/workspace')));
 app.use('/admin', express.static(path.join(__dirname, '../public/admin')));
 app.use('/provider', express.static(path.join(__dirname, '../public/provider')));
+app.use('/mypage', express.static(path.join(__dirname, '../public/mypage')));
 
 // Root → landing page
 app.get('/', (req, res) => res.sendFile(path.join(__dirname, '../public/landing/index.html')));
@@ -144,6 +146,8 @@ app.get('/portal/*', (req, res) => res.sendFile(path.join(__dirname, '../public/
 app.get('/workspace/*', (req, res) => res.sendFile(path.join(__dirname, '../public/workspace/index.html')));
 app.get('/admin/*', (req, res) => res.sendFile(path.join(__dirname, '../public/admin/index.html')));
 app.get('/provider/*', (req, res) => res.sendFile(path.join(__dirname, '../public/provider/index.html')));
+app.get('/mypage', (req, res) => res.sendFile(path.join(__dirname, '../public/mypage/index.html')));
+app.get('/mypage/*', (req, res) => res.sendFile(path.join(__dirname, '../public/mypage/index.html')));
 
 // ─── Maintenance Mode Middleware ───────────────────────────────────────────
 // Allow: admin pages, admin API, auth API, health check
@@ -199,6 +203,7 @@ app.use('/api/prices', priceRoutes);
 app.use('/api/coupons', couponRoutes);
 app.use('/api/user/apikeys', apiKeyRoutes);
 app.use('/api/diagnose', diagnosticsRoutes);
+app.use('/api/render', renderRoutes(io));
 app.use('/api/admin', adminRoutes);
 
 

@@ -7,12 +7,10 @@ const state = {
     reservations: [],
 };
 
-// API base: '' = same origin (local dev), 'https://...' = external backend
+// API base: '' = same origin (works for both local dev and any production domain/tunnel)
 const API = (function () {
-    // If running on localhost, use relative path
-    if (location.hostname === 'localhost' || location.hostname === '127.0.0.1') return '';
-    // Otherwise use the deployed backend URL
-    return 'https://pubmed-apartments-unix-implementation.trycloudflare.com';
+    // Always use relative paths — same-origin works for all environments
+    return '';
 })();
 let socket = null;
 
@@ -1809,3 +1807,38 @@ document.addEventListener('DOMContentLoaded', () => {
     }, 30000);
 });
 
+
+/* ── MOBILE MENU ─────────────────────────────────────────────── */
+function toggleMobileMenu() {
+    const drawer = document.getElementById('navDrawer');
+    const btn    = document.getElementById('navHamburger');
+    if (!drawer) return;
+    const isOpen = drawer.classList.toggle('open');
+    btn && btn.classList.toggle('open', isOpen);
+    document.body.style.overflow = isOpen ? 'hidden' : '';
+}
+function closeMobileMenu() {
+    const drawer = document.getElementById('navDrawer');
+    const btn    = document.getElementById('navHamburger');
+    if (!drawer) return;
+    drawer.classList.remove('open');
+    btn && btn.classList.remove('open');
+    document.body.style.overflow = '';
+}
+// ログイン状態変化時にドロワーを更新
+function syncDrawerAuth(user) {
+    const authSec = document.getElementById('drawerAuthSection');
+    const userSec = document.getElementById('drawerUserSection');
+    const nameEl  = document.getElementById('drawerUsername');
+    const adminLink = document.getElementById('drawerAdmin');
+    if (!authSec || !userSec) return;
+    if (user) {
+        authSec.style.display = 'none';
+        userSec.style.display = 'flex';
+        if (nameEl) nameEl.textContent = '👤 ' + (user.username || user.email || 'ユーザー');
+        if (adminLink) adminLink.classList.toggle('hidden', user.role !== 'admin');
+    } else {
+        authSec.style.display = 'flex';
+        userSec.style.display = 'none';
+    }
+}

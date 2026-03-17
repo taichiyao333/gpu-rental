@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="ja">
 
 <head>
@@ -840,6 +840,93 @@
                 font-size: 0.72rem;
             }
         }
+
+        /* ── Mobile Hamburger ── */
+        .nav-hamburger {
+            display: none;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            gap: 5px;
+            width: 40px;
+            height: 40px;
+            background: transparent;
+            border: 1px solid rgba(255,255,255,0.15);
+            border-radius: 8px;
+            cursor: pointer;
+            z-index: 9999;
+            flex-shrink: 0;
+        }
+        .nav-hamburger span {
+            display: block;
+            width: 20px;
+            height: 2px;
+            background: #e8e8f0;
+            border-radius: 2px;
+            transition: all 0.3s;
+        }
+        .nav-hamburger.open span:nth-child(1) { transform: translateY(7px) rotate(45deg); }
+        .nav-hamburger.open span:nth-child(2) { opacity: 0; transform: scaleX(0); }
+        .nav-hamburger.open span:nth-child(3) { transform: translateY(-7px) rotate(-45deg); }
+        .mob-drawer {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(10,10,20,0.98);
+            backdrop-filter: blur(20px);
+            z-index: 9998;
+            flex-direction: column;
+            padding: 5rem 1.5rem 2rem;
+            gap: 0;
+            overflow-y: auto;
+            transform: translateX(-100%);
+            transition: transform 0.3s ease;
+        }
+        .mob-drawer.open { transform: translateX(0); }
+        .mob-drawer a, .mob-drawer button.drawer-item {
+            display: flex;
+            align-items: center;
+            padding: 1rem 0.75rem;
+            border-bottom: 1px solid rgba(255,255,255,0.07);
+            color: #e8e8f0;
+            font-size: 1rem;
+            font-weight: 500;
+            text-decoration: none;
+            background: transparent;
+            border-left: none;
+            border-right: none;
+            border-top: none;
+            cursor: pointer;
+            width: 100%;
+            text-align: left;
+            transition: background 0.2s;
+            font-family: inherit;
+        }
+        .mob-drawer a:hover, .mob-drawer button.drawer-item:hover {
+            background: rgba(108,71,255,0.1);
+        }
+        .mob-drawer-title {
+            font-size: 0.7rem;
+            color: rgba(255,255,255,0.3);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            padding: 1rem 0.75rem 0.25rem;
+        }
+        @media (max-width: 768px) {
+            .nav-hamburger { display: flex !important; }
+            .mob-drawer { display: flex; }
+        }
+
+        /* admin sidebar mobile */
+        @media(max-width:768px){
+            .sidebar{display:none;}
+            .sidebar.mob-open{display:flex !important;position:fixed;inset:0;z-index:9990;width:280px;height:100vh;overflow-y:auto;}
+            .main-content{margin-left:0 !important;}
+            .app-layout{flex-direction:column;}
+        }
     </style>
 </head>
 
@@ -880,6 +967,17 @@
             <button class="nav-item" data-section="maintenance" id="navMaintenance">
                 <span class="nav-icon">🔧</span>メンテモード
                 <span class="nav-badge" id="maintBadge" style="display:none;background:#ff4757">ON</span>
+            </button>
+            <button class="nav-item" data-section="render-jobs">
+                <span class="nav-icon">🎬</span>レンダリング
+                <span class="nav-badge" id="renderJobsBadge" style="display:none;background:#f59e0b">0</span>
+            </button>
+                        <button class="nav-item" data-section="apikeys">
+                <span class="nav-icon">🔑</span>APIキー管理
+            </button>
+<button class="nav-item" data-section="outage">
+                <span class="nav-icon">⚡</span>障害管理
+                <span class="nav-badge" id="outageBadge" style="display:none;background:#ff4757">0</span>
             </button>
 
 
@@ -1166,7 +1264,7 @@
                         </thead>
                         <tbody id="userTableBody">
                             <tr>
-                                <td colspan="8" style="text-align:center;color:var(--text3);padding:2rem">
+                                <td colspan="9" style="text-align:center;color:var(--text3);padding:2rem">
                                     <div class="spinner"></div>
                                 </td>
                             </tr>
@@ -1248,6 +1346,225 @@
                             </tr>
                         </tbody>
                     </table>
+                </div>
+            </div>
+
+            <!-- ═══ API KEY MANAGEMENT ═══ -->
+            <div class="section" id="section-apikeys">
+                <div class="section-header">
+                    <div>
+                        <div class="section-title">🔑 APIキー管理</div>
+                        <div class="section-sub">全ユーザーが発行したAPIキーの一覧・無効化・削除</div>
+                    </div>
+                    <button class="btn" style="font-size:0.8rem;padding:6px 14px;background:var(--bg2);border:1px solid var(--border)" onclick="loadApiKeys()">🔄 更新</button>
+                </div>
+
+                <!-- 統計カード -->
+                <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:1rem;margin-bottom:1.5rem">
+                    <div class="stat-card">
+                        <div class="stat-value" id="akTotal">—</div>
+                        <div class="stat-label">総APIキー数</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value" id="akActive" style="color:var(--success)">—</div>
+                        <div class="stat-label">有効</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value" id="akInactive" style="color:var(--text3)">—</div>
+                        <div class="stat-label">無効</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value" id="akUsedToday" style="color:var(--accent)">—</div>
+                        <div class="stat-label">24h以内に使用</div>
+                    </div>
+                </div>
+
+                <!-- 検索 -->
+                <div style="margin-bottom:1rem">
+                    <input type="text" id="akSearch" placeholder="ユーザー名・メール・キー名で検索..."
+                        oninput="filterApiKeys()"
+                        style="width:100%;max-width:400px;background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:8px 14px;color:var(--text);font-size:0.85rem">
+                </div>
+
+                <!-- テーブル -->
+                <div class="table-card">
+                    <div style="overflow-x:auto">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>ユーザー</th>
+                                    <th>キー名</th>
+                                    <th>プレフィックス</th>
+                                    <th>発行日</th>
+                                    <th>最終使用</th>
+                                    <th>状態</th>
+                                    <th>操作</th>
+                                </tr>
+                            </thead>
+                            <tbody id="apiKeyTableBody">
+                                <tr><td colspan="8" style="text-align:center;color:var(--text3);padding:2rem"><div class="spinner"></div></td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ═══ OUTAGE MANAGEMENT ═══ -->
+            <div class="section" id="section-outage">
+                <div class="section-header">
+                    <div>
+                        <div class="section-title">⚡ 障害管理・補償</div>
+                        <div class="section-sub">GPU障害を記録し、影響を受けたユーザーへポイント補償を実行</div>
+                    </div>
+                    <button class="btn btn-primary" onclick="showOutageForm()">+ 障害を報告</button>
+                </div>
+
+                <!-- 障害報告フォーム -->
+                <div id="outageFormCard" class="table-card" style="display:none;margin-bottom:1.5rem">
+                    <div class="table-header"><h3>🔴 新規障害報告</h3></div>
+                    <div style="padding:1.5rem;display:grid;grid-template-columns:1fr 1fr;gap:1rem">
+                        <div>
+                            <label style="font-size:0.8rem;color:var(--text2);display:block;margin-bottom:4px">対象GPU *</label>
+                            <select id="outageGpuId" style="width:100%;background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:8px 12px;color:var(--text);font-size:0.85rem">
+                                <option value="">GPUを選択...</option>
+                            </select>
+                        </div>
+                        <div></div>
+                        <div>
+                            <label style="font-size:0.8rem;color:var(--text2);display:block;margin-bottom:4px">障害開始日時 *</label>
+                            <input type="datetime-local" id="outageStart" style="width:100%;background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:8px 12px;color:var(--text);font-size:0.85rem">
+                        </div>
+                        <div>
+                            <label style="font-size:0.8rem;color:var(--text2);display:block;margin-bottom:4px">障害終了日時 *</label>
+                            <input type="datetime-local" id="outageEnd" style="width:100%;background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:8px 12px;color:var(--text);font-size:0.85rem">
+                        </div>
+                        <div style="grid-column:1/-1">
+                            <label style="font-size:0.8rem;color:var(--text2);display:block;margin-bottom:4px">障害原因（任意）</label>
+                            <input type="text" id="outageReason" placeholder="例: プロバイダーのネットワーク障害" style="width:100%;background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:8px 12px;color:var(--text);font-size:0.85rem">
+                        </div>
+                        <div id="outagePreview" style="grid-column:1/-1;display:none;
+                            background:rgba(255,71,87,.06);border:1px solid rgba(255,71,87,.2);border-radius:10px;padding:1rem;font-size:0.82rem"></div>
+                        <div id="outageFormMsg" style="grid-column:1/-1;display:none"></div>
+                        <div style="grid-column:1/-1;display:flex;gap:8px">
+                            <button class="btn btn-primary" onclick="submitOutageReport()">📋 障害を報告する</button>
+                            <button class="btn" style="background:var(--bg2);border:1px solid var(--border)" onclick="hideOutageForm()">キャンセル</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 障害一覧テーブル -->
+                <div class="table-card">
+                    <div class="table-header">
+                        <h3>障害レポート一覧</h3>
+                        <button class="btn" style="font-size:0.8rem;padding:6px 14px;background:var(--bg2);border:1px solid var(--border)" onclick="loadOutageReports()">🔄 更新</button>
+                    </div>
+                    <div style="overflow-x:auto">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>GPU</th>
+                                    <th>障害開始</th>
+                                    <th>障害終了</th>
+                                    <th>時間</th>
+                                    <th>原因</th>
+                                    <th>影響ユーザー</th>
+                                    <th>補償ポイント</th>
+                                    <th>状態</th>
+                                    <th>操作</th>
+                                </tr>
+                            </thead>
+                            <tbody id="outageTableBody">
+                                <tr><td colspan="10" style="text-align:center;color:var(--text3);padding:2rem"><div class="spinner"></div></td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ═══ RENDER JOBS ═══ -->
+            <div class="section" id="section-render-jobs">
+                <div class="section-header">
+                    <div>
+                        <div class="section-title">🎬 レンダリングジョブ管理</div>
+                        <div class="section-sub">FFmpegレンダリングジョブの監視・管理</div>
+                    </div>
+                    <div style="display:flex;gap:8px;align-items:center">
+                        <select id="renderJobStatusFilter"
+                            onchange="loadRenderJobs()"
+                            style="background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:6px 12px;color:var(--text);font-size:0.82rem">
+                            <option value="">全ステータス</option>
+                            <option value="running">🔄 処理中</option>
+                            <option value="queued">⏳ 待機中</option>
+                            <option value="done">✅ 完了</option>
+                            <option value="failed">❌ 失敗</option>
+                            <option value="cancelled">⏹ キャンセル</option>
+                        </select>
+                        <button class="btn btn-ghost btn-sm" onclick="loadRenderJobs()">🔄 更新</button>
+                    </div>
+                </div>
+
+                <!-- KPI カード -->
+                <div class="kpi-grid" style="grid-template-columns:repeat(5,1fr);margin-bottom:1.25rem">
+                    <div class="kpi c-primary">
+                        <div class="kpi-icon">🎬</div>
+                        <div class="kpi-val" id="rjTotal">—</div>
+                        <div class="kpi-label">総ジョブ数</div>
+                    </div>
+                    <div class="kpi c-accent">
+                        <div class="kpi-icon">🔄</div>
+                        <div class="kpi-val" id="rjRunning">—</div>
+                        <div class="kpi-label">処理中</div>
+                    </div>
+                    <div class="kpi c-success">
+                        <div class="kpi-icon">✅</div>
+                        <div class="kpi-val" id="rjDone">—</div>
+                        <div class="kpi-label">完了</div>
+                    </div>
+                    <div class="kpi c-danger">
+                        <div class="kpi-icon">❌</div>
+                        <div class="kpi-val" id="rjFailed">—</div>
+                        <div class="kpi-label">失敗</div>
+                    </div>
+                    <div class="kpi c-warning">
+                        <div class="kpi-icon">⏳</div>
+                        <div class="kpi-val" id="rjQueued">—</div>
+                        <div class="kpi-label">待機中</div>
+                    </div>
+                </div>
+
+                <!-- ジョブ一覧テーブル -->
+                <div class="table-card">
+                    <div class="table-header">
+                        <h3>ジョブ一覧</h3>
+                        <span style="font-size:0.78rem;color:var(--text3)" id="rjCount"></span>
+                    </div>
+                    <div style="overflow-x:auto">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>ユーザー</th>
+                                    <th>入力ファイル</th>
+                                    <th>出力ファイル</th>
+                                    <th>フォーマット</th>
+                                    <th>ステータス</th>
+                                    <th>進捗</th>
+                                    <th>開始日時</th>
+                                    <th>完了日時</th>
+                                    <th>操作</th>
+                                </tr>
+                            </thead>
+                            <tbody id="renderJobsTableBody">
+                                <tr>
+                                    <td colspan="10" style="text-align:center;color:var(--text3);padding:2rem">
+                                        <div class="spinner"></div>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
             </div>
 
@@ -1555,7 +1872,32 @@
         </div>
     </div>
 
+    <!-- RENDER JOB ERROR LOG MODAL -->
+    <div id="renderJobErrorModal"
+        style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.75);backdrop-filter:blur(6px);z-index:1000;align-items:center;justify-content:center">
+        <div
+            style="background:var(--card);border:1px solid rgba(255,71,87,0.35);border-radius:16px;padding:2rem;width:min(720px,95vw);max-height:85vh;display:flex;flex-direction:column">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1.25rem">
+                <h3 style="font-size:1rem;font-weight:700">🔍 ジョブ詳細 / エラーログ <span id="rjErrJobId" style="color:var(--text3);font-weight:400"></span></h3>
+                <button onclick="closeRenderErrorModal()" style="background:none;border:none;color:var(--text3);font-size:1.3rem;cursor:pointer;line-height:1">✕</button>
+            </div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:.75rem;margin-bottom:1rem;font-size:.83rem">
+                <div><span style="color:var(--text3)">ステータス:</span> <span id="rjErrStatus" style="font-weight:600"></span></div>
+                <div><span style="color:var(--text3)">フォーマット:</span> <span id="rjErrFormat"></span></div>
+                <div style="grid-column:1/-1"><span style="color:var(--text3)">入力:</span> <code id="rjErrInput" style="font-size:.78rem;color:var(--accent)"></code></div>
+                <div style="grid-column:1/-1"><span style="color:var(--text3)">出力:</span> <code id="rjErrOutput" style="font-size:.78rem;color:var(--success)"></code></div>
+            </div>
+            <div style="margin-bottom:.75rem">
+                <div style="font-size:.78rem;color:var(--text3);margin-bottom:.4rem">FFmpegコマンド:</div>
+                <pre id="rjErrCmd" style="background:rgba(0,0,0,.4);border:1px solid var(--border);border-radius:8px;padding:.75rem;font-size:.72rem;color:#a0a0c0;overflow-x:auto;white-space:pre-wrap;word-break:break-all;max-height:120px;overflow-y:auto"></pre>
+            </div>
+            <div style="font-size:.78rem;color:var(--text3);margin-bottom:.4rem">エラーログ (最後の2KB):</div>
+            <pre id="rjErrLog" style="flex:1;background:rgba(255,0,0,.04);border:1px solid rgba(255,71,87,.25);border-radius:8px;padding:.75rem;font-size:.72rem;color:#ff9090;overflow-y:auto;white-space:pre-wrap;word-break:break-all;min-height:80px"></pre>
+        </div>
+    </div>
+
     <!-- FOOTER -->
+
     <footer
         style="border-top:1px solid rgba(255,255,255,.07);padding:1.5rem 2rem;margin-top:2rem;text-align:center;font-size:0.78rem;color:rgba(255,255,255,.35)">
         <div
@@ -1577,6 +1919,15 @@
     <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
     <script src="app.js"></script>
     <script src="bonus.js"></script>
+<script>
+function toggleAdminSidebar(){
+    var s=document.querySelector('.sidebar');
+    if(!s)return;
+    s.classList.toggle('mob-open');
+    var b=document.getElementById('mobHamburger');
+    if(b)b.classList.toggle('open',s.classList.contains('mob-open'));
+}
+</script>
 </body>
 
 </html>

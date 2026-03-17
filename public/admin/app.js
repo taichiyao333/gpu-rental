@@ -1,4 +1,4 @@
-﻿/* ── STATE ─────────────────────────────────────────────────────── */
+/* ── STATE ─────────────────────────────────────────────────────── */
 const token = localStorage.getItem('gpu_token');
 const user = JSON.parse(localStorage.getItem('gpu_user') || 'null');
 
@@ -12,7 +12,7 @@ document.getElementById('sfUsername').textContent = user?.username || '—';
 /* API base: auto-detect local vs remote */
 const API = (function () {
     if (location.hostname === 'localhost' || location.hostname === '127.0.0.1') return '';
-    return 'https://pubmed-apartments-unix-implementation.trycloudflare.com';
+    return ''; // same-origin
 })();
 
 /* ── API ───────────────────────────────────────────────────────── */
@@ -59,6 +59,9 @@ function loadSection(sec) {
         case 'alerts': loadAlerts(); break;
         case 'coupons': loadCoupons(); break;
         case 'pricing': loadPricingCompare(); break;
+        case 'render-jobs': loadRenderJobs(); break;
+        case 'outage': loadOutageSection(); break;
+        case 'apikeys': loadApiKeys(); break;
     }
 }
 
@@ -366,6 +369,7 @@ async function loadUsers() {
           <td><span class="badge ${roleBadge[u.role] || 'b-muted'}">${roleLabel[u.role] || u.role}</span></td>
           <td><span class="badge ${u.status === 'active' ? 'b-success' : 'b-danger'}">${u.status === 'active' ? '有効' : '停止'}</span></td>
           <td class="mono">¥${Math.round(u.wallet_balance || 0).toLocaleString()}</td>
+          <td class="mono" style="color:var(--accent)">${Math.round(u.point_balance || 0).toLocaleString()} pt</td>
           <td style="color:var(--text3)">${new Date(u.created_at).toLocaleDateString('ja-JP')}</td>
           <td style="display:flex;gap:6px;align-items:center">
             ${u.role !== 'admin'
@@ -374,7 +378,7 @@ async function loadUsers() {
                 : '<span style="color:var(--text3);font-size:0.8rem">保護</span>'
             }
           </td>
-        </tr>`).join('') || '<tr><td colspan="8" style="text-align:center;color:var(--text3);padding:2rem">ユーザーなし</td></tr>';
+        </tr>`).join('') || '<tr><td colspan="9" style="text-align:center;color:var(--text3);padding:2rem">ユーザーなし</td></tr>';
     } catch (err) { console.error(err); }
 }
 
@@ -475,6 +479,30 @@ function showDeleteToast(msg) {
         box-shadow:0 8px 24px rgba(0,0,0,0.5);animation:fadeIn 0.2s ease`;
     document.body.appendChild(t);
     setTimeout(() => t.remove(), 3500);
+}
+
+function showToast(msg, type = 'info') {
+    const colors = {
+        success: { bg: 'rgba(0,229,160,0.12)', border: 'rgba(0,229,160,0.4)', text: '#00e5a0' },
+        error:   { bg: 'rgba(255,71,87,0.12)',  border: 'rgba(255,71,87,0.4)',  text: '#ff6b6b' },
+        warning: { bg: 'rgba(255,179,0,0.12)',  border: 'rgba(255,179,0,0.4)',  text: '#ffb300' },
+        info:    { bg: 'rgba(108,71,255,0.12)', border: 'rgba(108,71,255,0.4)', text: '#a78bfa' },
+    };
+    const c = colors[type] || colors.info;
+    const t = document.createElement('div');
+    t.textContent = msg;
+    t.style.cssText = [
+        'position:fixed', 'bottom:24px', 'right:24px',
+        `background:${c.bg}`, `border:1px solid ${c.border}`,
+        'border-radius:10px', 'padding:12px 20px',
+        `color:${c.text}`, 'font-size:0.875rem', 'font-weight:600',
+        'z-index:99999', 'max-width:380px',
+        'box-shadow:0 8px 24px rgba(0,0,0,0.5)',
+        'transition:opacity .3s', 'word-break:break-word',
+    ].join(';');
+    t.className = 'admin-toast';
+    document.body.appendChild(t);
+    setTimeout(() => { t.style.opacity = '0'; setTimeout(() => t.remove(), 300); }, 4000);
 }
 
 
@@ -857,3 +885,497 @@ async function applyPrice(gpuName, priceJpy) {
         loadPricingCompare();
     } catch (e) { showToast(e.message, 'error'); }
 }
+
+// ============================================================
+// 🎬 レンダリングジョブ管理
+// ============================================================
+
+async function loadRenderJobs() {
+    // 統計 KPI
+    try {
+        const stats = await api('/admin/render-jobs/stats');
+        const se = (id, v) => { const e = document.getElementById(id); if (e) e.textContent = v ?? 0; };
+        se('rjTotal',   stats.total);
+        se('rjRunning', stats.running);
+        se('rjDone',    stats.done);
+        se('rjFailed',  stats.failed);
+        se('rjQueued',  stats.queued);
+
+        // 処理中ジョブがあればナビバッジを表示
+        const badge = document.getElementById('renderJobsBadge');
+        if (badge) {
+            const active = (stats.running || 0) + (stats.queued || 0);
+            if (active > 0) { badge.textContent = active; badge.style.display = ''; }
+            else { badge.style.display = 'none'; }
+        }
+
+        const cntEl = document.getElementById('rjCount');
+        if (cntEl) cntEl.textContent = `全 ${stats.total || 0} 件`;
+    } catch (err) { console.error('render-jobs stats:', err); }
+
+    // ジョブ一覧
+    const tbody = document.getElementById('renderJobsTableBody');
+    if (!tbody) return;
+    tbody.innerHTML = '<tr><td colspan="10" style="text-align:center;padding:2rem"><div class="spinner"></div></td></tr>';
+    try {
+        const filter = document.getElementById('renderJobStatusFilter')?.value || '';
+        const url = '/admin/render-jobs' + (filter ? `?status=${filter}` : '');
+        const jobs = await api(url);
+
+        if (!jobs || !jobs.length) {
+            tbody.innerHTML = '<tr><td colspan="10" style="text-align:center;color:var(--text3);padding:2rem">ジョブなし</td></tr>';
+            return;
+        }
+
+        const statusConfig = {
+            queued:    { label: '待機中',   cls: 'b-warning', icon: '⏳' },
+            running:   { label: '処理中',   cls: 'b-primary', icon: '🔄' },
+            done:      { label: '完了',     cls: 'b-success', icon: '✅' },
+            failed:    { label: '失敗',     cls: 'b-danger',  icon: '❌' },
+            cancelled: { label: 'キャンセル', cls: 'b-muted',   icon: '⏹' },
+        };
+
+        tbody.innerHTML = jobs.map(j => {
+            const sc = statusConfig[j.status] || { label: j.status, cls: 'b-muted', icon: '' };
+            const inputName = (j.input_path || '').split(/[\\/]/).pop() || '—';
+            const outputName = j.output_name || (j.output_path ? j.output_path.split(/[\\/]/).pop() : '—');
+            const startedAt = j.started_at ? new Date(j.started_at).toLocaleString('ja-JP') : '—';
+            const finishedAt = j.finished_at ? new Date(j.finished_at).toLocaleString('ja-JP') : '—';
+
+            const progressBar = j.status === 'running'
+                ? `<div style="display:flex;align-items:center;gap:6px">
+                    <div style="flex:1;height:5px;background:rgba(255,255,255,.1);border-radius:3px;overflow:hidden;min-width:60px">
+                        <div style="height:100%;width:${j.progress || 0}%;background:linear-gradient(90deg,var(--primary),#8b5cf6);transition:width .5s"></div>
+                    </div>
+                    <span style="font-size:.72rem;color:var(--text2);white-space:nowrap">${j.progress || 0}%</span>
+                   </div>`
+                : j.status === 'done'
+                    ? '<span style="color:var(--success);font-size:.8rem">✓ 100%</span>'
+                    : '<span style="color:var(--text3);font-size:.8rem">—</span>';
+
+            const actions = [];
+            if (j.status === 'failed') {
+                actions.push(`<button class="btn btn-ghost btn-sm" onclick="showRenderJobError(${j.id})" title="エラーログ閲覧">🔍 詳細</button>`);
+            }
+            if (['running', 'queued'].includes(j.status)) {
+                actions.push(`<button class="btn btn-danger btn-sm" onclick="adminCancelRenderJob(${j.id})">&#9209; キャンセル</button>`);
+            }
+            if (j.status === 'done') {
+                actions.push(`<button class="btn btn-ghost btn-sm" onclick="showRenderJobError(${j.id})" title="詳細確認">🔍 詳細</button>`);
+            }
+
+            return `<tr>
+              <td class="mono">#${j.id}</td>
+              <td>${j.user_name || j.user_id}<br><span style="font-size:.72rem;color:var(--text3)">${j.user_email || ''}</span></td>
+              <td title="${j.input_path || ''}"><span style="font-size:.8rem;max-width:140px;display:inline-block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${inputName}</span></td>
+              <td title="${j.output_path || ''}"><span style="font-size:.8rem;max-width:140px;display:inline-block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--success)">${outputName}</span></td>
+              <td><span class="badge b-muted">${j.format || '—'}</span></td>
+              <td><span class="badge ${sc.cls}">${sc.icon} ${sc.label}</span></td>
+              <td style="min-width:100px">${progressBar}</td>
+              <td style="font-size:.78rem;color:var(--text3)">${startedAt}</td>
+              <td style="font-size:.78rem;color:var(--text3)">${finishedAt}</td>
+              <td style="display:flex;gap:4px;flex-wrap:wrap">${actions.join('') || '<span style="color:var(--text3);font-size:.78rem">—</span>'}</td>
+            </tr>`;
+        }).join('');
+    } catch (err) {
+        tbody.innerHTML = `<tr><td colspan="10" style="text-align:center;padding:2rem;color:var(--danger)">${err.message}</td></tr>`;
+    }
+}
+
+async function adminCancelRenderJob(jobId) {
+    if (!confirm(`ジョブ #${jobId} を強制キャンセルしますか？`)) return;
+    try {
+        await api(`/admin/render-jobs/${jobId}/cancel`, { method: 'POST' });
+        showToast(`⏹ ジョブ #${jobId} をキャンセルしました`, 'success');
+        loadRenderJobs();
+    } catch (e) { showToast('キャンセル失敗: ' + e.message, 'error'); }
+}
+
+async function showRenderJobError(jobId) {
+    const modal = document.getElementById('renderJobErrorModal');
+    if (!modal) return;
+    modal.style.display = 'flex';
+    document.getElementById('rjErrJobId').textContent  = `#${jobId}`;
+    document.getElementById('rjErrStatus').textContent = '読み込み中...';
+    document.getElementById('rjErrFormat').textContent = '';
+    document.getElementById('rjErrInput').textContent  = '';
+    document.getElementById('rjErrOutput').textContent = '';
+    document.getElementById('rjErrCmd').textContent    = '';
+    document.getElementById('rjErrLog').textContent    = '';
+    try {
+        const job = await api(`/admin/render-jobs/${jobId}/error`);
+        const sc = { queued:'待機中', running:'処理中', done:'完了', failed:'失敗', cancelled:'キャンセル' };
+        document.getElementById('rjErrStatus').textContent = sc[job.status] || job.status;
+        document.getElementById('rjErrStatus').style.color = job.status === 'failed' ? 'var(--danger)' : job.status === 'done' ? 'var(--success)' : 'inherit';
+        document.getElementById('rjErrFormat').textContent = job.format || '—';
+        document.getElementById('rjErrInput').textContent  = job.input_path || '—';
+        document.getElementById('rjErrOutput').textContent = job.output_path || '—';
+        // ffmpeg_args is JSON array
+        try {
+            const args = JSON.parse(job.ffmpeg_args || '[]');
+            document.getElementById('rjErrCmd').textContent = 'ffmpeg ' + args.join(' ');
+        } catch { document.getElementById('rjErrCmd').textContent = job.ffmpeg_args || ''; }
+        document.getElementById('rjErrLog').textContent = job.error_log || '(エラーログなし)';
+    } catch (err) {
+        document.getElementById('rjErrStatus').textContent = '取得失敗';
+        document.getElementById('rjErrLog').textContent = err.message;
+    }
+}
+
+function closeRenderErrorModal() {
+    const m = document.getElementById('renderJobErrorModal');
+    if (m) m.style.display = 'none';
+}
+
+// render-jobs セクション遷移時にロード
+document.addEventListener('click', e => {
+    const btn = e.target.closest('[data-section="render-jobs"]');
+    if (btn) setTimeout(() => loadRenderJobs(), 50);
+});
+
+// 定期更新: 30秒ごとに処理中ジョブ数をKPI東涁に反映
+setInterval(async () => {
+    try {
+        const stats = await api('/admin/render-jobs/stats');
+        const badge = document.getElementById('renderJobsBadge');
+        if (badge) {
+            const active = (stats.running || 0) + (stats.queued || 0);
+            if (active > 0) { badge.textContent = active; badge.style.display = ''; }
+            else { badge.style.display = 'none'; }
+        }
+        // render-jobs セクション表示中なら自動更新
+        if (currentSection === 'render-jobs') {
+            const se = (id, v) => { const e = document.getElementById(id); if (e) e.textContent = v ?? 0; };
+            se('rjTotal',   stats.total);
+            se('rjRunning', stats.running);
+            se('rjDone',    stats.done);
+            se('rjFailed',  stats.failed);
+            se('rjQueued',  stats.queued);
+        }
+    } catch (_) { }
+}, 30000);
+
+/* ══════════════════════════════════════════════════════════════════
+   ⚡ OUTAGE MANAGEMENT
+══════════════════════════════════════════════════════════════════ */
+
+async function loadOutageSection() {
+    await populateOutageGpuSelect();
+    await loadOutageReports();
+    await updateOutageBadge();
+}
+
+async function populateOutageGpuSelect() {
+    try {
+        const gpus = await api('/admin/gpus');
+        const sel = document.getElementById('outageGpuId');
+        if (!sel) return;
+        const current = sel.value;
+        sel.innerHTML = '<option value="">GPUを選択...</option>';
+        (gpus || []).forEach(g => {
+            const opt = document.createElement('option');
+            opt.value = g.id;
+            opt.textContent = `#${g.id} ${g.name} (${g.location || 'Home'}) — ${g.status}`;
+            sel.appendChild(opt);
+        });
+        if (current) sel.value = current;
+    } catch (e) {
+        console.error('GPU list failed:', e.message);
+    }
+}
+
+function showOutageForm() {
+    const card = document.getElementById('outageFormCard');
+    if (card) {
+        card.style.display = '';
+        // デフォルト: 今から1時間前〜今
+        const now = new Date();
+        const oneHourAgo = new Date(now.getTime() - 60 * 60 * 1000);
+        const fmt = d => d.toISOString().slice(0, 16);
+        document.getElementById('outageStart').value = fmt(oneHourAgo);
+        document.getElementById('outageEnd').value = fmt(now);
+        card.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+}
+
+function hideOutageForm() {
+    const card = document.getElementById('outageFormCard');
+    if (card) card.style.display = 'none';
+    const msg = document.getElementById('outageFormMsg');
+    if (msg) { msg.style.display = 'none'; msg.innerHTML = ''; }
+    const prev = document.getElementById('outagePreview');
+    if (prev) { prev.style.display = 'none'; prev.innerHTML = ''; }
+}
+
+async function submitOutageReport() {
+    const gpuId = document.getElementById('outageGpuId')?.value;
+    const start = document.getElementById('outageStart')?.value;
+    const end = document.getElementById('outageEnd')?.value;
+    const reason = document.getElementById('outageReason')?.value || '';
+    const msgEl = document.getElementById('outageFormMsg');
+    const prevEl = document.getElementById('outagePreview');
+
+    function showMsg(html, isError = false) {
+        if (!msgEl) return;
+        msgEl.style.display = '';
+        msgEl.style.background = isError ? 'rgba(255,71,87,.08)' : 'rgba(0,229,160,.08)';
+        msgEl.style.border = isError ? '1px solid rgba(255,71,87,.2)' : '1px solid rgba(0,229,160,.2)';
+        msgEl.style.borderRadius = '8px';
+        msgEl.style.padding = '0.75rem 1rem';
+        msgEl.style.fontSize = '0.85rem';
+        msgEl.innerHTML = html;
+    }
+
+    if (!gpuId) return showMsg('⚠️ GPUを選択してください', true);
+    if (!start || !end) return showMsg('⚠️ 障害開始・終了日時を入力してください', true);
+    if (new Date(start) >= new Date(end)) return showMsg('⚠️ 終了日時は開始日時より後にしてください', true);
+
+    // 報告 → プレビュー表示
+    try {
+        msgEl.style.display = 'none';
+        const data = await api('/outage/report', {
+            method: 'POST',
+            body: JSON.stringify({
+                gpu_id: parseInt(gpuId),
+                outage_start: new Date(start).toISOString(),
+                outage_end: new Date(end).toISOString(),
+                reason,
+            }),
+        });
+
+        const mins = Math.round((new Date(end) - new Date(start)) / 60000);
+        const affCount = data.affected_reservations || 0;
+
+        if (prevEl) {
+            prevEl.style.display = '';
+            prevEl.innerHTML = `
+                <div style="display:flex;gap:2rem;flex-wrap:wrap;margin-bottom:0.75rem">
+                    <div><span style="color:var(--text3);font-size:0.75rem">障害ID</span><br><strong>#${data.report_id}</strong></div>
+                    <div><span style="color:var(--text3);font-size:0.75rem">障害時間</span><br><strong>${mins} 分</strong></div>
+                    <div><span style="color:var(--text3);font-size:0.75rem">影響予約数</span><br><strong style="color:${affCount > 0 ? 'var(--danger)' : 'var(--success)'}">${affCount} 件</strong></div>
+                </div>
+                ${affCount > 0 ? `
+                <div style="font-size:0.78rem;color:var(--text2);margin-bottom:0.5rem">影響を受けた予約:</div>
+                <div style="display:flex;flex-direction:column;gap:4px">
+                    ${(data.affected || []).map(a => `<div style="background:rgba(255,255,255,.03);border-radius:6px;padding:6px 10px;font-size:0.78rem">
+                        👤 <strong>${a.user}</strong> — ${a.gpu} — ${new Date(a.start_time).toLocaleString('ja-JP')} 〜 ${new Date(a.end_time).toLocaleString('ja-JP')}
+                    </div>`).join('')}
+                </div>
+                <div style="margin-top:0.75rem;padding-top:0.75rem;border-top:1px solid rgba(255,255,255,.06)">
+                    <button class="btn btn-primary" onclick="executeCompensation(${data.report_id})" style="background:linear-gradient(135deg,#ff4757,#c0392b)">
+                        🎁 今すぐ補償ポイントを配布する
+                    </button>
+                    <span style="font-size:0.75rem;color:var(--text3);margin-left:1rem">障害時間比に応じてポイントを自動計算</span>
+                </div>` : '<div style="color:var(--success)">✅ 影響を受けた予約なし（補償対象なし）</div>'}
+            `;
+        }
+
+        showMsg(`✅ 障害 #${data.report_id} を報告しました`, false);
+        await loadOutageReports();
+        await updateOutageBadge();
+    } catch (e) {
+        showMsg(`❌ エラー: ${e.message}`, true);
+    }
+}
+
+async function executeCompensation(reportId) {
+    if (!confirm(`障害 #${reportId} の補償ポイントを配布しますか？\nこの操作は取り消せません。`)) return;
+    try {
+        const data = await api(`/outage/${reportId}/compensate`, { method: 'POST' });
+        const mins = data.outage_minutes || 0;
+        const pts = data.total_points_issued || 0;
+        const cnt = data.affected_count || 0;
+        alert(`✅ 補償完了！\n\n障害時間: ${mins} 分\n補償対象: ${cnt} 件\n配布ポイント合計: ${pts.toLocaleString()} pt\n(¥${(pts * 10).toLocaleString()} 相当)`);
+        hideOutageForm();
+        await loadOutageReports();
+        await updateOutageBadge();
+    } catch (e) {
+        alert(`❌ 補償エラー: ${e.message}`);
+    }
+}
+
+async function loadOutageReports() {
+    const tbody = document.getElementById('outageTableBody');
+    if (!tbody) return;
+    try {
+        const reports = await api('/outage');
+        if (!reports.length) {
+            tbody.innerHTML = '<tr><td colspan="10" style="text-align:center;color:var(--text3);padding:2rem">障害レポートなし</td></tr>';
+            return;
+        }
+        tbody.innerHTML = reports.map(r => {
+            const startD = new Date(r.outage_start);
+            const endD = new Date(r.outage_end);
+            const mins = Math.round((endD - startD) / 60000);
+            const isPending = r.status === 'pending';
+            const statusBadge = isPending
+                ? '<span style="background:rgba(251,191,36,.15);color:#fbbf24;border:1px solid rgba(251,191,36,.3);border-radius:4px;padding:2px 8px;font-size:0.72rem;font-weight:700">未補償</span>'
+                : '<span style="background:rgba(0,229,160,.12);color:var(--success);border:1px solid rgba(0,229,160,.2);border-radius:4px;padding:2px 8px;font-size:0.72rem;font-weight:700">補償済</span>';
+            const pts = r.total_compensated_points || 0;
+            return `<tr>
+                <td style="color:var(--text3);font-size:0.8rem">#${r.id}</td>
+                <td style="font-weight:600">${r.gpu_name || '-'}</td>
+                <td style="font-size:0.8rem">${startD.toLocaleString('ja-JP')}</td>
+                <td style="font-size:0.8rem">${endD.toLocaleString('ja-JP')}</td>
+                <td style="font-family:monospace">${mins} 分</td>
+                <td style="color:var(--text2);font-size:0.8rem;max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${r.reason || ''}">${r.reason || '—'}</td>
+                <td>—</td>
+                <td style="font-family:monospace;color:${pts > 0 ? 'var(--success)' : 'var(--text3)'}">
+                    ${pts > 0 ? `+${pts.toLocaleString()} pt` : '—'}
+                </td>
+                <td>${statusBadge}</td>
+                <td>
+                    ${isPending ? `<button class="btn" style="font-size:0.75rem;padding:4px 12px;background:linear-gradient(135deg,#ff4757,#c0392b);color:#fff;border:none;cursor:pointer" onclick="executeCompensation(${r.id})">🎁 補償実行</button>` : '<span style="color:var(--text3);font-size:0.78rem">完了</span>'}
+                </td>
+            </tr>`;
+        }).join('');
+    } catch (e) {
+        tbody.innerHTML = `<tr><td colspan="10" style="text-align:center;color:var(--danger);padding:2rem">エラー: ${e.message}</td></tr>`;
+    }
+}
+
+async function updateOutageBadge() {
+    try {
+        const reports = await api('/outage');
+        const pending = (reports || []).filter(r => r.status === 'pending').length;
+        const badge = document.getElementById('outageBadge');
+        if (badge) {
+            if (pending > 0) { badge.textContent = pending; badge.style.display = ''; }
+            else { badge.style.display = 'none'; }
+        }
+    } catch (_) { }
+}
+
+// 初期バッジ更新
+setTimeout(updateOutageBadge, 2000);
+// 5分ごとにバッジ更新
+setInterval(updateOutageBadge, 5 * 60 * 1000);
+
+// outageセクション切替時にGPUリストも最新化
+document.addEventListener('click', e => {
+    const btn = e.target.closest('[data-section="outage"]');
+    if (btn) setTimeout(() => loadOutageSection(), 50);
+});
+
+/* ══════════════════════════════════════════════════════════════════
+   🔑 API KEY MANAGEMENT
+══════════════════════════════════════════════════════════════════ */
+
+let _allApiKeys = [];   // キャッシュ（検索フィルタ用）
+
+async function loadApiKeys() {
+    const tbody = document.getElementById('apiKeyTableBody');
+    if (tbody) tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;color:var(--text3);padding:2rem"><div class="spinner"></div></td></tr>';
+
+    try {
+        const keys = await api('/admin/apikeys');
+        _allApiKeys = keys || [];
+        updateApiKeyStats(_allApiKeys);
+        renderApiKeyTable(_allApiKeys);
+    } catch (e) {
+        if (tbody) tbody.innerHTML = `<tr><td colspan="8" style="text-align:center;color:var(--danger);padding:2rem">エラー: ${e.message}</td></tr>`;
+    }
+}
+
+function updateApiKeyStats(keys) {
+    const now = Date.now();
+    const oneDayMs = 24 * 60 * 60 * 1000;
+    const active   = keys.filter(k => k.is_active).length;
+    const inactive = keys.filter(k => !k.is_active).length;
+    const usedToday = keys.filter(k => k.last_used_at && (now - new Date(k.last_used_at).getTime()) < oneDayMs).length;
+
+    const se = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v; };
+    se('akTotal',    keys.length);
+    se('akActive',   active);
+    se('akInactive', inactive);
+    se('akUsedToday', usedToday);
+}
+
+function filterApiKeys() {
+    const q = (document.getElementById('akSearch')?.value || '').toLowerCase();
+    const filtered = q
+        ? _allApiKeys.filter(k =>
+            (k.username || '').toLowerCase().includes(q) ||
+            (k.email    || '').toLowerCase().includes(q) ||
+            (k.name     || '').toLowerCase().includes(q) ||
+            (k.key_prefix || '').toLowerCase().includes(q))
+        : _allApiKeys;
+    renderApiKeyTable(filtered);
+}
+
+function renderApiKeyTable(keys) {
+    const tbody = document.getElementById('apiKeyTableBody');
+    if (!tbody) return;
+
+    if (!keys.length) {
+        tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;color:var(--text3);padding:2rem">APIキーが見つかりません</td></tr>';
+        return;
+    }
+
+    const fmtDate = s => s ? new Date(s).toLocaleString('ja-JP', { month:'2-digit', day:'2-digit', hour:'2-digit', minute:'2-digit' }) : '—';
+    const now = Date.now();
+    const oneDayMs = 24 * 60 * 60 * 1000;
+
+    tbody.innerHTML = keys.map(k => {
+        const isActive = !!k.is_active;
+        const usedRecently = k.last_used_at && (now - new Date(k.last_used_at).getTime()) < oneDayMs;
+        const statusBadge = isActive
+            ? '<span style="background:rgba(0,229,160,.12);color:var(--success);border:1px solid rgba(0,229,160,.2);border-radius:4px;padding:2px 8px;font-size:0.72rem;font-weight:700">有効</span>'
+            : '<span style="background:rgba(255,255,255,.05);color:var(--text3);border:1px solid var(--border);border-radius:4px;padding:2px 8px;font-size:0.72rem;font-weight:700">無効</span>';
+        const toggleLabel = isActive ? '⏸ 無効化' : '▶ 有効化';
+        const toggleColor = isActive ? 'color:#fbbf24' : 'color:var(--success)';
+        const lastUsed = k.last_used_at
+            ? `<span style="color:${usedRecently ? 'var(--accent)' : 'var(--text2)'}">${fmtDate(k.last_used_at)}${usedRecently ? ' 🟢' : ''}</span>`
+            : '<span style="color:var(--text3)">未使用</span>';
+
+        return `<tr>
+            <td style="color:var(--text3);font-size:0.8rem">#${k.id}</td>
+            <td>
+                <div style="font-weight:600;font-size:0.85rem">${k.username || '—'}</div>
+                <div style="font-size:0.75rem;color:var(--text3)">${k.email || ''}</div>
+            </td>
+            <td style="font-size:0.85rem">${k.name || 'My API Key'}</td>
+            <td style="font-family:monospace;font-size:0.8rem;color:var(--text2)">${k.key_prefix || '—'}</td>
+            <td style="font-size:0.8rem;color:var(--text2)">${fmtDate(k.created_at)}</td>
+            <td style="font-size:0.8rem">${lastUsed}</td>
+            <td>${statusBadge}</td>
+            <td style="display:flex;gap:6px;flex-wrap:wrap">
+                <button class="btn" style="font-size:0.72rem;padding:3px 10px;${toggleColor};background:transparent;border:1px solid var(--border)"
+                    onclick="toggleApiKey(${k.id}, ${isActive})">${toggleLabel}</button>
+                <button class="btn" style="font-size:0.72rem;padding:3px 10px;color:var(--danger);background:transparent;border:1px solid rgba(255,71,87,.3)"
+                    onclick="deleteApiKey(${k.id}, '${k.username}')">🗑 削除</button>
+            </td>
+        </tr>`;
+    }).join('');
+}
+
+async function toggleApiKey(id, currentlyActive) {
+    try {
+        const data = await api(`/admin/apikeys/${id}/toggle`, { method: 'PATCH' });
+        // キャッシュ更新
+        const key = _allApiKeys.find(k => k.id === id);
+        if (key) key.is_active = data.is_active ? 1 : 0;
+        updateApiKeyStats(_allApiKeys);
+        filterApiKeys();
+    } catch (e) {
+        alert(`エラー: ${e.message}`);
+    }
+}
+
+async function deleteApiKey(id, username) {
+    if (!confirm(`ユーザー「${username}」のAPIキー #${id} を削除しますか？\nこの操作は取り消せません。`)) return;
+    try {
+        await api(`/admin/apikeys/${id}`, { method: 'DELETE' });
+        _allApiKeys = _allApiKeys.filter(k => k.id !== id);
+        updateApiKeyStats(_allApiKeys);
+        filterApiKeys();
+    } catch (e) {
+        alert(`削除エラー: ${e.message}`);
+    }
+}
+
+// apikeysセクション切替時に自動ロード
+document.addEventListener('click', e => {
+    const btn = e.target.closest('[data-section="apikeys"]');
+    if (btn) setTimeout(() => loadApiKeys(), 50);
+});

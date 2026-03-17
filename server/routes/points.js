@@ -1,4 +1,4 @@
-﻿/**
+/**
  * Points & Tickets API
  * GET  /api/points/balance          - my point balance
  * GET  /api/points/logs             - my point history
@@ -14,6 +14,7 @@ const { authMiddleware } = require('../middleware/auth');
 const crypto = require('crypto');
 const couponRouter = require('./coupons');
 const validateCoupon = couponRouter.validateCoupon;
+const { mailPointPurchased } = require('../services/email');
 
 // 1 point = 10 yen
 const POINT_RATE = 10;
@@ -21,10 +22,9 @@ const POINT_RATE = 10;
 // GMO Epsilon settings (from .env)
 const EPSILON_CONTRACT_CODE = process.env.EPSILON_CONTRACT_CODE || 'TEST_CONTRACT';
 const EPSILON_URL = process.env.EPSILON_URL || 'https://beta.epsilon.jp/cgi-bin/order/lcard_order.cgi';
-const EPSILON_CALLBACK = process.env.EPSILON_CALLBACK ||
-    'https://pubmed-apartments-unix-implementation.trycloudflare.com/api/points/epsilon/callback';
-const EPSILON_RETURN = process.env.EPSILON_RETURN ||
-    'https://pubmed-apartments-unix-implementation.trycloudflare.com/portal/';
+const _BASE = process.env.BASE_URL || process.env.EPSILON_CALLBACK?.replace('/api/points/epsilon/callback', '') || 'http://localhost:3000';
+const EPSILON_CALLBACK = process.env.EPSILON_CALLBACK || `${_BASE}/api/points/epsilon/callback`;
+const EPSILON_RETURN = process.env.EPSILON_RETURN || `${_BASE}/portal/`;
 
 // ─── Ticket Plans ────────────────────────────────────────────────────────────
 const TICKET_PLANS = [
@@ -169,6 +169,24 @@ router.get('/epsilon/callback', (req, res) => {
                         VALUES (?, ?, 'purchase', ?, ?)`).run(
                 purchase.user_id, purchase.points, `${purchase.plan_name}を購入`, pid
             );
+
+            // 購入完了メールを送信（非同期・失敗してもリダイレクトに影響しない）
+            try {
+                const user = db.prepare('SELECT username, email FROM users WHERE id = ?').get(purchase.user_id);
+                if (user) {
+                    mailPointPurchased({
+                        to: user.email,
+                        username: user.username,
+                        purchase: {
+                            plan_name: purchase.plan_name,
+                            points: purchase.points,
+                            amount_yen: purchase.amount_yen,
+                        },
+                    }).catch(e => console.error('購入完了メール送信失敗:', e.message));
+                }
+            } catch (e) {
+                console.error('購入完了メール準備エラー:', e.message);
+            }
         }
         res.redirect(`${EPSILON_RETURN}?payment=success&points=${purchase?.points || 0}`);
     } else if (status === 'failure') {

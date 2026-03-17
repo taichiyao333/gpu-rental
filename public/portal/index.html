@@ -40,7 +40,29 @@
         </div>
         <!-- ナビバー: ログイン不要でも表示するGPU公開ボタン -->
         <button class="btn btn-provide" id="btnProvideGuidePublic" title="自分のPCのGPUを貸し出す">🏭 GPUを公開する</button>
+    <!-- ハンバーガーボタン -->
+        <button class="nav-hamburger" id="navHamburger" aria-label="メニューを開く" onclick="toggleMobileMenu()"><span></span><span></span><span></span></button>
     </nav>
+
+    <!-- モバイルドロワー -->
+    <div class="nav-drawer" id="navDrawer">
+        <a href="#gpus" class="drawer-link" onclick="closeMobileMenu()">🖥️ GPU一覧</a>
+        <a href="#how" class="drawer-link" onclick="closeMobileMenu()">📖 使い方</a>
+        <a href="/pricing.html" class="drawer-link" target="_blank">💰 料金表</a>
+        <div class="drawer-divider"></div>
+        <div id="drawerAuthSection" style="display:flex;flex-direction:column;gap:8px">
+            <button class="btn btn-ghost drawer-btn" onclick="closeMobileMenu();document.getElementById('btnLogin').click()">ログイン</button>
+            <button class="btn btn-primary drawer-btn" onclick="closeMobileMenu();document.getElementById('btnRegister').click()">無料登録</button>
+        </div>
+        <div id="drawerUserSection" style="display:none;flex-direction:column;gap:8px">
+            <div class="drawer-section" id="drawerUsername"></div>
+            <a href="/mypage/" class="drawer-link">👤 マイページ</a>
+            <a href="/workspace/" class="drawer-link">🖥️ ワークスペース</a>
+            <a href="/admin/" class="drawer-link hidden" id="drawerAdmin">⚙️ 管理画面</a>
+            <div class="drawer-divider"></div>
+            <button class="btn btn-ghost drawer-btn" onclick="closeMobileMenu();document.getElementById('btnLogout').click()">ログアウト</button>
+        </div>
+    </div>
 
     <!-- HERO -->
     <section class="hero">

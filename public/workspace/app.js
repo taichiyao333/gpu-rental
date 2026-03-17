@@ -4,8 +4,9 @@ if (!token || !user) { window.location.href = '/portal/'; }
 
 /* API base: auto-detect local vs remote */
 const API = (function () {
+    // localhost = dev (relative path), any other host = same-origin (production)
     if (location.hostname === 'localhost' || location.hostname === '127.0.0.1') return '';
-    return 'https://pubmed-apartments-unix-implementation.trycloudflare.com';
+    return ''; // same-origin — works regardless of domain/Cloudflare tunnel URL
 })();
 
 let pod = null;
@@ -60,6 +61,9 @@ async function init() {
 
     // 回線速度計測（接続完了後に開始）
     setTimeout(() => measureBandwidth(), 2000);
+
+    // コンテナ起動状態のポーリング（Dockerテンプレート利用時）
+    pollContainerStatus();
 }
 
 /* ─── Bandwidth Measurement ─────────────────────────────────────── */
@@ -441,25 +445,114 @@ async function doStopPod(force) {
 }
 
 
+/* ─── Container Status Polling ─────────────────────────────────────── */
+let _containerPollTimer = null;
+let _containerReady = false;
+
+async function pollContainerStatus() {
+    if (_containerReady || !pod) return;
+    try {
+        const info = await apiFetch(`/pods/${pod.id}/container`);
+        updateContainerBanner(info);
+        if (['running', 'simulation'].includes(info.container_status)) {
+            _containerReady = true;
+            clearInterval(_containerPollTimer);
+        }
+    } catch (_) { }
+}
+
+function updateContainerBanner(info) {
+    let banner = document.getElementById('containerBanner');
+    if (!banner) {
+        banner = document.createElement('div');
+        banner.id = 'containerBanner';
+        banner.style.cssText = [
+            'position:fixed', 'bottom:1.2rem', 'right:1.2rem',
+            'background:rgba(13,13,20,0.95)', 'border:1px solid rgba(108,71,255,0.4)',
+            'backdrop-filter:blur(12px)', 'border-radius:14px',
+            'padding:14px 18px', 'min-width:300px', 'z-index:8888',
+            'font-size:0.82rem', 'box-shadow:0 8px 32px rgba(0,0,0,0.5)',
+        ].join(';');
+        document.body.appendChild(banner);
+    }
+
+    const STATUS_UI = {
+        pending:           { icon: '⏳', label: 'コンテナ準備中...', color: '#888' },
+        pulling:           { icon: '⬇️', label: 'Dockerイメージを取得中...', color: '#00d4ff' },
+        starting:          { icon: '🚀', label: 'コンテナ起動中...', color: '#a78bfa' },
+        running:           { icon: '✅', label: 'コンテナ稼働中', color: '#00e5a0' },
+        simulation:        { icon: '🟡', label: 'シミュレーションモード', color: '#fbbf24' },
+        failed:            { icon: '❌', label: '起動失敗', color: '#ff4757' },
+        image_pull_failed: { icon: '❌', label: 'イメージ取得失敗', color: '#ff4757' },
+    };
+
+    const st = STATUS_UI[info.container_status] || STATUS_UI.pending;
+    const services = (info.services || []).map(s => {
+        if (s.url) return `<a href="${s.url}" target="_blank" style="color:#6c47ff;text-decoration:none;font-weight:600">${s.icon} ${s.name} → 開く</a>`;
+        if (s.cmd) return `${s.icon} <code style="color:#00e5a0;font-size:0.78rem">${s.cmd}</code>`;
+        return '';
+    }).filter(Boolean);
+
+    banner.innerHTML = `
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:${services.length ? '10px' : '0'}">
+            <span style="font-size:1.3rem">${st.icon}</span>
+            <div style="flex:1">
+                <div style="font-weight:700;color:${st.color}">${st.label}</div>
+                ${info.template ? `<div style="color:#555;font-size:0.72rem">${info.template.description || ''}</div>` : ''}
+            </div>
+            ${['running','simulation'].includes(info.container_status)
+                ? `<button onclick="document.getElementById('containerBanner').remove()" style="background:none;border:none;color:#555;cursor:pointer;font-size:1rem">✕</button>`
+                : ''}
+        </div>
+        ${services.length ? `<div style="display:flex;flex-direction:column;gap:6px;padding-top:8px;border-top:1px solid rgba(255,255,255,0.07)">${services.join('')}</div>` : ''}
+    `;
+}
+
+// ── Start polling ──
+setTimeout(() => {
+    _containerPollTimer = setInterval(pollContainerStatus, 4000);
+    pollContainerStatus();
+}, 1500);
+
 /* ─── Render ────────────────────────────────────────────────────── */
-document.getElementById('btnStartRender').addEventListener('click', () => {
+document.getElementById('btnStartRender').addEventListener('click', async () => {
     const input = document.getElementById('renderInput').value;
     if (!input) { showNotif('入力ファイルを選択してください', 'error'); return; }
+    if (!pod) { showNotif('アクティブなPodが必要です', 'error'); return; }
+
     const outputDir = document.getElementById('renderOutput').value.trim() || '/outputs/';
     const settings = {
+        pod_id: pod.id,
         input,
         outputDir,
-        format: document.getElementById('renderFormat').value,
-        resolution: document.getElementById('renderRes').value,
-        fps: document.getElementById('renderFps').value,
+        format:      document.getElementById('renderFormat').value,
+        resolution:  document.getElementById('renderRes').value,
+        fps:         document.getElementById('renderFps').value,
         bitrateMode: document.getElementById('renderBitrateMode').value,
-        bitrate: document.getElementById('renderBitrate').value,
-        encoder: document.getElementById('renderEncoder').value,
-        preset: document.getElementById('renderPreset').value,
-        audio: document.getElementById('renderAudio').value,
-        audioBr: document.getElementById('renderAudioBr').value,
+        bitrate:     document.getElementById('renderBitrate').value,
+        encoder:     document.getElementById('renderEncoder').value,
+        preset:      document.getElementById('renderPreset').value,
+        audio:       document.getElementById('renderAudio').value,
+        audioBr:     document.getElementById('renderAudioBr').value,
     };
-    addToQueue(settings);
+
+    const btn = document.getElementById('btnStartRender');
+    btn.disabled = true;
+    btn.textContent = '⏳ 開始中...';
+
+    try {
+        const result = await apiFetch('/render/start', {
+            method: 'POST',
+            body: JSON.stringify(settings),
+        });
+        showNotif(`🎬 ジョブ #${result.jobId} を開始しました`, 'success');
+        addJobToQueue(result.jobId, input, settings);
+    } catch (err) {
+        showNotif('レンダリング開始失敗: ' + err.message, 'error');
+    } finally {
+        btn.disabled = false;
+        btn.textContent = '🚀 レンダリング開始';
+    }
 });
 
 /* ─── レンダリング入力ファイル選択 ─────────────────────────────── */
@@ -715,45 +808,66 @@ function closeFilePickerModal() {
     if (modal) modal.style.display = 'none';
 }
 
-function addToQueue(settings) {
+function addJobToQueue(jobId, inputPath, settings) {
     const queue = document.getElementById('renderQueue');
     const empty = queue.querySelector('.queue-empty');
     if (empty) empty.remove();
-    const id = Date.now();
+
     const item = document.createElement('div');
     item.className = 'queue-item';
-    item.id = `q${id}`;
+    item.id = `qjob${jobId}`;
     item.innerHTML = `
-    <div class="queue-item-name">${settings.input.split('/').pop()}</div>
-    <div class="queue-progress-bar"><div class="queue-progress-fill" id="qfill${id}" style="width:0%"></div></div>
-    <div class="queue-meta"><span id="qstatus${id}">待機中...</span><span>${settings.format} · ${settings.resolution}</span></div>
-  `;
+        <div class="queue-item-name">${inputPath.split('/').pop()} <span style="color:#555;font-size:0.72rem">#${jobId}</span></div>
+        <div class="queue-progress-bar"><div class="queue-progress-fill" id="qfill${jobId}" style="width:0%"></div></div>
+        <div class="queue-meta">
+            <span id="qstatus${jobId}">待機中...</span>
+            <span>${settings.format} · ${settings.resolution}</span>
+            <button onclick="cancelRenderJob(${jobId})" style="background:none;border:none;color:#ff4757;cursor:pointer;font-size:0.78rem">✕ キャンセル</button>
+        </div>
+    `;
     queue.appendChild(item);
 
-    showNotif('🎬 レンダリングをキューに追加しました', 'success');
-    // Simulate progress
-    simulateRender(id);
+    // Poll for progress
+    const pollerHandle = setInterval(async () => {
+        try {
+            const job = await apiFetch(`/render/jobs/${jobId}`);
+            const fill = document.getElementById(`qfill${jobId}`);
+            const statusEl = document.getElementById(`qstatus${jobId}`);
+
+            if (fill) fill.style.width = `${job.progress}%`;
+            if (statusEl) {
+                const statusText = {
+                    queued:    '待機中...',
+                    running:   `${job.progress}% 処理中...`,
+                    done:      `✅ 完了 → ${job.output_name}`,
+                    failed:    '❌ 失敗',
+                    cancelled: '⏹ キャンセル済',
+                };
+                statusEl.textContent = statusText[job.status] || job.status;
+            }
+
+            if (['done', 'failed', 'cancelled'].includes(job.status)) {
+                clearInterval(pollerHandle);
+                if (job.status === 'done') {
+                    showNotif(`🎉 レンダリング完了！ ${job.output_name} を outputs フォルダで確認してください`, 'success');
+                    loadFiles();
+                } else if (job.status === 'failed') {
+                    showNotif('❌ レンダリングに失敗しました。FFmpegがインストールされているか確認してください。', 'error');
+                }
+            }
+        } catch (_) { clearInterval(pollerHandle); }
+    }, 2000);
 }
 
-function simulateRender(id) {
-    let pct = 0;
-    const fill = document.getElementById(`qfill${id}`);
-    const status = document.getElementById(`qstatus${id}`);
-    if (!fill) return;
-    status.textContent = '処理中...';
-    const iv = setInterval(() => {
-        pct += Math.random() * 3;
-        if (pct >= 100) {
-            pct = 100;
-            clearInterval(iv);
-            status.textContent = '✅ 完了';
-            showNotif('🎉 レンダリング完了！outputs フォルダを確認してください', 'success');
-            loadFiles();
-        } else {
-            status.textContent = `${Math.round(pct)}% 処理中...`;
-        }
-        fill.style.width = `${Math.round(pct)}%`;
-    }, 500);
+async function cancelRenderJob(jobId) {
+    try {
+        await apiFetch(`/render/jobs/${jobId}/cancel`, { method: 'POST' });
+        const statusEl = document.getElementById(`qstatus${jobId}`);
+        if (statusEl) statusEl.textContent = '⏹ キャンセル済';
+        showNotif('キャンセルしました', 'info');
+    } catch (err) {
+        showNotif('キャンセル失敗: ' + err.message, 'error');
+    }
 }
 
 function showNotif(msg, type = 'info') {
@@ -779,7 +893,7 @@ function showNotif(msg, type = 'info') {
 }
 
 /* ─── Tab: 接続情報 ─────────────────────────────────────────────── */
-function initConnectTab() {
+async function initConnectTab() {
     if (!pod) return;
     const tunnelHost = API ? new URL(API).hostname : location.hostname;
     const sshUser = `gpu-user-${pod.renter_id}`;
@@ -788,22 +902,74 @@ function initConnectTab() {
         ? pod.workspace_path.replace(/\\/g, '/')
         : `/gpu-rental/users/${pod.renter_id}/workspace`;
 
-    // SSH情報を設定
     const setEl = (id, txt) => { const e = document.getElementById(id); if (e) e.textContent = txt; };
     setEl('sshHost', tunnelHost);
     setEl('sshUser', sshUser);
     setEl('sshPass', sshPass);
     setEl('sshCwd', workDir);
-    setEl('sshCmd', `ssh -p 2222 ${sshUser}@${tunnelHost}`);
 
-    // VSCode設定を更新
+    // ── コンテナ情報からSSH/Jupyter/WebUIポートを動的に取得 ──────────────
+    let sshPort = 2222;        // fallback (ホストOSのsshd)
+    let jupyterPort = null;
+    let webuiPort = null;
+
+    try {
+        const info = await apiFetch(`/pods/${pod.id}/container`);
+        if (info.ssh_port)     sshPort     = info.ssh_port;
+        if (info.jupyter_port) jupyterPort = info.jupyter_port;
+        if (info.webui_port)   webuiPort   = info.webui_port;
+
+        // 動的サービスURLをHTMLに挿入
+        const servicesEl = document.getElementById('dynamicServices');
+        if (servicesEl && info.services?.length) {
+            servicesEl.innerHTML = info.services.map(s => `
+                <div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid rgba(255,255,255,0.06)">
+                    <span style="font-size:1.1rem">${s.icon}</span>
+                    ${s.url
+                        ? `<a href="${s.url}" target="_blank" class="connect-link" style="font-weight:600">${s.name}</a>
+                           <span style="color:#555;font-size:0.78rem">→ ${s.url}</span>`
+                        : `<span style="color:#ccc">${s.name}</span>
+                           <code style="color:#00e5a0;font-size:0.78rem;background:rgba(0,229,160,0.08);padding:2px 8px;border-radius:4px">${s.cmd}</code>`
+                    }
+                </div>
+            `).join('');
+            servicesEl.style.display = 'block';
+        }
+    } catch (_) { /* コンテナ情報なし = Docker未使用、fallback値を使用 */ }
+
+    // SSHポートをHTMLに反映
+    const sshPortEl = document.getElementById('sshPortDisplay');
+    if (sshPortEl) sshPortEl.textContent = sshPort;
+
+    setEl('sshCmd', `ssh -p ${sshPort} ${sshUser}@${tunnelHost}`);
+
     const vscCfg = document.getElementById('vscodeConfig');
     if (vscCfg) {
-        vscCfg.textContent = `Host gpu-rental\n    HostName ${tunnelHost}\n    Port 2222\n    User ${sshUser}`;
+        vscCfg.textContent = `Host gpu-rental\n    HostName ${tunnelHost}\n    Port ${sshPort}\n    User ${sshUser}`;
     }
 
-    // JupyterURL（SSHポートフォワード経由）
-    setEl('jupyterUrl', `http://localhost:8888/?token=gpurental`);
+    // JupyterURL
+    if (jupyterPort) {
+        setEl('jupyterUrl', `http://${tunnelHost}:${jupyterPort}`);
+        const noteEl = document.querySelector('#connectPane .connect-note');
+        if (noteEl) {
+            noteEl.style.color = '#00e5a0';
+            noteEl.textContent = `✅ JupyterLab が起動しています: http://${tunnelHost}:${jupyterPort}`;
+        }
+    } else {
+        setEl('jupyterUrl', `http://localhost:8888/?token=gpurental`);
+    }
+
+    // WebUI (ComfyUI / Blender / Ollama)
+    const webuiBanner = document.getElementById('webuiBanner');
+    if (webuiBanner) {
+        if (webuiPort) {
+            webuiBanner.innerHTML = `<a href="http://${tunnelHost}:${webuiPort}" target="_blank" class="connect-link" style="font-weight:700;color:#00e5a0">🌐 Web UI が起動中 → http://${tunnelHost}:${webuiPort}</a>`;
+            webuiBanner.style.display = 'block';
+        } else {
+            webuiBanner.style.display = 'none';
+        }
+    }
 }
 
 // タブ切り替え
@@ -818,20 +984,19 @@ document.addEventListener('DOMContentLoaded', () => {
         const btnEl = document.getElementById(btn);
         if (!btnEl) return;
         btnEl.addEventListener('click', () => {
-            // タブ切り替え
             tabs.forEach(t => {
                 const b = document.getElementById(t.btn);
                 const p = document.getElementById(t.pane);
                 if (b) b.classList.toggle('active', t.btn === btn);
                 if (p) p.classList.toggle('hidden', t.pane !== pane);
             });
-            // ターミナルタブに戻ったときフォーカス
             if (btn === 'tabTerminal' && term) setTimeout(() => term.focus(), 50);
-            // 接続情報タブを開いた時にSSH情報をセット
+            // 接続情報タブを開いた時にSSH情報をセット（async）
             if (btn === 'tabConnect') initConnectTab();
         });
     });
 });
+
 
 /* ─── コピー機能 ──────────────────────────────────────────────────── */
 function copyText(el) {

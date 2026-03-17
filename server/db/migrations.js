@@ -127,7 +127,7 @@ async function runMigrations() {
   `);
 
   // ─── Seed admin/provider user ────────────────────────────────────────
-  const existing = db.prepare('SELECT id FROM users WHERE email = ?').get(config.admin.email);
+  const existing = db.prepare('SELECT id, password_hash FROM users WHERE email = ?').get(config.admin.email);
   if (!existing) {
     const hash = bcrypt.hashSync(config.admin.password, 12);
     const res = db.prepare(`
@@ -142,6 +142,15 @@ async function runMigrations() {
       VALUES (?, 0, 'NVIDIA RTX A4500', 20470, '552.74', 800, 'Home PC')
     `).run(res.lastInsertRowid);
     console.log('\u2705 RTX A4500 registered');
+  } else {
+    // 既存adminが存在 → .envのパスワードと一致しなければ自動更新
+    const envPasswordMatches = bcrypt.compareSync(config.admin.password, existing.password_hash);
+    if (!envPasswordMatches) {
+      const newHash = bcrypt.hashSync(config.admin.password, 12);
+      db.prepare('UPDATE users SET password_hash = ?, status = ? WHERE email = ?')
+        .run(newHash, 'active', config.admin.email);
+      console.log('\u2705 Admin password synced with .env (ADMIN_PASSWORD)');
+    }
   }
 
   // ─── Bank Accounts (出金口座) ─────────────────────────────────────────
@@ -323,6 +332,26 @@ async function runMigrations() {
       created_at   DATETIME DEFAULT CURRENT_TIMESTAMP,
       last_used_at DATETIME,
       FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+    );
+  `);
+
+  // ─── Render Jobs (FFmpeg GPU レンダリング) ───────────────────────────────
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS render_jobs (
+      id            INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id       INTEGER NOT NULL,
+      pod_id        INTEGER,
+      input_path    TEXT NOT NULL,
+      output_path   TEXT NOT NULL,
+      format        TEXT DEFAULT 'h264',
+      status        TEXT DEFAULT 'queued', -- 'queued'|'running'|'done'|'failed'|'cancelled'
+      progress      INTEGER DEFAULT 0,     -- 0-100
+      ffmpeg_args   TEXT,                  -- JSON array of args
+      error_log     TEXT,
+      created_at    DATETIME DEFAULT CURRENT_TIMESTAMP,
+      started_at    DATETIME,
+      finished_at   DATETIME,
+      FOREIGN KEY (user_id) REFERENCES users(id)
     );
   `);
 

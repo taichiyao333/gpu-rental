@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="ja">
 
 <head>
@@ -126,8 +126,12 @@
             align-items: center;
             gap: 1.5rem;
             margin-bottom: 2rem;
-            flex-wrap: wrap;
+            flex-wrap: nowrap;
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+            scrollbar-width: none;
         }
+        .tabs::-webkit-scrollbar { display: none; }
 
         .profile-avatar {
             width: 70px;
@@ -165,8 +169,12 @@
             gap: .5rem;
             border-bottom: 1px solid var(--border);
             margin-bottom: 2rem;
-            flex-wrap: wrap;
+            flex-wrap: nowrap;
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+            scrollbar-width: none;
         }
+        .tabs::-webkit-scrollbar { display: none; }
 
         .tab-btn {
             padding: .6rem 1.2rem;
@@ -551,6 +559,86 @@
                 font-size: .8rem;
             }
         }
+
+        /* ── Mobile Hamburger ── */
+        .nav-hamburger {
+            display: none;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            gap: 5px;
+            width: 40px;
+            height: 40px;
+            background: transparent;
+            border: 1px solid rgba(255,255,255,0.15);
+            border-radius: 8px;
+            cursor: pointer;
+            z-index: 9999;
+            flex-shrink: 0;
+        }
+        .nav-hamburger span {
+            display: block;
+            width: 20px;
+            height: 2px;
+            background: #e8e8f0;
+            border-radius: 2px;
+            transition: all 0.3s;
+        }
+        .nav-hamburger.open span:nth-child(1) { transform: translateY(7px) rotate(45deg); }
+        .nav-hamburger.open span:nth-child(2) { opacity: 0; transform: scaleX(0); }
+        .nav-hamburger.open span:nth-child(3) { transform: translateY(-7px) rotate(-45deg); }
+        .mob-drawer {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(10,10,20,0.98);
+            backdrop-filter: blur(20px);
+            z-index: 9998;
+            flex-direction: column;
+            padding: 5rem 1.5rem 2rem;
+            gap: 0;
+            overflow-y: auto;
+            transform: translateX(-100%);
+            transition: transform 0.3s ease;
+        }
+        .mob-drawer.open { transform: translateX(0); }
+        .mob-drawer a, .mob-drawer button.drawer-item {
+            display: flex;
+            align-items: center;
+            padding: 1rem 0.75rem;
+            border-bottom: 1px solid rgba(255,255,255,0.07);
+            color: #e8e8f0;
+            font-size: 1rem;
+            font-weight: 500;
+            text-decoration: none;
+            background: transparent;
+            border-left: none;
+            border-right: none;
+            border-top: none;
+            cursor: pointer;
+            width: 100%;
+            text-align: left;
+            transition: background 0.2s;
+            font-family: inherit;
+        }
+        .mob-drawer a:hover, .mob-drawer button.drawer-item:hover {
+            background: rgba(108,71,255,0.1);
+        }
+        .mob-drawer-title {
+            font-size: 0.7rem;
+            color: rgba(255,255,255,0.3);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            padding: 1rem 0.75rem 0.25rem;
+        }
+        @media (max-width: 768px) {
+            .nav-hamburger { display: flex !important; }
+            .mob-drawer { display: flex; }
+        }
+        /* end mobile */
     </style>
 </head>
 
@@ -971,7 +1059,7 @@
         // ── CONFIG ──────────────────────────────────────────────────
         const API_BASE = (function () {
             if (location.hostname === 'localhost' || location.hostname === '127.0.0.1') return '';
-            return 'https://pubmed-apartments-unix-implementation.trycloudflare.com';
+            return ''; // same-origin
         })();
         const token = localStorage.getItem('gpu_token');
         const user = JSON.parse(localStorage.getItem('gpu_user') || 'null');
@@ -1058,8 +1146,13 @@
                     return;
                 }
                 const typeMap = {
-                    purchase: ['purple', '購入'], usage: ['danger', '利用'],
-                    bonus: ['success', 'ボーナス'], refund: ['info', '返金'],
+                    purchase:     ['purple',  '購入'],
+                    usage:        ['danger',  '利用'],
+                    bonus:        ['success', 'ボーナス'],
+                    refund:       ['info',    '返金'],
+                    compensation: ['warning', '障害補償'],
+                    coupon:       ['purple',  'クーポン'],
+                    adjustment:   ['info',    '調整'],
                 };
                 tbody.innerHTML = logs.map(l => {
                     const [cls, label] = typeMap[l.type] || ['info', l.type];
@@ -1441,6 +1534,28 @@
             loadApiKeys();
         }
     </script>
+
+<script>
+(function(){
+    function toggleMenu(){
+        var d=document.getElementById('mobDrawer');
+        var b=document.getElementById('mobHamburger');
+        if(!d)return;
+        var open=d.classList.toggle('open');
+        if(b)b.classList.toggle('open',open);
+        document.body.style.overflow=open?'hidden':'';
+    }
+    function closeMenu(){
+        var d=document.getElementById('mobDrawer');
+        var b=document.getElementById('mobHamburger');
+        if(d){d.classList.remove('open');}
+        if(b){b.classList.remove('open');}
+        document.body.style.overflow='';
+    }
+    window.toggleMobMenu=toggleMenu;
+    window.closeMobMenu=closeMenu;
+})();
+</script>
 </body>
 
 </html>

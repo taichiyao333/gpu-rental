@@ -674,7 +674,7 @@
 
     <footer
         style="border-top:1px solid var(--border);padding:2rem;text-align:center;font-size:0.78rem;color:var(--text3)">
-        © 2026 GPU Rental Platform · <a href="/terms.html" style="color:var(--text3)">利用規約</a> · <a href="/privacy.html"
+        © 2026 GPU Rental Platform · <a href="/landing/terms.html" style="color:var(--text3)">利用規約</a> · <a href="/landing/privacy.html"
             style="color:var(--text3)">プライバシーポリシー</a>
     </footer>
 
@@ -732,8 +732,7 @@
         // APIから実際の価格を取得して上書き
         async function loadLivePrices() {
             try {
-                const API = location.hostname === 'localhost' ? '' :
-                    'https://pubmed-apartments-unix-implementation.trycloudflare.com';
+                const API = ''; // same-origin
                 const r = await fetch(`${API}/api/prices`);
                 if (!r.ok) return;
                 const liveData = await r.json();

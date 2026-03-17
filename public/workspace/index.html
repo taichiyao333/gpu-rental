@@ -82,8 +82,8 @@
                         <div class="connect-info-grid" id="sshInfoGrid">
                             <div class="info-item"><span class="info-label">ホスト</span><code id="sshHost"
                                     class="info-val copiable" onclick="copyText(this)">読み込み中...</code></div>
-                            <div class="info-item"><span class="info-label">ポート</span><code class="info-val copiable"
-                                    onclick="copyText(this)">2222</code></div>
+                            <div class="info-item"><span class="info-label">ポート</span><code id="sshPortDisplay"
+                                    class="info-val copiable" onclick="copyText(this)">2222</code></div>
                             <div class="info-item"><span class="info-label">ユーザー名</span><code id="sshUser"
                                     class="info-val copiable" onclick="copyText(this)">読み込み中...</code></div>
                             <div class="info-item"><span class="info-label">パスワード</span><code id="sshPass"
@@ -137,6 +137,10 @@
                             <span class="connect-badge badge-jupyter">Jupyter</span>
                             <h3>JupyterLab（機械学習・データ分析）</h3>
                         </div>
+                        <!-- 動的サービスURL (Dockerコンテナ起動後に挿入) -->
+                        <div id="dynamicServices" style="margin-bottom:12px;display:none"></div>
+                        <!-- WebUI バナー (ComfyUI / Blender / Ollama) -->
+                        <div id="webuiBanner" style="display:none;margin-bottom:12px;background:rgba(0,229,160,0.08);border:1px solid rgba(0,229,160,0.25);border-radius:8px;padding:10px 14px;font-size:0.83rem"></div>
                         <ol class="connect-steps">
                             <li>上のターミナルタブで以下を実行：
                                 <div class="code-block">

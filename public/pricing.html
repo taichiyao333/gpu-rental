@@ -732,8 +732,7 @@
         // APIから実際の価格を取得して上書き
         async function loadLivePrices() {
             try {
-                const API = location.hostname === 'localhost' ? '' :
-                    'https://pubmed-apartments-unix-implementation.trycloudflare.com';
+                const API = ''; // same-origin
                 const r = await fetch(`${API}/api/prices`);
                 if (!r.ok) return;
                 const liveData = await r.json();

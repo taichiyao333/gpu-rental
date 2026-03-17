@@ -343,16 +343,44 @@ function mailPasswordReset({ to, username, token }) {
   });
 }
 
-module.exports = {
-  sendMail,
-  mailWelcome,
-  mailPasswordReset,
-  mailReservationConfirmed,
-  mailReminderStart,
-  mailReminderEnd,
-  mailSessionExpired,
-  mailPayoutRequest,
-};
+/**
+ * 7. ポイント（チケット）購入完了メール
+ */
+function mailPointPurchased({ to, username, purchase }) {
+  const fmtJp = dt => new Date(dt).toLocaleString('ja-JP', { timeZone: 'Asia/Tokyo', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' });
+  return sendMail({
+    to,
+    subject: `✅ ポイント購入完了 — ${purchase.points.toLocaleString()}pt を追加しました`,
+    html: `<!DOCTYPE html><html><head><style>${BASE_STYLE}</style></head><body>
+<div class="wrap">
+  <div class="card">
+    <div class="header" style="background:linear-gradient(135deg,#6c47ff,#00e5a0)">
+      <h1>💎 ポイント購入完了</h1>
+      <p>ご購入ありがとうございます！</p>
+    </div>
+    <div class="body">
+      <p>こんにちは、<strong>${username}</strong> さん 👋</p>
+      <p>以下の内容でポイントが加算されました。</p>
+      <div class="info-row"><span class="info-label">プラン</span><span class="info-val">🎫 ${purchase.plan_name}</span></div>
+      <div class="info-row"><span class="info-label">付与ポイント</span><span class="info-val" style="color:#00e5a0">+${purchase.points.toLocaleString()} pt</span></div>
+      <div class="info-row"><span class="info-label">お支払い金額</span><span class="info-val">¥${Math.round(purchase.amount_yen).toLocaleString()}</span></div>
+      <div class="info-row"><span class="info-label">購入日時</span><span class="info-val">📅 ${fmtJp(new Date())}</span></div>
+      <div class="price">${purchase.points.toLocaleString()} pt</div>
+      <div style="text-align:center">
+        <a href="${process.env.BASE_URL || 'http://localhost:3000'}/portal/" class="btn">🚀 GPUを予約する</a>
+      </div>
+      <div class="warn">
+        💡 <strong>1pt = 10円</strong> で計算されます。<br>
+        ポイント残高はマイページからいつでも確認できます。
+      </div>
+    </div>
+    <div class="footer">© 2026 GPU Rental Platform · <a href="${process.env.BASE_URL || 'http://localhost:3000'}/portal/" style="color:#6c47ff">マイページ</a></div>
+  </div>
+</div>
+</body></html>`,
+    text: `ポイント購入完了\nプラン: ${purchase.plan_name}\n付与ポイント: +${purchase.points.toLocaleString()} pt\nお支払い: ¥${Math.round(purchase.amount_yen).toLocaleString()}\n\nGPUの予約はこちら: ${process.env.BASE_URL || 'http://localhost:3000'}/portal/`,
+  });
+}
 
 /**
  * 出金申請通知メール（運営向け）
@@ -405,6 +433,7 @@ module.exports = {
   mailSessionExpired,
   mailPayoutRequest,
   mailPayoutRequestAdmin,
+  mailPointPurchased,
 };
 
 

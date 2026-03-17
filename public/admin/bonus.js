@@ -18,8 +18,7 @@
     }
 
     function getApiBase() {
-        if (location.hostname === 'localhost' || location.hostname === '127.0.0.1') return '';
-        return 'https://pubmed-apartments-unix-implementation.trycloudflare.com';
+        return ''; // same-origin — works for any domain/Cloudflare tunnel
     }
 
     async function bonusApi(path, opts = {}) {
