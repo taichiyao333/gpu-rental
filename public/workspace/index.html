@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="ja">
 
 <head>
@@ -11,9 +11,43 @@
         rel="stylesheet" />
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/xterm@5.3.0/css/xterm.min.css" />
     <link rel="stylesheet" href="style.css" />
+
+    <style>
+    /* Mobile warning for workspace */
+    .mobile-notice {
+        display: none;
+        position: fixed;
+        inset: 0;
+        background: rgba(10,10,20,0.97);
+        z-index: 99999;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        text-align: center;
+        padding: 2rem;
+        color: #e8e8f0;
+        font-family: 'Inter', sans-serif;
+        gap: 1.5rem;
+    }
+    .mobile-notice-icon { font-size: 4rem; }
+    .mobile-notice h2 { font-size: 1.4rem; font-weight: 700; margin: 0; }
+    .mobile-notice p { font-size: 0.9rem; color: rgba(255,255,255,0.6); margin: 0; line-height: 1.6; }
+    .mobile-notice a { color: #6c47ff; text-decoration: none; font-weight: 600; }
+    @media (max-width: 768px) {
+        .mobile-notice { display: flex; }
+        body { overflow: hidden; }
+    }
+    </style>
 </head>
 
 <body>
+    <!-- Mobile Notice -->
+    <div class="mobile-notice">
+        <div class="mobile-notice-icon">🖥️</div>
+        <h2>PCブラウザをご利用ください</h2>
+        <p>ワークスペースはターミナルとファイルマネージャーを含む高度なツールです。<br>スマートフォンやタブレットでは快適にご利用いただけません。</p>
+        <a href="/portal/">← GPU一覧に戻る</a>
+    </div>
     <!-- TOP BAR -->
     <header class="ws-header">
         <div class="ws-header-left">
