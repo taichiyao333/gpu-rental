@@ -235,7 +235,29 @@ app.post('/api/bench/upload', (req, res) => {
 });
 
 
-// ─── WebSocket ────────────────────────────────────────────────────────────────
+// ─── 404 Handlers ─────────────────────────────────────────────────────────────
+// API 404
+app.use('/api/*', (req, res) => {
+    res.status(404).json({ error: 'API endpoint not found', path: req.path });
+});
+
+// Frontend 404 — すべての未知URLに404.htmlを返す
+app.use((req, res) => {
+    res.status(404).sendFile(path.join(__dirname, '../public/404.html'));
+});
+
+// Global error handler
+app.use((err, req, res, _next) => {
+    console.error('Unhandled error:', err);
+    if (req.path.startsWith('/api/')) {
+        res.status(err.status || 500).json({ error: err.message || 'Internal server error' });
+    } else {
+        res.status(500).sendFile(path.join(__dirname, '../public/404.html'));
+    }
+});
+
+
+
 io.on('connection', (socket) => {
     console.log(`🔌 Client connected: ${socket.id}`);
 
