@@ -1,4 +1,4 @@
-﻿const express = require('express');
+const express = require('express');
 const router = express.Router();
 const { getDb } = require('../db/database');
 const { authMiddleware, adminOnly } = require('../middleware/auth');
@@ -534,6 +534,102 @@ router.delete('/apikeys/:id', authMiddleware, adminOnly, (req, res) => {
     res.json({ success: true });
 });
 
+// ─── Backup Management ──────────────────────────────────────────────────────
+
+// GET /api/admin/backups — バックアップ一覧
+router.get('/backups', authMiddleware, adminOnly, (req, res) => {
+    const { listBackups } = require('../services/backup');
+    res.json(listBackups());
+});
+
+// POST /api/admin/backups/run — 手動バックアップ実行
+router.post('/backups/run', authMiddleware, adminOnly, async (req, res) => {
+    const { runBackup } = require('../services/backup');
+    const result = await runBackup();
+    if (result) {
+        res.json({ success: true, file: require('path').basename(result.file), size: result.size });
+    } else {
+        res.status(500).json({ error: 'Backup failed' });
+    }
+});
+
+// ─── Revenue Stats API (admin dashboard charts) ─────────────────────────────
+
+// GET /api/admin/stats/revenue?days=30 — 日別売上グラフデータ
+router.get('/stats/revenue', authMiddleware, adminOnly, (req, res) => {
+    const db = getDb();
+    const days = Math.min(parseInt(req.query.days) || 30, 365);
+
+    const rows = db.prepare(`
+        SELECT
+            date(created_at) as date,
+            SUM(amount_yen)  as revenue,
+            COUNT(*)         as count
+        FROM point_purchases
+        WHERE status = 'completed'
+          AND created_at >= date('now', ? || ' days')
+        GROUP BY date(created_at)
+        ORDER BY date ASC
+    `).all('-' + days);
+
+    // GPU利用収益（usage_logs）
+    const usageRows = db.prepare(`
+        SELECT
+            date(logged_at)   as date,
+            SUM(cost)         as gpu_revenue,
+            SUM(provider_payout) as payout
+        FROM usage_logs
+        WHERE logged_at >= date('now', ? || ' days')
+        GROUP BY date(logged_at)
+        ORDER BY date ASC
+    `).all('-' + days);
+
+    res.json({ point_sales: rows, gpu_usage: usageRows, days });
+});
+
+// GET /api/admin/stats/users?days=30 — ユーザー登録推移
+router.get('/stats/users', authMiddleware, adminOnly, (req, res) => {
+    const db = getDb();
+    const days = Math.min(parseInt(req.query.days) || 30, 365);
+
+    const rows = db.prepare(`
+        SELECT
+            date(created_at) as date,
+            COUNT(*)         as new_users,
+            SUM(CASE WHEN role='provider' THEN 1 ELSE 0 END) as new_providers
+        FROM users
+        WHERE created_at >= date('now', ? || ' days')
+        GROUP BY date(created_at)
+        ORDER BY date ASC
+    `).all('-' + days);
+
+    res.json({ registrations: rows, days });
+});
+
+// GET /api/admin/stats/summary — KPIサマリー
+router.get('/stats/summary', authMiddleware, adminOnly, (req, res) => {
+    const db = getDb();
+
+    const totalRevenue = db.prepare(`SELECT COALESCE(SUM(amount_yen),0) as v FROM point_purchases WHERE status='completed'`).get().v;
+    const monthRevenue = db.prepare(`SELECT COALESCE(SUM(amount_yen),0) as v FROM point_purchases WHERE status='completed' AND created_at >= date('now','-30 days')`).get().v;
+    const totalUsers   = db.prepare(`SELECT COUNT(*) as v FROM users WHERE role='user'`).get().v;
+    const totalProviders = db.prepare(`SELECT COUNT(*) as v FROM users WHERE role='provider'`).get().v;
+    const totalGpus    = db.prepare(`SELECT COUNT(*) as v FROM gpu_nodes`).get().v;
+    const activeGpus   = db.prepare(`SELECT COUNT(*) as v FROM gpu_nodes WHERE status='available' OR status='rented'`).get().v;
+    const totalSessions = db.prepare(`SELECT COUNT(*) as v FROM usage_logs`).get().v;
+    const avgSession   = db.prepare(`SELECT COALESCE(AVG(duration_minutes),0) as v FROM usage_logs`).get().v;
+    const totalPayout  = db.prepare(`SELECT COALESCE(SUM(provider_payout),0) as v FROM usage_logs`).get().v;
+
+    res.json({
+        revenue: { total: totalRevenue, month: monthRevenue },
+        users: { total: totalUsers, providers: totalProviders },
+        gpus: { total: totalGpus, active: activeGpus },
+        sessions: { total: totalSessions, avg_minutes: Math.round(avgSession) },
+        payouts: { total: totalPayout },
+    });
+});
+
 module.exports = router;
+
 
 
