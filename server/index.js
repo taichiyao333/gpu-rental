@@ -7,6 +7,7 @@ const helmet = require('helmet');
 const path = require('path');
 const fs = require('fs');
 const rateLimit = require('express-rate-limit');
+let compression; try { compression = require('compression'); } catch(_) { compression = null; }
 
 const config = require('./config');
 const { runMigrations } = require('./db/migrations');
@@ -14,6 +15,7 @@ const { initDb } = require('./db/database');
 const { startGpuMonitor, getGpuNodesWithStats } = require('./services/gpuManager');
 const { startScheduler } = require('./services/scheduler');
 const { attachTerminal } = require('./services/terminal');
+const { startBackupScheduler } = require('./services/backup');
 
 // Routes
 const authRoutes = require('./routes/auth');
@@ -94,6 +96,14 @@ const io = new Server(server, {
 app.set('trust proxy', 1);
 app.use(helmet({ contentSecurityPolicy: false }));
 app.use(cors(corsOptions));
+// gzip圧縮 (compressionがインストール済みの場合のみ)
+if (compression) {
+    app.use(compression({ filter: (req, res) => {
+        if (req.headers['x-no-compression']) return false;
+        return compression.filter(req, res);
+    }}));
+    console.log('✅ gzip compression enabled');
+}
 app.use(express.json({ limit: '100mb' }));
 app.use(express.urlencoded({ extended: true, limit: '100mb' }));
 
@@ -308,6 +318,11 @@ async function start() {
 
     // Start scheduler (auto-start/stop pods)
     startScheduler(io);
+
+    // Start DB backup scheduler (daily 3am, keep 7 days)
+    startBackupScheduler();
+    console.log('✅ DB backup scheduler started');
+
 
     // Start server
     server.listen(config.port, () => {
