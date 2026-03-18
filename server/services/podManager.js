@@ -11,11 +11,27 @@ const { v4: uuidv4 } = require('uuid');
 
 // ── Docker availability check (起動時1回) ────────────────────────────────────
 let DOCKER_AVAILABLE = false;
-try {
-    execSync('docker info --format "{{.ServerVersion}}"', { stdio: 'pipe' });
-    DOCKER_AVAILABLE = true;
-    console.log('✅ Docker daemon detected — container mode enabled');
-} catch (_) {
+let DOCKER_CMD = 'docker'; // Default
+
+// Windows Docker Desktop のパスも確認
+const DOCKER_PATHS = [
+    'docker',
+    'C:\\Program Files\\Docker\\Docker\\resources\\bin\\docker.exe',
+    '/usr/bin/docker',
+    '/usr/local/bin/docker',
+];
+
+for (const dockerPath of DOCKER_PATHS) {
+    try {
+        execSync(`"${dockerPath}" info --format "{{.ServerVersion}}"`, { stdio: 'pipe', timeout: 5000 });
+        DOCKER_AVAILABLE = true;
+        DOCKER_CMD = dockerPath;
+        console.log(`✅ Docker daemon detected [${dockerPath}] — container mode enabled`);
+        break;
+    } catch (_) { /* try next */ }
+}
+
+if (!DOCKER_AVAILABLE) {
     console.warn('⚠️  Docker not available — running in SIMULATION mode (workspace-only)');
 }
 
@@ -70,7 +86,7 @@ function buildDockerCommand(tpl, context) {
     const { deviceIndex, workspacePath, containerName, ports } = context;
 
     const parts = [
-        'docker run -d',
+        `${DOCKER_CMD} run -d`,
         `--name "${containerName}"`,
         `--gpus device=${deviceIndex}`,
         '--restart=unless-stopped',
@@ -121,7 +137,7 @@ function buildDockerCommand(tpl, context) {
 async function ensureImage(image) {
     try {
         // Check if image exists locally first
-        const { stdout } = await execAsync(`docker image inspect "${image}" --format "{{.Id}}"`, { timeout: 5000 });
+        const { stdout } = await execAsync(`${DOCKER_CMD} image inspect "${image}" --format "{{.Id}}"`, { timeout: 5000 });
         if (stdout.trim()) {
             console.log(`  📦 Image already present: ${image}`);
             return true;
@@ -133,7 +149,7 @@ async function ensureImage(image) {
     console.log(`  ⬇️  Pulling image: ${image} ...`);
     try {
         // Pull with 10 minute timeout
-        await execAsync(`docker pull "${image}"`, { timeout: 600000 });
+        await execAsync(`${DOCKER_CMD} pull "${image}"`, { timeout: 600000 });
         console.log(`  ✅ Image pulled: ${image}`);
         return true;
     } catch (err) {
@@ -407,14 +423,14 @@ async function stopPodAsync(podId, reason = 'expired') {
     if (DOCKER_AVAILABLE && pod.container_id) {
         try {
             console.log(`🐳 Stopping container ${pod.container_id.substring(0, 12)} for pod #${podId}...`);
-            await execAsync(`docker stop "${pod.container_id}"`, { timeout: 30000 });
-            await execAsync(`docker rm "${pod.container_id}"`, { timeout: 15000 });
+            await execAsync(`${DOCKER_CMD} stop "${pod.container_id}"`, { timeout: 30000 });
+            await execAsync(`${DOCKER_CMD} rm "${pod.container_id}"`, { timeout: 15000 });
             console.log(`  ✅ Container removed: ${pod.container_id.substring(0, 12)}`);
         } catch (err) {
             console.warn(`  ⚠️  Could not stop/remove container ${pod.container_id}: ${err.message}`);
             // Attempt force remove
             try {
-                await execAsync(`docker rm -f "${pod.container_id}"`, { timeout: 10000 });
+                await execAsync(`${DOCKER_CMD} rm -f "${pod.container_id}"`, { timeout: 10000 });
             } catch (_) { /* best-effort */ }
         }
     }
