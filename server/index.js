@@ -295,7 +295,7 @@ async function start() {
         console.log(`💻 Workspace:  http://localhost:${config.port}/workspace/`);
         console.log(`🏭 Provider:   http://localhost:${config.port}/provider/`);
         console.log('\n─────────────────────────────────────────────');
-        console.log('📧 Admin login: taichi.yao@gmail.com / admin123');
+        console.log(`📧 Admin: ${process.env.ADMIN_EMAIL || 'taichi.yao@gmail.com'} / [see .env ADMIN_PASSWORD]`);
         console.log('─────────────────────────────────────────────\n');
     });
 }

@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 const { getDb } = require('../db/database');
 const { authMiddleware } = require('../middleware/auth');
-const { mailReservationConfirmed } = require('../services/email');
+const { mailReservationConfirmed, mailProviderPodStarted } = require('../services/email');
 
 // GET /api/reservations - my reservations (or all for admin)
 router.get('/', authMiddleware, (req, res) => {
@@ -131,6 +131,29 @@ router.post('/:id/start', authMiddleware, (req, res) => {
   try {
     const { createPod } = require('../services/podManager');
     const pod = createPod(reservation.id);
+
+    // ✉️ プロバイダーへ利用開始メール
+    try {
+      const gpuInfo = db.prepare(`
+        SELECT gn.name as gpu_name, gn.price_per_hour, u.email as provider_email, u.username as provider_name
+        FROM gpu_nodes gn JOIN users u ON gn.provider_id = u.id
+        WHERE gn.id = ?
+      `).get(reservation.gpu_id);
+      const renter = db.prepare('SELECT username FROM users WHERE id = ?').get(reservation.renter_id);
+      if (gpuInfo?.provider_email) {
+        const durationH = (new Date(reservation.end_time) - new Date(reservation.start_time)) / 3600000;
+        const earn = Math.round(durationH * gpuInfo.price_per_hour * (parseFloat(process.env.PROVIDER_PAYOUT_RATE) || 0.8));
+        mailProviderPodStarted({
+          to:           gpuInfo.provider_email,
+          providerName: gpuInfo.provider_name,
+          renterName:   renter?.username || 'ユーザー',
+          gpuName:      gpuInfo.gpu_name,
+          startTime:    reservation.start_time,
+          endTime:      reservation.end_time,
+          earnAmount:   earn,
+        }).catch(e => console.error('Provider start mail error:', e.message));
+      }
+    } catch(mailErr) { console.error('Provider mail lookup error:', mailErr.message); }
 
     // Socket.IO通知（io が使えれば）
     try {
