@@ -17,6 +17,7 @@ const router  = express.Router();
 const { authMiddleware, adminOnly } = require('../middleware/auth');
 const { getDb } = require('../db/database');
 const config  = require('../config');
+const { mailPointPurchased, mailReservationConfirmed } = require('../services/email');
 
 // ─── Stripe instance ─────────────────────────────────────────────
 function getStripe() {
@@ -413,6 +414,22 @@ router.post('/webhook', express.raw({ type: 'application/json' }), async (req, r
                           .run(purchase.coupon_id, purchase.user_id, purchase.id, purchase.coupon_discount_yen || 0);
                     }
 
+                    // ✉️ ポイント購入完了メール送信
+                    const buyer = db.prepare('SELECT username, email FROM users WHERE id = ?').get(purchase.user_id);
+                    if (buyer?.email) {
+                        mailPointPurchased({
+                            to:       buyer.email,
+                            username: buyer.username,
+                            purchase: {
+                                ...purchase,
+                                plan_name:  purchase.plan_name,
+                                points:     purchase.points,
+                                amount_yen: purchase.amount_yen,
+                                payment_method: 'Stripe',
+                            },
+                        }).catch(e => console.error('Mail error:', e.message));
+                    }
+
                     console.log(`✅ Point purchase #${purchase.id}: +${purchase.points}pt for user ${purchase.user_id}`);
                 }
 
@@ -421,6 +438,23 @@ router.post('/webhook', express.raw({ type: 'application/json' }), async (req, r
                 const reservationId = meta.reservation_id;
                 db.prepare("UPDATE reservations SET status = 'paid' WHERE id = ? AND status IN ('pending','confirmed')")
                   .run(Number(reservationId));
+
+                // ✉️ 予約確定メール送信
+                const resData = db.prepare(`
+                    SELECT r.*, gn.name as gpu_name, gn.price_per_hour, u.username, u.email
+                    FROM reservations r
+                    JOIN gpu_nodes gn ON r.gpu_id = gn.id
+                    JOIN users u ON r.renter_id = u.id
+                    WHERE r.id = ?
+                `).get(Number(reservationId));
+                if (resData?.email) {
+                    mailReservationConfirmed({
+                        to:          resData.email,
+                        username:    resData.username,
+                        reservation: resData,
+                    }).catch(e => console.error('Mail error:', e.message));
+                }
+
                 console.log(`✅ Reservation #${reservationId} paid via Stripe`);
             }
             break;
