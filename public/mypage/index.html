@@ -779,7 +779,33 @@
                     <div class="stat-unit">円相当（1pt = 10円）</div>
                 </div>
             </div>
-            <div class="table-card">
+                    <!-- Stripe ポイント購入 -->
+        <div class="table-card" style="margin-bottom:1.5rem">
+            <div class="table-header" style="margin-bottom:1rem">
+                <span class="table-title">💳 ポイント購入（Stripeカード決済）</span>
+            </div>
+            <div style="display:flex;gap:0.75rem;align-items:center;margin-bottom:1.25rem;flex-wrap:wrap">
+                <select id="stripePlanSelect" style="flex:1;min-width:200px;padding:0.6rem 1rem;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.12);border-radius:8px;color:#e8e8f0;font-size:0.9rem">
+                    <option value="plan_1h">1時間チケット  — ¥800 / 80pt</option>
+                    <option value="plan_3h">3時間チケット  — ¥2,400 / 240pt</option>
+                    <option value="plan_10h" selected>10時間チケット — ¥7,500 / 750pt ⭐ 6%OFF</option>
+                    <option value="plan_30h">30時間チケット — ¥21,000 / 2,100pt 🔥 12%OFF</option>
+                    <option value="plan_100h">100時間チケット — ¥65,000 / 6,500pt 🏆 18%OFF</option>
+                </select>
+                <div style="display:flex;gap:0.5rem;align-items:center">
+                    <input type="text" id="stripeCouponInput" placeholder="クーポンコード（任意）"
+                        style="padding:0.6rem 1rem;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.12);border-radius:8px;color:#e8e8f0;font-size:0.875rem;width:160px">
+                    <button class="btn btn-primary" id="btnStripeCheckout" onclick="stripeCheckoutPoints()">
+                        💳 Stripeで購入
+                    </button>
+                </div>
+            </div>
+            <p style="font-size:0.78rem;color:var(--text2);line-height:1.6">
+                ✅ Visa・Mastercard・JCB・Amex対応  |  🔒 Stripe安全決済  |  ⚡ 即時ポイント付与
+            </p>
+        </div>
+
+        <div class="table-card">
                 <div class="table-header">
                     <span class="table-title">💾 ポイント利用・付与履歴</span>
                     <button onclick="loadPointLogs()"
@@ -1733,7 +1759,48 @@
         });
     })();
     </script>
-    <script src="//translate.google.com/translate_a/element.js?cb=googleTranslateElementInit" async></script>
+    <script src="//translate.google.com/translate_a/element.js?cb=googleTranslateElementInit" async>
+    // Stripe ポイント購入
+    async function stripeCheckoutPoints() {
+        var token = localStorage.getItem("token");
+        if (!token) { alert("ログインが必要です"); return; }
+        var planEl   = document.getElementById("stripePlanSelect");
+        var couponEl = document.getElementById("stripeCouponInput");
+        var btn      = document.getElementById("btnStripeCheckout");
+        var planId   = planEl ? planEl.value : "plan_1h";
+        var coupon   = couponEl ? couponEl.value.trim() : "";
+        try {
+            if(btn){ btn.disabled=true; btn.textContent="処理中..."; }
+            var body = { plan_id: planId };
+            if (coupon) body.coupon_code = coupon;
+            var r = await fetch("/api/stripe/checkout/points", {
+                method: "POST",
+                headers: { "Authorization": "Bearer " + token, "Content-Type": "application/json" },
+                body: JSON.stringify(body)
+            });
+            var d = await r.json();
+            if (!r.ok) { alert("エラー: " + (d.error || "Stripe未設定")); return; }
+            if (d.url) window.location.href = d.url;
+        } catch(e) {
+            alert("接続エラー: " + e.message);
+        } finally {
+            if(btn){ btn.disabled=false; btn.textContent="💳 Stripeで購入"; }
+        }
+    }
+    // 購入完了URLチェック
+    (function(){
+        var p = new URLSearchParams(location.search);
+        if (p.get("payment") === "success") {
+            var pid = p.get("purchase");
+            showToast("✅ ポイント購入完了！" + (pid ? " (注文#" + pid + ")" : ""), "success");
+            setTimeout(function(){ loadPointBalance(); loadPointLogs(); }, 500);
+            history.replaceState(null, "", "/mypage/");
+        } else if (p.get("payment") === "cancelled") {
+            showToast("決済がキャンセルされました", "warning");
+            history.replaceState(null, "", "/mypage/");
+        }
+    })();
+</script>
 
 </body>
 

@@ -32,6 +32,7 @@ const couponRoutes = require('./routes/coupons');
 const { router: apiKeyRoutes } = require('./routes/apikeys');
 const diagnosticsRoutes = require('./routes/diagnostics');
 const renderRoutes = require('./routes/render');
+const stripeRoutes = require('./routes/stripe');
 
 
 // ─── Startup Environment Validation ────────────────────────────────────────
@@ -204,6 +205,7 @@ app.use('/api/coupons', couponRoutes);
 app.use('/api/user/apikeys', apiKeyRoutes);
 app.use('/api/diagnose', diagnosticsRoutes);
 app.use('/api/render', renderRoutes(io));
+app.use('/api/stripe', stripeRoutes);
 app.use('/api/admin', adminRoutes);
 
 

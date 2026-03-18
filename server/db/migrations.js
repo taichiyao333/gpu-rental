@@ -260,6 +260,11 @@ async function runMigrations() {
     "ALTER TABLE pods ADD COLUMN jupyter_port INTEGER",
     "ALTER TABLE pods ADD COLUMN webui_port INTEGER",
     "ALTER TABLE pods ADD COLUMN ssh_port INTEGER",
+    // Stripe Connect (Phase 2)
+    "ALTER TABLE users ADD COLUMN stripe_account_id TEXT",
+    "ALTER TABLE users ADD COLUMN stripe_connected INTEGER DEFAULT 0",
+    "ALTER TABLE reservations ADD COLUMN stripe_session_id TEXT",
+    "ALTER TABLE point_purchases ADD COLUMN stripe_session_id TEXT",
   ];
   for (const sql of alterList) {
     try { db.exec(sql); } catch (_) { /* column already exists */ }

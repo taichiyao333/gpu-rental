@@ -1249,10 +1249,19 @@
                         </div>
                         <div style="font-size:1.4rem;font-weight:800" id="totalEarned">¥0</div>
                     </div>
-                    <div style="margin-left:auto">
+                    <div style="margin-left:auto;display:flex;gap:0.75rem;align-items:center;flex-wrap:wrap">
+                        <button class="btn btn-ghost btn-sm" id="btnStripeConnect" onclick="connectStripe()" style="display:none;border-color:rgba(108,71,255,0.5);color:#a08cff">⚡ Stripeに接続</button>
                         <button class="btn btn-primary" id="btnWithdraw" onclick="withdraw()">💴 出金申請</button>
                     </div>
                 </div>
+                <!-- Stripe Connect ステータスバナー -->
+                <div id="stripeStatusBanner" style="display:none;background:rgba(108,71,255,0.08);border:1px solid rgba(108,71,255,0.25);border-radius:10px;padding:1rem 1.25rem;margin-bottom:1.25rem;align-items:center;gap:1rem;flex-wrap:wrap">
+                    <div><div style="font-size:0.72rem;color:var(--text3);letter-spacing:0.5px;margin-bottom:4px">Stripe Connect</div>
+                    <div id="stripeStatusText" style="font-size:0.9rem;font-weight:600;color:#00e5a0">✅ 接続済み — 自動送金が有効</div></div>
+                    <div style="margin-left:auto;display:flex;gap:0.5rem">
+                        <button class="btn btn-ghost btn-sm" onclick="openStripeDashboard()">📊 Stripeダッシュボード</button>
+                        <button class="btn btn-ghost btn-sm" onclick="disconnectStripe()" style="color:var(--danger)">接続解除</button>
+                    </div></div>
                 <div class="gpus-grid" id="myGpusGrid"></div>
                 <div style="margin-top:1.5rem;text-align:center">
                     <button class="btn btn-ghost" onclick="showRegisterForm()">+ さらにGPUを追加</button>
@@ -1868,7 +1877,86 @@
         });
     })();
     </script>
-    <script src="//translate.google.com/translate_a/element.js?cb=googleTranslateElementInit" async></script>
+    <script src="//translate.google.com/translate_a/element.js?cb=googleTranslateElementInit" async>
+    // ─── Stripe Connect ──────────────────────────────────────────────
+    async function loadStripeStatus() {
+        try {
+            const r = await fetch('/api/stripe/connect/status', {
+                headers: { 'Authorization': 'Bearer ' + localStorage.getItem('token') }
+            });
+            if (!r.ok) return;
+            const d = await r.json();
+            const btn = document.getElementById('btnStripeConnect');
+            const banner = document.getElementById('stripeStatusBanner');
+            const statusText = document.getElementById('stripeStatusText');
+            
+            if (d.connected) {
+                // 接続済み
+                if(btn) btn.style.display = 'none';
+                if(banner) banner.style.display = 'flex';
+                if(statusText) statusText.textContent = '✅ 接続済み — 自動送金が有効です';
+            } else if (d.accountId && !d.connected) {
+                // アカウントあるが未完了
+                if(btn){ btn.style.display = 'inline-flex'; btn.textContent = '⚡ Stripe 登録を完了する'; }
+                if(banner) banner.style.display = 'none';
+            } else {
+                // 未接続
+                if(btn) btn.style.display = 'inline-flex';
+                if(banner) banner.style.display = 'none';
+            }
+        } catch(e) {
+            console.log('Stripe status check failed:', e.message);
+        }
+    }
+
+    async function connectStripe() {
+        const token = localStorage.getItem('token');
+        if (!token) { alert('ログインが必要です'); return; }
+        const btn = document.getElementById('btnStripeConnect');
+        try {
+            if(btn){ btn.disabled = true; btn.textContent = '処理中...'; }
+            const r = await fetch('/api/stripe/connect/onboard', {
+                method: 'POST',
+                headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' }
+            });
+            const d = await r.json();
+            if (d.url) {
+                window.open(d.url, '_blank');
+                // 3秒後に状態を再確認
+                setTimeout(loadStripeStatus, 3000);
+            } else {
+                alert('エラー: ' + (d.error || '不明なエラー'));
+            }
+        } catch(e) {
+            alert('接続エラー: ' + e.message);
+        } finally {
+            if(btn){ btn.disabled = false; btn.textContent = '⚡ Stripe に接続'; }
+        }
+    }
+
+    async function openStripeDashboard() {
+        const token = localStorage.getItem('token');
+        const r = await fetch('/api/stripe/connect/dashboard', {
+            headers: { 'Authorization': 'Bearer ' + token }
+        });
+        const d = await r.json();
+        if (d.url) window.open(d.url, '_blank');
+        else alert('エラー: ' + (d.error || '不明'));
+    }
+
+    async function disconnectStripe() {
+        if (!confirm('Stripe Connectの連携を解除しますか？')) return;
+        const token = localStorage.getItem('token');
+        await fetch('/api/stripe/connect/disconnect', {
+            method: 'POST',
+            headers: { 'Authorization': 'Bearer ' + token }
+        });
+        loadStripeStatus();
+    }
+    // 初期化時にStripe状態を確認
+    setTimeout(loadStripeStatus, 1000);
+
+</script>
 
 </body>
 
