@@ -423,6 +423,75 @@ function mailPayoutRequestAdmin({ to, username, email, amount, account, payout }
   });
 }
 
+// ─── Provider: Pod利用開始通知 ───────────────────────────────────
+function mailProviderPodStarted({ to, providerName, renterName, gpuName, startTime, endTime, earnAmount }) {
+  const siteUrl = process.env.BASE_URL || 'https://gpurental.jp';
+  const fmtJp = dt => new Date(dt).toLocaleString('ja-JP', { timeZone: 'Asia/Tokyo', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' });
+  return sendMail({
+    to,
+    subject: `🚀 GPU利用開始のお知らせ — ${gpuName}`,
+    html: `<!DOCTYPE html><html><head><style>${BASE_STYLE}</style></head><body>
+<div class="wrap">
+  <div class="card">
+    <div class="header" style="background:linear-gradient(135deg,#6c47ff,#00d4ff)">
+      <h1>🚀 GPU利用が開始されました</h1>
+      <p>あなたのGPUが利用されています</p>
+    </div>
+    <div class="body">
+      <div class="info-row"><span class="info-label">GPU</span><span class="info-val">🖥️ ${gpuName}</span></div>
+      <div class="info-row"><span class="info-label">利用者</span><span class="info-val">👤 ${renterName}</span></div>
+      <div class="info-row"><span class="info-label">開始時刻</span><span class="info-val">📅 ${fmtJp(startTime)}</span></div>
+      <div class="info-row"><span class="info-label">終了予定</span><span class="info-val">📅 ${fmtJp(endTime)}</span></div>
+      <div class="price">期待収益: ¥${Math.round(earnAmount || 0).toLocaleString()}</div>
+      <p style="text-align:center;color:#9898b8;font-size:0.85rem">利用中はGPUの電源をオフにしないでください</p>
+      <div style="text-align:center;margin-top:20px">
+        <a href="${siteUrl}/provider/" class="btn">📊 プロバイダー画面を確認</a>
+      </div>
+    </div>
+    <div class="footer">© 2026 GPU Rental — プロバイダー通知</div>
+  </div>
+</div>
+</body></html>`,
+    text: `GPU利用開始\nGPU: ${gpuName}\n利用者: ${renterName}\n開始: ${fmtJp(startTime)}\n終了予定: ${fmtJp(endTime)}\n期待収益: ¥${Math.round(earnAmount||0).toLocaleString()}`,
+  });
+}
+
+// ─── Provider: Pod利用終了・収益通知 ────────────────────────────
+function mailProviderPodEnded({ to, providerName, renterName, gpuName, startTime, endTime, earnAmount, totalBalance }) {
+  const siteUrl = process.env.BASE_URL || 'https://gpurental.jp';
+  const fmtJp = dt => new Date(dt).toLocaleString('ja-JP', { timeZone: 'Asia/Tokyo', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' });
+  const durationMs  = new Date(endTime) - new Date(startTime);
+  const durationMin = Math.round(durationMs / 60000);
+  return sendMail({
+    to,
+    subject: `✅ GPU利用終了・収益確定 — ¥${Math.round(earnAmount||0).toLocaleString()}`,
+    html: `<!DOCTYPE html><html><head><style>${BASE_STYLE}</style></head><body>
+<div class="wrap">
+  <div class="card">
+    <div class="header" style="background:linear-gradient(135deg,#00e5a0,#00d4ff)">
+      <h1>✅ GPU利用が終了しました</h1>
+      <p>収益が確定しました</p>
+    </div>
+    <div class="body">
+      <div class="info-row"><span class="info-label">GPU</span><span class="info-val">🖥️ ${gpuName}</span></div>
+      <div class="info-row"><span class="info-label">利用者</span><span class="info-val">👤 ${renterName}</span></div>
+      <div class="info-row"><span class="info-label">開始</span><span class="info-val">📅 ${fmtJp(startTime)}</span></div>
+      <div class="info-row"><span class="info-label">終了</span><span class="info-val">📅 ${fmtJp(endTime)}</span></div>
+      <div class="info-row"><span class="info-label">利用時間</span><span class="info-val">⏱️ ${durationMin}分</span></div>
+      <div class="price" style="color:#00e5a0">+ ¥${Math.round(earnAmount||0).toLocaleString()}</div>
+      <div class="info-row"><span class="info-label">ウォレット残高</span><span class="info-val mono">¥${Math.round(totalBalance||0).toLocaleString()}</span></div>
+      <div style="text-align:center;margin-top:20px">
+        <a href="${siteUrl}/provider/" class="btn">💰 収益を確認する</a>
+      </div>
+    </div>
+    <div class="footer">© 2026 GPU Rental — プロバイダー通知</div>
+  </div>
+</div>
+</body></html>`,
+    text: `GPU利用終了\nGPU: ${gpuName}\n利用者: ${renterName}\n利用時間: ${durationMin}分\n収益: ¥${Math.round(earnAmount||0).toLocaleString()}\nウォレット残高: ¥${Math.round(totalBalance||0).toLocaleString()}`,
+  });
+}
+
 module.exports = {
   sendMail,
   mailWelcome,
@@ -434,6 +503,8 @@ module.exports = {
   mailPayoutRequest,
   mailPayoutRequestAdmin,
   mailPointPurchased,
+  mailProviderPodStarted,
+  mailProviderPodEnded,
 };
 
 

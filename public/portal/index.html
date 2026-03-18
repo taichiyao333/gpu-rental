@@ -898,7 +898,109 @@
         }
     });
 
+
+
+    // ─── Portal Stripe ポイント購入 ─────────────────────────────
+    function openStripeModal() {
+        document.getElementById('stripeBuyModal').style.display = 'flex';
+    }
+    function closeStripeModal() {
+        document.getElementById('stripeBuyModal').style.display = 'none';
+    }
+    // ESCで閉じる
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape') closeStripeModal();
+    });
+
+    async function stripeCheckoutPortal() {
+        var token = localStorage.getItem('token');
+        if (!token) { alert('ログインが必要です'); return; }
+        var planId   = document.getElementById('portalPlanSelect')?.value || 'plan_1h';
+        var coupon   = document.getElementById('portalCouponInput')?.value?.trim() || '';
+        var btn      = document.getElementById('btnPortalStripe');
+        try {
+            if(btn){ btn.disabled=true; btn.textContent='処理中...'; }
+            var body = { plan_id: planId };
+            if (coupon) body.coupon_code = coupon;
+            var r = await fetch('/api/stripe/checkout/points', {
+                method: 'POST',
+                headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' },
+                body: JSON.stringify(body)
+            });
+            var d = await r.json();
+            if (!r.ok) { alert('エラー: ' + (d.error || 'Stripe未設定')); return; }
+            if (d.url) window.location.href = d.url;
+        } catch(e) {
+            alert('接続エラー: ' + e.message);
+        } finally {
+            if(btn){ btn.disabled=false; btn.textContent='💳 Stripeで安全決済'; }
+        }
+    }
+
+    // ログイン後にフローティングボタンを表示
+    var _origSetUser = typeof setUserInfo === 'function' ? setUserInfo : null;
+    function showStripeBuyBtn() {
+        var token = localStorage.getItem('token');
+        if (token) {
+            var el = document.getElementById('stripeBuyBtn');
+            if (el) el.style.display = 'block';
+        }
+    }
+    setTimeout(showStripeBuyBtn, 800);
+
+    // 購入完了URLチェック  
+    (function(){
+        var p = new URLSearchParams(location.search);
+        if (p.get('payment') === 'success') {
+            var pid = p.get('purchase');
+            if (typeof showToast === 'function') {
+                showToast('✅ ポイント購入完了！' + (pid ? ' #' + pid : ''), 'success');
+            }
+            history.replaceState(null, '', '/portal/');
+        } else if (p.get('payment') === 'cancelled') {
+            if (typeof showToast === 'function') showToast('決済がキャンセルされました', 'info');
+            history.replaceState(null, '', '/portal/');
+        }
+    })();
+
 </script>
+
+
+    <!-- Stripe ポイント購入フローティングボタン -->
+    <div id="stripeBuyBtn" style="position:fixed;bottom:24px;right:24px;z-index:8000;display:none">
+        <button onclick="openStripeModal()" style="background:linear-gradient(135deg,#6c47ff,#00d4ff);border:none;border-radius:50px;padding:14px 22px;color:#fff;font-size:0.9rem;font-weight:700;cursor:pointer;box-shadow:0 4px 20px rgba(108,71,255,0.5);display:flex;align-items:center;gap:8px">
+            💳 ポイント購入
+        </button>
+    </div>
+
+    <!-- Stripe Checkout モーダル -->
+    <div id="stripeBuyModal" style="display:none;position:fixed;inset:0;z-index:9000;background:rgba(0,0,0,0.75);backdrop-filter:blur(8px);align-items:center;justify-content:center">
+        <div style="background:#16162a;border:1px solid rgba(108,71,255,0.3);border-radius:20px;padding:2rem;width:min(420px,92vw);max-height:90vh;overflow-y:auto">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.5rem">
+                <h3 style="font-size:1.1rem;font-weight:700">💳 ポイント購入</h3>
+                <button onclick="closeStripeModal()" style="background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);border-radius:8px;padding:4px 10px;color:#e8e8f0;cursor:pointer;font-size:1rem">✕</button>
+            </div>
+            <!-- プラン選択 -->
+            <div style="display:flex;flex-direction:column;gap:0.6rem;margin-bottom:1.25rem">
+                <label style="font-size:0.8rem;color:#9898b8;text-transform:uppercase;letter-spacing:0.5px">プランを選択</label>
+                <select id="portalPlanSelect" style="padding:0.75rem 1rem;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.12);border-radius:10px;color:#e8e8f0;font-size:0.9rem">
+                    <option value="plan_1h">1時間チケット  — ¥800 / 80pt</option>
+                    <option value="plan_3h">3時間チケット  — ¥2,400 / 240pt</option>
+                    <option value="plan_10h" selected>10時間チケット — ¥7,500 / 750pt ⭐ 6%OFF</option>
+                    <option value="plan_30h">30時間チケット — ¥21,000 / 2,100pt 🔥 12%OFF</option>
+                    <option value="plan_100h">100時間チケット — ¥65,000 / 6,500pt 🏆 18%OFF</option>
+                </select>
+                <input type="text" id="portalCouponInput" placeholder="クーポンコード（任意）"
+                    style="padding:0.65rem 1rem;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.12);border-radius:10px;color:#e8e8f0;font-size:0.875rem">
+            </div>
+            <button id="btnPortalStripe" onclick="stripeCheckoutPortal()" style="width:100%;padding:0.9rem;background:linear-gradient(135deg,#6c47ff,#00d4ff);border:none;border-radius:12px;color:#fff;font-size:1rem;font-weight:700;cursor:pointer;margin-bottom:1rem">
+                💳 Stripeで安全決済
+            </button>
+            <p style="font-size:0.75rem;color:#5a5a7a;text-align:center;line-height:1.6">
+                ✅ Visa・Mastercard・JCB・Amex &nbsp;|&nbsp; 🔒 Stripe暗号化決済 &nbsp;|&nbsp; ⚡ 即時付与
+            </p>
+        </div>
+    </div>
 
 </body>
 

@@ -27,8 +27,38 @@ const RUNPOD_GRAPHQL_QUERY = JSON.stringify({
     }`
 });
 
-// USD→JPY レート (固定値 / 後でAPI取得に変更可)
-const USD_TO_JPY = 150;
+// USD→JPY レート (動的取得 / フォールバック: 150)
+let USD_TO_JPY = 150;
+
+/**
+ * フリーAPIからUSD/JPYレートを取得
+ * https://cdn.jsdelivr.net/npm/@fawazahmed0/currency-api@latest/v1/currencies/usd.json
+ */
+async function updateExchangeRate() {
+    try {
+        const res = await new Promise((resolve, reject) => {
+            const req = require('https').get(
+                'https://cdn.jsdelivr.net/npm/@fawazahmed0/currency-api@latest/v1/currencies/usd.json',
+                { timeout: 5000 },
+                (r) => {
+                    let d = '';
+                    r.on('data', c => d += c);
+                    r.on('end', () => resolve(d));
+                }
+            );
+            req.on('error', reject);
+            req.on('timeout', () => { req.destroy(); reject(new Error('timeout')); });
+        });
+        const json = JSON.parse(res);
+        const rate = json?.usd?.jpy;
+        if (rate && rate > 50 && rate < 300) {
+            USD_TO_JPY = Math.round(rate * 10) / 10;
+            console.log('[PricingMonitor] Exchange rate updated: 1 USD =', USD_TO_JPY, 'JPY');
+        }
+    } catch (e) {
+        console.warn('[PricingMonitor] Rate fetch failed, using', USD_TO_JPY, 'JPY:', e.message);
+    }
+}
 
 // GPURentalの価格設定マージン (RunPod価格 × この倍率)
 const MARGIN_RATIO = 1.15; // 15%上乗せ
@@ -115,6 +145,9 @@ function fetchRunPodPrices() {
 async function runPricingSnapshot(db) {
     console.log('[PricingMonitor] Fetching RunPod prices...');
 
+    // 最新為替レートを取得
+    await updateExchangeRate();
+
     let runpodPrices;
     try {
         runpodPrices = await fetchRunPodPrices();
@@ -200,7 +233,7 @@ function getFallbackPrices() {
     ];
 }
 
-module.exports = { runPricingSnapshot, fetchRunPodPrices, getFallbackPrices };
+module.exports = { runPricingSnapshot, fetchRunPodPrices, getFallbackPrices, updateExchangeRate, getUsdToJpy: () => USD_TO_JPY };
 
 // Run directly: node server/services/pricingMonitor.js
 if (require.main === module) {

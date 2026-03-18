@@ -4,6 +4,7 @@ const { getDb } = require('../db/database');
 const { authMiddleware, adminOnly } = require('../middleware/auth');
 const { getActivePods, stopPod, createPod, getPodContainerInfo } = require('../services/podManager');
 const { getCachedStats } = require('../services/gpuManager');
+const { mailProviderPodStarted, mailProviderPodEnded } = require('../services/email');
 
 // ─── GET /api/pods ─ アクティブPod一覧 ────────────────────────────────────
 router.get('/', authMiddleware, (req, res) => {
@@ -86,6 +87,31 @@ router.post('/:id/stop', authMiddleware, async (req, res) => {
         // 完全終了（Dockerコンテナも停止）
         try {
             const result = await stopPod(pod.id, 'user_requested');
+
+            // ✉️ プロバイダーへ収益確定メール
+            try {
+                const gpuInfo = db.prepare(`
+                    SELECT gn.name as gpu_name, gn.price_per_hour, u.email as provider_email, u.username as provider_name, u.wallet_balance
+                    FROM gpu_nodes gn JOIN users u ON gn.provider_id = u.id
+                    WHERE gn.id = ?
+                `).get(pod.gpu_id);
+                const renter = db.prepare('SELECT username FROM users WHERE id = ?').get(pod.renter_id);
+                if (gpuInfo?.provider_email) {
+                    const durH = (new Date() - new Date(pod.started_at)) / 3600000;
+                    const earn = Math.round(durH * gpuInfo.price_per_hour * (parseFloat(process.env.PROVIDER_PAYOUT_RATE) || 0.8));
+                    mailProviderPodEnded({
+                        to:           gpuInfo.provider_email,
+                        providerName: gpuInfo.provider_name,
+                        renterName:   renter?.username || 'ユーザー',
+                        gpuName:      gpuInfo.gpu_name,
+                        startTime:    pod.started_at,
+                        endTime:      new Date().toISOString(),
+                        earnAmount:   earn,
+                        totalBalance: (gpuInfo.wallet_balance || 0) + earn,
+                    }).catch(e => console.error('Provider end mail error:', e.message));
+                }
+            } catch(mailErr) { console.error('Provider mail lookup error:', mailErr.message); }
+
             res.json({ success: true, status: 'stopped', ...result });
         } catch (err) {
             res.status(500).json({ error: err.message });
