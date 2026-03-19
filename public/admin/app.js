@@ -60,6 +60,7 @@ function loadSection(sec) {
         case 'coupons': loadCoupons(); break;
         case 'pricing': loadPricingCompare(); break;
         case 'render-jobs': loadRenderJobs(); break;
+        case 'backup': loadBackups(); loadKpiSummary(); break;
         case 'outage': loadOutageSection(); break;
         case 'apikeys': loadApiKeys(); break;
     }
@@ -1378,4 +1379,125 @@ async function deleteApiKey(id, username) {
 document.addEventListener('click', e => {
     const btn = e.target.closest('[data-section="apikeys"]');
     if (btn) setTimeout(() => loadApiKeys(), 50);
+});
+
+/* ── KPI SUMMARY (新API連携) ──────────────────────────────────────── */
+async function loadKpiSummary() {
+    try {
+        const s = await api('/admin/stats/summary');
+        // 売上KPIカード更新
+        const monthRevEl = document.getElementById('kMonthRevenue');
+        if (monthRevEl && s.revenue) {
+            monthRevEl.textContent = '¥' + Math.round(s.revenue.month || 0).toLocaleString();
+        }
+        // 追加KPIがあれば更新
+        const kTotalRevEl = document.getElementById('kTotalRevenue');
+        if (kTotalRevEl && s.revenue) {
+            kTotalRevEl.textContent = '¥' + Math.round(s.revenue.total || 0).toLocaleString();
+        }
+        const kTotalPayoutEl = document.getElementById('kTotalPayout');
+        if (kTotalPayoutEl && s.payouts) {
+            kTotalPayoutEl.textContent = '¥' + Math.round(s.payouts.total || 0).toLocaleString();
+        }
+        const kAvgSessionEl = document.getElementById('kAvgSession');
+        if (kAvgSessionEl && s.sessions) {
+            kAvgSessionEl.textContent = s.sessions.avg_minutes + '分';
+        }
+    } catch(e) {
+        console.warn('KPI summary error:', e.message);
+    }
+}
+
+/* ── REVENUE CHART (新API使用) ────────────────────────────────────── */
+async function loadRevenueChart(days = 30) {
+    try {
+        const data = await api('/admin/stats/revenue?days=' + days);
+        if (!chartRevenue) return;
+
+        const sales = data.point_sales || [];
+        const allDates = [...new Set(sales.map(r => r.date))].sort();
+        const salesMap = {};
+        sales.forEach(r => { salesMap[r.date] = r.revenue || 0; });
+
+        chartRevenue.data.labels = allDates;
+        chartRevenue.data.datasets[0].data = allDates.map(d => Math.round(salesMap[d] || 0));
+        chartRevenue.data.datasets[0].label = 'ポイント売上';
+
+        // 2番目のデータセット（GPU使用収益）
+        const usage = data.gpu_usage || [];
+        const usageMap = {};
+        usage.forEach(r => { usageMap[r.date] = r.gpu_revenue || 0; });
+        chartRevenue.data.datasets[1].data = allDates.map(d => Math.round(usageMap[d] || 0));
+        chartRevenue.data.datasets[1].label = 'GPU収益';
+        chartRevenue.update();
+    } catch(e) {
+        console.warn('Revenue chart error:', e.message);
+    }
+}
+
+/* ── BACKUP MANAGEMENT ──────────────────────────────────────────────── */
+let _backups = [];
+
+async function loadBackups() {
+    try {
+        _backups = await api('/admin/backups');
+        renderBackupTable();
+    } catch(e) {
+        console.warn('Backup load error:', e.message);
+    }
+}
+
+function renderBackupTable() {
+    const tbody = document.getElementById('backupTableBody');
+    if (!tbody) return;
+    if (!_backups.length) {
+        tbody.innerHTML = '<tr><td colspan="3" style="text-align:center;color:var(--text3);padding:2rem">バックアップなし</td></tr>';
+        return;
+    }
+    tbody.innerHTML = _backups.map(b => {
+        const date = new Date(b.created_at).toLocaleString('ja-JP');
+        const sizeKB = Math.round(b.size / 1024);
+        return `<tr>
+          <td class="mono" style="font-size:0.82rem">${b.name}</td>
+          <td style="color:var(--text2)">${sizeKB} KB</td>
+          <td style="color:var(--text2)">${date}</td>
+        </tr>`;
+    }).join('');
+}
+
+async function runManualBackup() {
+    const btn = document.getElementById('btnRunBackup');
+    if (btn) { btn.disabled = true; btn.textContent = '実行中...'; }
+    try {
+        const r = await api('/admin/backups/run', { method: 'POST' });
+        showToast('✅ バックアップ完了: ' + r.file + ' (' + Math.round(r.size/1024) + 'KB)', 'success');
+        await loadBackups();
+    } catch(e) {
+        showToast('❌ バックアップ失敗: ' + e.message, 'error');
+    } finally {
+        if (btn) { btn.disabled = false; btn.textContent = '🗄 今すぐバックアップ'; }
+    }
+}
+
+/* ── overviewに新API連携を統合 ─────────────────────────────────────── */
+// 既存のrefreshAllが完了したらKPIサマリーと収益グラフも更新
+const _origRefreshAll = typeof refreshAll === 'function' ? refreshAll : null;
+if (_origRefreshAll) {
+    window._fullRefreshAll = async function() {
+        await _origRefreshAll();
+        await Promise.allSettled([loadKpiSummary(), loadRevenueChart(30)]);
+    };
+}
+
+/* ── 初期化 ─────────────────────────────────────────────────────────── */
+document.addEventListener('DOMContentLoaded', () => {
+    // バックアップセクションのボタン
+    const backupBtn = document.getElementById('btnRunBackup');
+    if (backupBtn) backupBtn.addEventListener('click', runManualBackup);
+
+    // overviewセクション表示時に新APIも呼ぶ
+    setTimeout(() => {
+        loadKpiSummary();
+        loadRevenueChart(30);
+    }, 1500);
 });

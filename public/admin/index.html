@@ -40,8 +40,7 @@
         html,
         body {
             height: 100%;
-            overflow: hidden
-        
+            overflow: hidden;
             overflow-x: hidden;
         }
 
@@ -1064,7 +1063,13 @@
                         <button class="nav-item" data-section="apikeys">
                 <span class="nav-icon">🔑</span>APIキー管理
             </button>
-<button class="nav-item" data-section="outage">
+            <button class="nav-item" data-section="outage">
+                <span class="nav-icon">⚡</span>障害管理
+                <span class="nav-badge" id="outageBadge" style="display:none;background:#ff4757">0</span>
+            </button>
+            <button class="nav-item" data-section="backup">
+                <span class="nav-icon">🗄</span>バックアップ
+            </button>
                 <span class="nav-icon">⚡</span>障害管理
                 <span class="nav-badge" id="outageBadge" style="display:none;background:#ff4757">0</span>
             </button>
@@ -1931,7 +1936,64 @@
         </div>
     </div>
 
+            <!-- ═══ BACKUP MANAGEMENT ═══ -->
+            <div class="section" id="section-backup">
+                <div class="section-header">
+                    <div>
+                        <div class="section-title">🗄 バックアップ管理</div>
+                        <div class="section-sub">DBの自動バックアップ履歴・手動実行</div>
+                    </div>
+                    <button class="btn btn-primary" id="btnRunBackup">🗄 今すぐバックアップ</button>
+                </div>
+
+                <!-- KPI -->
+                <div class="kpi-grid" style="grid-template-columns:repeat(3,1fr);margin-bottom:1.5rem">
+                    <div class="kpi c-primary">
+                        <div class="kpi-icon">💰</div>
+                        <div class="kpi-value" id="kTotalRevenue">—</div>
+                        <div class="kpi-label">累計売上</div>
+                    </div>
+                    <div class="kpi c-success">
+                        <div class="kpi-icon">🏦</div>
+                        <div class="kpi-value" id="kTotalPayout">—</div>
+                        <div class="kpi-label">累計プロバイダー収益</div>
+                    </div>
+                    <div class="kpi c-accent">
+                        <div class="kpi-icon">⏱</div>
+                        <div class="kpi-value" id="kAvgSession">—</div>
+                        <div class="kpi-label">平均セッション時間</div>
+                    </div>
+                </div>
+
+                <!-- Backup table -->
+                <div class="table-card">
+                    <div class="table-header">
+                        <h3>バックアップ履歴</h3>
+                        <button class="btn btn-ghost btn-sm" onclick="loadBackups()">🔄 更新</button>
+                    </div>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>ファイル名</th>
+                                <th>サイズ</th>
+                                <th>作成日時</th>
+                            </tr>
+                        </thead>
+                        <tbody id="backupTableBody">
+                            <tr><td colspan="3" style="text-align:center;color:var(--text3);padding:2rem">読み込み中...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <div style="margin-top:1.5rem;padding:1.25rem;background:rgba(108,71,255,0.06);border:1px solid rgba(108,71,255,0.2);border-radius:12px;font-size:0.875rem;color:var(--text2)">
+                    <strong style="color:var(--text)">📋 バックアップ設定</strong><br>
+                    毎日 午前3時に自動バックアップを実行。最大7日分を保持します。<br>
+                    保存先: <code style="color:var(--accent)">/backups/</code> フォルダ
+                </div>
+            </div>
+
     <!-- COUPON CREATE MODAL -->
+
     <div id="couponModal"
         style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);backdrop-filter:blur(6px);z-index:1000;align-items:center;justify-content:center">
         <div
