@@ -933,7 +933,12 @@ document.getElementById('submitReserve').addEventListener('click', async () => {
         loadMyReservations();
         loadGpus();
     } catch (err) {
-        errEl.textContent = err.message;
+        // 残高不足エラーの場合は特別なメッセージ
+        if (err.message && err.message.includes('ポイント残高が不足')) {
+            errEl.innerHTML = `${err.message} <a href="/mypage/" style="color:#00d4ff;text-decoration:underline">→ ポイントチャージ</a>`;
+        } else {
+            errEl.textContent = err.message;
+        }
         errEl.classList.remove('hidden');
     } finally {
         btn.disabled = false;
@@ -1040,9 +1045,12 @@ async function executeCancel(id) {
     const btn = document.getElementById('confirmCancelResBtn');
     if (btn) { btn.disabled = true; btn.textContent = '処理中...'; }
     try {
-        await apiFetch(`/reservations/${id}`, { method: 'DELETE' });
+        const result = await apiFetch(`/reservations/${id}`, { method: 'DELETE' });
         document.getElementById('cancelResModal')?.remove();
-        showToast('予約をキャンセルしました', 'info');
+        const msg = result.refunded > 0
+            ? `予約をキャンセルしました。💰 ${result.refunded}pt を返金しました！`
+            : '予約をキャンセルしました。';
+        showToast(msg, 'info');
         loadMyReservations();
         loadGpus();
     } catch (err) {

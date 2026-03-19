@@ -462,11 +462,32 @@ async function stopPodAsync(podId, reason = 'expired') {
         durationMinutes, actualCost, providerPayout, interrupted, interrupted ? reason : null
     );
 
-    // Update provider wallet
-    if (gpuNode) {
-        db.prepare('UPDATE users SET wallet_balance = wallet_balance + ? WHERE id = ?')
-            .run(providerPayout, gpuNode.provider_id);
-    }
+    // ── ウォレット更新（トランザクション）─────────────────────────────────
+    // 1) プロバイダーへ収益を付与
+    // 2) レンタラーにデポジット差額（未使用分）を返金
+    const rateUsed = parseFloat(process.env.PROVIDER_PAYOUT_RATE) || 0.8;
+    const finalActualCost = (durationMinutes / 60) * (costPerHour?.price_per_hour || 0);
+    const finalProviderPayout = finalActualCost * rateUsed;
+
+    // デポジット = 予約時に引き落とした ceil(reservation.total_price)
+    const depositPaid = reservation ? Math.ceil(reservation.total_price || 0) : 0;
+    const refundAmount = Math.max(0, depositPaid - Math.ceil(finalActualCost));
+
+    db.transaction(() => {
+        // プロバイダーへ収益付与
+        if (gpuNode) {
+            db.prepare('UPDATE users SET wallet_balance = wallet_balance + ? WHERE id = ?')
+                .run(finalProviderPayout, gpuNode.provider_id);
+        }
+        // レンタラーへ未使用分を返金
+        if (refundAmount > 0) {
+            db.prepare('UPDATE users SET wallet_balance = wallet_balance + ? WHERE id = ?')
+                .run(refundAmount, pod.renter_id);
+            console.log(`💰 Pod #${podId}: Refunded ${refundAmount}pt to renter (deposit=${depositPaid}, actual=${Math.ceil(finalActualCost)})`);
+        }
+    })();
+
+
 
     // Update GPU node session stats
     try {
