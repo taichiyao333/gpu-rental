@@ -63,10 +63,35 @@ router.post('/', authMiddleware, (req, res) => {
   const { TEMPLATES } = require('../services/dockerTemplates');
   const templateId = (docker_template && TEMPLATES[docker_template]) ? docker_template : 'pytorch';
 
-  const result = db.prepare(`
-    INSERT INTO reservations (renter_id, gpu_id, start_time, end_time, status, total_price, notes, docker_template)
-    VALUES (?, ?, ?, ?, 'confirmed', ?, ?, ?)
-  `).run(req.user.id, gpu_id, start_time, end_time, total_price, notes || '', templateId);
+  // ── ウォレット残高チェック & デポジット引き落とし（トランザクション内）─────
+  const renter = db.prepare('SELECT * FROM users WHERE id = ?').get(req.user.id);
+  if (!renter) return res.status(404).json({ error: 'ユーザーが見つかりません' });
+
+  // デポジット = 予約総額（セッション開始時に使用分のみ請求し、未使用分は返金する設計）
+  const depositAmount = Math.ceil(total_price); // ポイント単位で切り上げ
+
+  if (renter.wallet_balance < depositAmount) {
+    return res.status(400).json({
+      error: `ポイント残高が不足しています。必要: ${depositAmount}pt / 現在: ${Math.floor(renter.wallet_balance)}pt`,
+      required: depositAmount,
+      balance: Math.floor(renter.wallet_balance),
+    });
+  }
+
+  // トランザクション: 予約作成 + デポジット引き落とし
+  const insertReservation = db.transaction(() => {
+    const result = db.prepare(`
+      INSERT INTO reservations (renter_id, gpu_id, start_time, end_time, status, total_price, notes, docker_template)
+      VALUES (?, ?, ?, ?, 'confirmed', ?, ?, ?)
+    `).run(req.user.id, gpu_id, start_time, end_time, total_price, notes || '', templateId);
+
+    // ウォレットからデポジット差し引き
+    db.prepare('UPDATE users SET wallet_balance = wallet_balance - ? WHERE id = ?').run(depositAmount, req.user.id);
+
+    return result;
+  });
+
+  const result = insertReservation();
 
   const reservation = db.prepare('SELECT * FROM reservations WHERE id = ?').get(result.lastInsertRowid);
   const resWithGpu = { ...reservation, gpu_name: gpu.name };
@@ -78,8 +103,9 @@ router.post('/', authMiddleware, (req, res) => {
       .catch(e => console.error('Reservation mail error:', e.message));
   }
 
-  res.status(201).json(resWithGpu);
+  res.status(201).json({ ...resWithGpu, deposit_deducted: depositAmount });
 });
+
 
 
 // DELETE /api/reservations/:id - cancel
@@ -91,10 +117,33 @@ router.delete('/:id', authMiddleware, (req, res) => {
     return res.status(403).json({ error: 'Forbidden' });
   if (reservation.status === 'active')
     return res.status(400).json({ error: 'Cannot cancel active session. Stop the pod first.' });
+  if (reservation.status === 'cancelled')
+    return res.status(400).json({ error: 'Already cancelled' });
 
-  db.prepare("UPDATE reservations SET status = 'cancelled' WHERE id = ?").run(req.params.id);
-  res.json({ success: true });
+  // キャンセル時の返金処理（confirmedのみ返金）
+  let refundAmount = 0;
+  const refundableStatuses = ['confirmed', 'pending'];
+  if (refundableStatuses.includes(reservation.status)) {
+    // デポジット（ceil(total_price)）を返金
+    refundAmount = Math.ceil(reservation.total_price || 0);
+  }
+
+  const cancelReservation = db.transaction(() => {
+    db.prepare("UPDATE reservations SET status = 'cancelled' WHERE id = ?").run(req.params.id);
+    if (refundAmount > 0) {
+      db.prepare('UPDATE users SET wallet_balance = wallet_balance + ? WHERE id = ?').run(refundAmount, reservation.renter_id);
+    }
+  });
+
+  cancelReservation();
+
+  const msg = refundAmount > 0
+    ? `予約をキャンセルしました。${refundAmount}pt を返金しました。`
+    : '予約をキャンセルしました。';
+
+  res.json({ success: true, refunded: refundAmount, message: msg });
 });
+
 
 // GET /api/reservations/active-pod - get my active pod
 router.get('/my/active-pod', authMiddleware, (req, res) => {
