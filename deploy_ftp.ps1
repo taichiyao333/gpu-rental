@@ -3,7 +3,7 @@
 #  Target: mdl-japan.sakura.ne.jp /www/gpurental/
 ###############################################################
 param(
-    [string]$ApiBase = "REPLACE_WITH_TUNNEL_URL",  # e.g. https://xxxx.trycloudflare.com
+    [string]$ApiBase = "https://gpurental.jp",  # 本番URL固定
     [switch]$DryRun = $false
 )
 
@@ -15,7 +15,7 @@ $LOCAL_PUBLIC = "F:\antigravity\gpu-platform\public"
 $CRED = New-Object System.Net.NetworkCredential($FTP_USER, $FTP_PASS)
 
 # Files to upload (relative to $LOCAL_PUBLIC)
-$UPLOAD_DIRS = @("landing", "portal", "admin", "workspace", "provider", "mypage", "epsilon_mock")
+$UPLOAD_DIRS = @("landing", "portal", "admin", "workspace", "provider", "mypage", "tokushoho", "terms", "privacy", "404")
 
 # Root-level files to upload directly (e.g. pricing.html, terms.html)
 $ROOT_FILES = @("pricing.html", "pricing.html")
