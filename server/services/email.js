@@ -491,6 +491,84 @@ function mailProviderPodEnded({ to, providerName, renterName, gpuName, startTime
     text: `GPU利用終了\nGPU: ${gpuName}\n利用者: ${renterName}\n利用時間: ${durationMin}分\n収益: ¥${Math.round(earnAmount||0).toLocaleString()}\nウォレット残高: ¥${Math.round(totalBalance||0).toLocaleString()}`,
   });
 }
+/**
+ * 12. セッション終了・利用明細メール（レンタラー向け）
+ */
+function mailSessionEnded({ to, username, session }) {
+  const fmtJp = dt => new Date(dt).toLocaleString('ja-JP', {
+    timeZone: 'Asia/Tokyo', year: 'numeric', month: '2-digit', day: '2-digit',
+    hour: '2-digit', minute: '2-digit',
+  });
+  const fmtPt = n => Math.round(n || 0).toLocaleString();
+  const startedAt = session.started_at ? fmtJp(session.started_at) : '—';
+  const endedAt = fmtJp(new Date());
+  const durationH = Math.floor((session.duration_minutes || 0) / 60);
+  const durationM = (session.duration_minutes || 0) % 60;
+  const durationStr = durationH > 0 ? `${durationH}時間${durationM}分` : `${durationM}分`;
+  const refundLine = session.refund_amount > 0
+    ? `<div class="info-row"><span class="info-label">↩️ 返金ポイント</span><span class="info-val" style="color:#00e5a0">+${fmtPt(session.refund_amount)} pt</span></div>`
+    : '';
+  const walletAfter = session.wallet_after != null
+    ? `<div class="info-row"><span class="info-label">💰 残高（終了後）</span><span class="info-val">${fmtPt(session.wallet_after)} pt</span></div>`
+    : '';
+  const reasonMap = {
+    expired: '予約時間終了',
+    user_stop: 'ユーザーが停止',
+    provider_force: 'プロバイダーにより停止',
+    admin: '管理者操作',
+  };
+  const reasonLabel = reasonMap[session.reason] || session.reason || '終了';
+
+  return sendMail({
+    to,
+    subject: `📊 GPU利用明細: ${session.gpu_name || 'GPU'} — ${durationStr}のご利用`,
+    html: `<!DOCTYPE html><html><head><style>${BASE_STYLE}
+      .receipt-box{background:rgba(0,229,160,0.06);border:1px solid rgba(0,229,160,0.2);border-radius:12px;padding:20px;margin:16px 0;text-align:center}
+      .cost-big{font-size:2.2rem;font-weight:900;color:#00e5a0;line-height:1.2}
+      .cost-label{font-size:0.8rem;color:#9898b8;margin-top:4px}
+      .tag{display:inline-block;padding:2px 10px;border-radius:20px;font-size:0.75rem;font-weight:700}
+      .tag-done{background:rgba(0,229,160,0.15);color:#00e5a0;border:1px solid rgba(0,229,160,0.3)}
+    </style></head><body>
+<div class="wrap">
+  <div class="card">
+    <div class="header">
+      <h1>📊 GPU利用明細</h1>
+      <p>ご利用ありがとうございました</p>
+    </div>
+    <div class="body">
+      <p><strong>${username}</strong> さん</p>
+      <p>以下のGPUセッションが終了しました。ご利用内容をご確認ください。</p>
+
+      <div class="receipt-box">
+        <div class="cost-big">${fmtPt(session.actual_cost)} pt</div>
+        <div class="cost-label">実費用（ポイント消費）</div>
+      </div>
+
+      <div class="info-row"><span class="info-label">🖥️ GPU</span><span class="info-val">${session.gpu_name || '—'}</span></div>
+      <div class="info-row"><span class="info-label">🕐 開始時刻</span><span class="info-val">${startedAt}</span></div>
+      <div class="info-row"><span class="info-label">🕑 終了時刻</span><span class="info-val">${endedAt}</span></div>
+      <div class="info-row"><span class="info-label">⏱️ 利用時間</span><span class="info-val">${durationStr}</span></div>
+      <div class="info-row"><span class="info-label">💳 デポジット</span><span class="info-val">${fmtPt(session.deposit_paid)} pt（予約時仮押さえ）</span></div>
+      <div class="info-row"><span class="info-label">💸 実費用</span><span class="info-val">${fmtPt(session.actual_cost)} pt</span></div>
+      ${refundLine}
+      ${walletAfter}
+      <div class="info-row"><span class="info-label">📋 終了理由</span><span class="info-val"><span class="tag tag-done">${reasonLabel}</span></span></div>
+
+      <div style="text-align:center;margin-top:24px">
+        <a href="${process.env.BASE_URL || 'https://gpurental.jp'}/portal/" class="btn">次のGPUを予約する</a>
+      </div>
+    </div>
+    <div class="footer">
+      ご不明な点は <a href="mailto:info@metadatalab.net" style="color:#6c47ff">info@metadatalab.net</a> までお問い合わせください<br>
+      © 2026 METADATALAB.INC — GPURental
+    </div>
+  </div>
+</div>
+</body></html>`,
+    text: `GPU利用明細\nGPU: ${session.gpu_name}\n利用時間: ${durationStr}\n実費用: ${fmtPt(session.actual_cost)}pt\n返金: ${fmtPt(session.refund_amount || 0)}pt\n残高: ${fmtPt(session.wallet_after)}pt`,
+  });
+}
+
 
 module.exports = {
   sendMail,
@@ -500,6 +578,7 @@ module.exports = {
   mailReminderStart,
   mailReminderEnd,
   mailSessionExpired,
+  mailSessionEnded,
   mailPayoutRequest,
   mailPayoutRequestAdmin,
   mailPointPurchased,

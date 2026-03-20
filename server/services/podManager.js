@@ -8,6 +8,7 @@ const { getCachedStats, updateGpuStatus } = require('./gpuManager');
 const { getTemplate } = require('./dockerTemplates');
 const config = require('../config');
 const { v4: uuidv4 } = require('uuid');
+const { mailSessionEnded, mailProviderPodEnded } = require('./email');
 
 // ── Docker availability check (起動時1回) ────────────────────────────────────
 let DOCKER_AVAILABLE = false;
@@ -516,8 +517,32 @@ async function stopPodAsync(podId, reason = 'expired') {
     db.prepare("UPDATE reservations SET status = 'completed' WHERE id = ?").run(pod.reservation_id);
     db.prepare("UPDATE gpu_nodes SET status = 'available' WHERE id = ?").run(pod.gpu_id);
 
-    console.log(`✅ Pod #${podId} stopped (${reason}) | Duration: ${durationMinutes}min | Payout: ¥${providerPayout.toFixed(0)}`);
-    return { podId, durationMinutes, actualCost, providerPayout };
+    console.log(`✅ Pod #${podId} stopped (${reason}) | Duration: ${durationMinutes}min | Cost: ${finalActualCost.toFixed(1)}pt | Refund: ${refundAmount}pt`);
+
+    // ── メール通知（レンタラー向け利用明細）────────────────────────────────
+    try {
+        const renter = db.prepare('SELECT email, username, wallet_balance FROM users WHERE id = ?').get(pod.renter_id);
+        if (renter?.email) {
+            mailSessionEnded({
+                to: renter.email,
+                username: renter.username,
+                session: {
+                    gpu_name: gpu?.name || 'GPU',
+                    started_at: pod.started_at,
+                    duration_minutes: durationMinutes,
+                    deposit_paid: depositPaid,
+                    actual_cost: Math.ceil(finalActualCost),
+                    refund_amount: refundAmount,
+                    wallet_after: renter.wallet_balance,
+                    reason,
+                },
+            }).catch(e => console.error('Session end email error:', e.message));
+        }
+    } catch (e) {
+        console.error('Failed to send session end email:', e.message);
+    }
+
+    return { podId, durationMinutes, actualCost: finalActualCost, providerPayout: finalProviderPayout, refundAmount };
 }
 
 /**
