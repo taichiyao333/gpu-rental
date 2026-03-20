@@ -49,10 +49,22 @@ router.post('/connect/onboard', authMiddleware, async (req, res) => {
     try {
         let accountId = user.stripe_account_id;
 
-        // すでにアカウントがある場合は既存アカウントを使用
-        if (!accountId) {
+        // 既存アカウントが未完成（古いstandard / 未使用）の場合は新規Express作成
+        let needsNew = !accountId;
+        if (accountId && !needsNew) {
+            try {
+                const existing = await stripe.accounts.retrieve(accountId);
+                // standard + charges disabledなら再作成
+                if (existing.type === 'standard' && !existing.charges_enabled) {
+                    needsNew = true;
+                }
+            } catch (_) { needsNew = true; }
+        }
+
+        if (needsNew) {
+            // Express アカウント作成（本番Platform Profile承認済み）
             const account = await stripe.accounts.create({
-                type:    'standard',
+                type:    'express',
                 country: 'JP',
                 email:   user.email,
                 capabilities: {
@@ -60,24 +72,21 @@ router.post('/connect/onboard', authMiddleware, async (req, res) => {
                     transfers:     { requested: true },
                 },
                 business_profile: {
-                    mcc:                 '7372', // コンピュータサービス
+                    mcc:                 '5734', // コンピュータソフトウェア
+                    url:                 'https://gpurental.jp',
                     product_description: 'GPU rental provider on GPURental platform',
-                },
-                settings: {
-                    payouts: {
-                        schedule: { interval: 'weekly', weekly_anchor: 'monday' },
-                    },
                 },
             });
             accountId = account.id;
 
             // DBに保存
-            db.prepare('UPDATE users SET stripe_account_id = ? WHERE id = ?')
+            db.prepare('UPDATE users SET stripe_account_id = ?, stripe_connected = 0 WHERE id = ?')
               .run(accountId, req.user.id);
+            console.log(`📝 Created live Express account ${accountId} for user ${req.user.id}`);
         }
 
         // onboarding link 生成
-        const baseUrl = process.env.BASE_URL || 'http://localhost:3000';
+        const baseUrl = process.env.BASE_URL || 'https://gpurental.jp';
         const link = await stripe.accountLinks.create({
             account:     accountId,
             refresh_url: `${baseUrl}/provider/?stripe=refresh`,
@@ -93,6 +102,7 @@ router.post('/connect/onboard', authMiddleware, async (req, res) => {
         res.status(500).json({ error: err.message });
     }
 });
+
 
 /**
  * GET /api/stripe/connect/status
