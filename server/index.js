@@ -35,6 +35,7 @@ const { router: apiKeyRoutes } = require('./routes/apikeys');
 const diagnosticsRoutes = require('./routes/diagnostics');
 const renderRoutes = require('./routes/render');
 const stripeRoutes = require('./routes/stripe');
+const { rateLimitHandler, securityAuditMiddleware, getRecentLogs } = require('./middleware/securityLogger');
 
 
 // ─── Startup Environment Validation ────────────────────────────────────────
@@ -151,7 +152,10 @@ app.use('/api/auth/reset-password', rateLimit({
 }));
 // Admin panel makes many API calls — use a more relaxed limit
 app.use('/api/admin', rateLimit({ windowMs: 60 * 1000, max: 500, standardHeaders: true, legacyHeaders: false }));
-app.use('/api/', rateLimit(config.rateLimit.api));
+app.use('/api/', rateLimit({ ...config.rateLimit.api, handler: rateLimitHandler }));
+
+// セキュリティ監査ミドルウェア（401/403を全てログ）
+app.use('/api/', securityAuditMiddleware);
 
 // Named pages — static より前に定義することで優先マッチさせる
 app.get('/terms.html', (req, res) => res.sendFile(path.join(__dirname, '../public/landing/terms.html')));

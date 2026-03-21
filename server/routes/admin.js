@@ -1,9 +1,10 @@
-const express = require('express');
+﻿const express = require('express');
 const router = express.Router();
 const { getDb } = require('../db/database');
 const { authMiddleware, adminOnly } = require('../middleware/auth');
 const { getGpuNodesWithStats } = require('../services/gpuManager');
 const { getActivePods } = require('../services/podManager');
+const { getRecentLogs } = require('../middleware/securityLogger');
 
 // GET /api/admin/overview
 router.get('/overview', authMiddleware, adminOnly, (req, res) => {
@@ -623,6 +624,18 @@ router.get('/stats/summary', authMiddleware, adminOnly, (req, res) => {
 });
 
 module.exports = router;
+
+// GET /api/admin/security/logs - セキュリティイベントログ（管理者専用）
+router.get('/security/logs', authMiddleware, adminOnly, (req, res) => {
+    const lines = parseInt(req.query.lines || '200', 10);
+    const logs  = getRecentLogs(Math.min(lines, 1000));
+    // イベント別集計
+    const summary = logs.reduce((acc, log) => {
+        acc[log.event] = (acc[log.event] || 0) + 1;
+        return acc;
+    }, {});
+    res.json({ total: logs.length, summary, logs });
+});
 
 
 
