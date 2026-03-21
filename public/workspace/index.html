@@ -520,85 +520,73 @@ jupyter lab --ip=0.0.0.0 --port=8888 --no-browser --NotebookApp.token='gpurental
     <!-- Language Switcher JS -->
     <script>
     (function(){
-        /* ── Google Translate 初期化 ── */
-        window.googleTranslateElementInit = function() {
-            new google.translate.TranslateElement({
-                pageLanguage: 'ja',
-                includedLanguages: 'en,zh-CN,ja',
-                layout: google.translate.TranslateElement.InlineLayout.SIMPLE,
-                autoDisplay: false
-            }, 'google_translate_element');
-            /* 保存済み言語を復元 */
-            var saved = localStorage.getItem('site_lang') || 'ja';
-            if (saved !== 'ja') {
-                setTimeout(function(){ applyLang(saved); }, 800);
-            }
-        };
-
-        /* ── 言語適用 ── */
-        function applyLang(lang) {
-            /* Googleのcookieベース切り替え */
-            var gtCombo = document.querySelector('.goog-te-combo');
-            if (gtCombo) {
-                gtCombo.value = lang === 'zh' ? 'zh-CN' : lang;
-                gtCombo.dispatchEvent(new Event('change'));
-            } else {
-                /* cookieで直接セット */
-                var val = lang === 'zh' ? 'zh-CN' : lang;
-                document.cookie = 'googtrans=/ja/' + val + '; path=/; domain=.' + location.hostname;
-                document.cookie = 'googtrans=/ja/' + val + '; path=/';
-                location.reload();
-            }
-        }
-
-        /* ── UI更新 ── */
         var LANGS = {
             ja: { flag: '🇯🇵', name: '日本語' },
             en: { flag: '🇺🇸', name: 'English' },
             zh: { flag: '🇨🇳', name: '中文' }
         };
+        var GT_LANG = { en: 'en', zh: 'zh-CN', ja: 'ja' };
+
+        function setGoogCookie(val) {
+            var d = '.' + location.hostname;
+            document.cookie = 'googtrans=' + val + '; path=/; domain=' + d;
+            document.cookie = 'googtrans=' + val + '; path=/';
+        }
+        function clearGoogCookie() {
+            var exp = 'expires=Thu, 01 Jan 1970 00:00:00 GMT';
+            var d = '.' + location.hostname;
+            document.cookie = 'googtrans=; path=/; ' + exp + '; domain=' + d;
+            document.cookie = 'googtrans=; path=/; ' + exp;
+        }
 
         function updateLangBtn(lang) {
             var info = LANGS[lang] || LANGS['ja'];
-            var allBtns = document.querySelectorAll('.lang-btn');
-            allBtns.forEach(function(b){
-                b.innerHTML = '<span class="lang-flag">' + info.flag + '</span>' + info.name + ' <span style="opacity:.6;font-size:.7rem">▼</span>';
+            document.querySelectorAll('.lang-btn').forEach(function(b){
+                b.innerHTML = '<span class="lang-flag">' + info.flag + '</span>'
+                    + info.name + ' <span style="opacity:.6;font-size:.7rem">&#9660;</span>';
             });
-            var opts = document.querySelectorAll('.lang-option');
-            opts.forEach(function(o){
+            document.querySelectorAll('.lang-option').forEach(function(o){
                 o.classList.toggle('active', o.dataset.lang === lang);
             });
         }
 
-        window.toggleLangMenu = function(el) {
-            var switcher = el.closest ? el.closest('.lang-switcher') : el.parentElement;
-            if(!switcher) return;
-            var isOpen = switcher.classList.toggle('open');
-            if(isOpen){
-                document.addEventListener('click', function handler(e){
-                    if(!switcher.contains(e.target)){
-                        switcher.classList.remove('open');
-                        document.removeEventListener('click', handler);
-                    }
-                });
-            }
+        window.googleTranslateElementInit = function() {
+            new google.translate.TranslateElement({
+                pageLanguage: 'ja',
+                includedLanguages: 'en,zh-CN',
+                autoDisplay: false
+            }, 'google_translate_element');
         };
 
         window.selectLang = function(lang) {
-            localStorage.setItem('site_lang', lang);
-            updateLangBtn(lang);
+            var current = localStorage.getItem('site_lang') || 'ja';
             document.querySelectorAll('.lang-switcher').forEach(function(s){ s.classList.remove('open'); });
-            if(lang === 'ja'){
-                /* 日本語に戻す */
-                document.cookie = 'googtrans=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; domain=.' + location.hostname;
-                document.cookie = 'googtrans=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT';
-                location.reload();
+            if (lang === current) return;
+            localStorage.setItem('site_lang', lang);
+            if (lang === 'ja') {
+                clearGoogCookie();
             } else {
-                applyLang(lang);
+                setGoogCookie('/ja/' + GT_LANG[lang]);
+            }
+            location.reload();
+        };
+
+        window.toggleLangMenu = function(el) {
+            var switcher = el.closest ? el.closest('.lang-switcher') : el.parentElement;
+            if (!switcher) return;
+            var isOpen = switcher.classList.toggle('open');
+            if (isOpen) {
+                setTimeout(function(){
+                    document.addEventListener('click', function handler(e){
+                        if (!switcher.contains(e.target)){
+                            switcher.classList.remove('open');
+                            document.removeEventListener('click', handler);
+                        }
+                    });
+                }, 10);
             }
         };
 
-        /* ── 初期化 ── */
         document.addEventListener('DOMContentLoaded', function(){
             var saved = localStorage.getItem('site_lang') || 'ja';
             updateLangBtn(saved);
