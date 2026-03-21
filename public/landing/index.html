@@ -749,7 +749,7 @@
         .nav-hamburger.open span:nth-child(2) { opacity: 0; transform: scaleX(0); }
         .nav-hamburger.open span:nth-child(3) { transform: translateY(-7px) rotate(-45deg); }
         .mob-drawer {
-            display: none;
+            display: flex;
             position: fixed;
             top: 0;
             left: 0;
@@ -924,13 +924,15 @@
         <button class="nav-hamburger" id="mobHamburger" onclick="toggleMobMenu()"><span></span><span></span><span></span></button>
     </header>
     <div class="mob-drawer" id="mobDrawer">
-        <a href="#how" onclick="closeMobMenu()">📖 使い方</a>
-        <a href="#features" onclick="closeMobMenu()">⚡ 機能</a>
-        <a href="/landing/pricing.html" onclick="closeMobMenu()">💰 料金表</a>
-        <a href="#pricing" onclick="closeMobMenu()">💳 料金概要</a>
-        <a href="#provider" onclick="closeMobMenu()">🏭 プロバイダー</a>
-        <div style="height:1px;background:rgba(255,255,255,0.08);margin:0.5rem 0"></div>
-        <a href="/portal/" style="background:linear-gradient(135deg,#6c47ff,#8b5cf6);border-radius:8px;margin-top:0.5rem;justify-content:center">ログイン / 今すぐ始める</a>
+        <div class="mob-drawer-title">ナビゲーション</div>
+        <a href="#how" onclick="closeMobMenu()">&#128214; 使い方</a>
+        <a href="#features" onclick="closeMobMenu()">&#9889; 機能</a>
+        <a href="/landing/pricing.html" onclick="closeMobMenu()">&#128176; 料金表</a>
+        <a href="#pricing" onclick="closeMobMenu()">&#128179; 料金概要</a>
+        <a href="#provider" onclick="closeMobMenu()">&#127981; プロバイダー</a>
+        <div style="height:1px;background:rgba(255,255,255,0.08);margin:0.75rem 0"></div>
+        <a href="/portal/register" onclick="closeMobMenu()" style="color:#00e5a0;">&#127381; 新規登録</a>
+        <a href="/portal/" onclick="closeMobMenu()" style="background:linear-gradient(135deg,#6c47ff,#8b5cf6);border-radius:10px;margin-top:0.5rem;justify-content:center;font-weight:700">ログイン / 今すぐ始める</a>
     </div>
 
     <!-- HERO -->
