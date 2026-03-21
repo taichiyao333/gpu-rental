@@ -8,6 +8,37 @@ const { getDb } = require('../db/database');
 const config = require('../config');
 const { mailWelcome, mailPasswordReset } = require('../services/email');
 
+// ── ログインブルートフォース対策: 試行ロック ─────────────────────────
+const loginAttempts = new Map(); // { email: { count, lockedUntil } }
+const MAX_ATTEMPTS  = 10;
+const LOCK_DURATION = 30 * 60 * 1000; // 30分
+
+function checkLoginLock(email) {
+    const rec = loginAttempts.get(email);
+    if (!rec) return { locked: false };
+    if (Date.now() < rec.lockedUntil) {
+        const remaining = Math.ceil((rec.lockedUntil - Date.now()) / 60000);
+        return { locked: true, remaining };
+    }
+    return { locked: false };
+}
+function recordFailedLogin(email) {
+    const rec = loginAttempts.get(email) || { count: 0, lockedUntil: 0 };
+    rec.count++;
+    if (rec.count >= MAX_ATTEMPTS) {
+        rec.lockedUntil = Date.now() + LOCK_DURATION;
+        console.warn('[Security] Account locked: ' + email + ' (' + rec.count + ' failed attempts)');
+    }
+    loginAttempts.set(email, rec);
+}
+function clearLoginLock(email) { loginAttempts.delete(email); }
+// 古いロックレコードを1時間おきにクリーンアップ
+setInterval(() => {
+    const now = Date.now();
+    loginAttempts.forEach((rec, email) => {
+        if (rec.lockedUntil && now > rec.lockedUntil + LOCK_DURATION) loginAttempts.delete(email);
+    });
+}, 60 * 60 * 1000);
 // ── reCAPTCHA v3 検証 ────────────────────────────────────────────
 async function verifyCaptcha(token) {
     const secretKey = process.env.RECAPTCHA_SECRET_KEY;
@@ -78,15 +109,26 @@ router.post('/login', async (req, res) => {
     const { email, password, captcha_token } = req.body;
     if (!email || !password) return res.status(400).json({ error: 'Email and password required' });
 
+    // ロックチェック
+    const lockStatus = checkLoginLock(email);
+    if (lockStatus.locked) {
+        return res.status(429).json({
+            error: `アカウントは一時ロックされています。約${lockStatus.remaining}分後に再試行してください。`
+        });
+    }
+
     // reCAPTCHA検証
     const captchaOk = await verifyCaptcha(captcha_token);
-    if (!captchaOk) return res.status(400).json({ error: '自動送信の疑いがあります。もう一度お試しください' });
+    if (!captchaOk) return res.status(400).json({ error: '自動送信の疊いがあります。もう一度お試しください' });
 
     const db = getDb();
     const user = db.prepare('SELECT * FROM users WHERE email = ? AND status = ?').get(email, 'active');
-    if (!user || !bcrypt.compareSync(password, user.password_hash))
+    if (!user || !bcrypt.compareSync(password, user.password_hash)) {
+        recordFailedLogin(email); // 失敗カウントアップ
         return res.status(401).json({ error: 'Invalid credentials' });
+    }
 
+    clearLoginLock(email); // 成功ログインでカウンタリセット
     db.prepare('UPDATE users SET last_login = CURRENT_TIMESTAMP WHERE id = ?').run(user.id);
     const token = jwt.sign({ id: user.id, username: user.username, role: user.role }, config.jwt.secret, { expiresIn: config.jwt.expiresIn });
     res.json({ token, user: { id: user.id, username: user.username, email: user.email, role: user.role, wallet_balance: user.wallet_balance } });

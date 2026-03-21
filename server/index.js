@@ -1,4 +1,4 @@
-require('dotenv').config();
+﻿require('dotenv').config();
 const express = require('express');
 const http = require('http');
 const { Server } = require('socket.io');
@@ -94,7 +94,32 @@ const io = new Server(server, {
 // ─── Middleware ───────────────────────────────────────────────────────────────
 // Trust Cloudflare / reverse proxy headers (required for express-rate-limit behind Cloudflare Tunnel)
 app.set('trust proxy', 1);
-app.use(helmet({ contentSecurityPolicy: false }));
+app.disable('x-powered-by'); // サーバー情報を非公開
+app.use(helmet({
+    // ── CSP: XSS攻撃をブロック ──
+    contentSecurityPolicy: {
+        directives: {
+            defaultSrc:  ["'self'"],
+            scriptSrc:   ["'self'", "'unsafe-inline'",
+                          "https://translate.google.com", "https://translate.googleapis.com",
+                          "https://www.google.com", "https://www.gstatic.com",
+                          "https://js.stripe.com", "https://cdn.socket.io"],
+            styleSrc:    ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com",
+                          "https://translate.googleapis.com"],
+            fontSrc:     ["'self'", "https://fonts.gstatic.com", "data:"],
+            imgSrc:      ["'self'", "data:", "https:", "blob:"],
+            connectSrc:  ["'self'", "https://api.stripe.com", "wss:", "ws:",
+                          "https://translate.googleapis.com"],
+            frameSrc:    ["https://js.stripe.com", "https://hooks.stripe.com"],
+            objectSrc:   ["'none'"],
+        }
+    },
+    // ── HSTS: HTTPS強制 ──
+    hsts: process.env.NODE_ENV === 'production' ? {
+        maxAge: 31536000, includeSubDomains: true, preload: true
+    } : false,
+    crossOriginEmbedderPolicy: false, // Google Translate iframe許可
+}));
 app.use(cors(corsOptions));
 // gzip圧縮 (compressionがインストール済みの場合のみ)
 if (compression) {
