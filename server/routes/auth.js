@@ -1,15 +1,46 @@
-﻿const express = require('express');
+const express = require('express');
 const router = express.Router();
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
+const https = require('https');
 const { getDb } = require('../db/database');
 const config = require('../config');
 const { mailWelcome, mailPasswordReset } = require('../services/email');
 
+// ── reCAPTCHA v3 検証 ────────────────────────────────────────────
+async function verifyCaptcha(token) {
+    const secretKey = process.env.RECAPTCHA_SECRET_KEY;
+    if (!secretKey || !token) return true;
+    return new Promise((resolve) => {
+        const params = `secret=${encodeURIComponent(secretKey)}&response=${encodeURIComponent(token)}`;
+        const options = {
+            hostname: 'www.google.com',
+            path: '/recaptcha/api/siteverify',
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'Content-Length': Buffer.byteLength(params) }
+        };
+        const req = https.request(options, (res) => {
+            let data = '';
+            res.on('data', d => data += d);
+            res.on('end', () => {
+                try {
+                    const json = JSON.parse(data);
+                    resolve(json.success && json.score >= 0.3);
+                } catch { resolve(false); }
+            });
+        });
+        req.on('error', () => resolve(true));
+        req.write(params);
+        req.end();
+    });
+}
+
+
+
 // POST /api/auth/register
-router.post('/register', (req, res) => {
-    const { username, email, password } = req.body;
+router.post('/register', async (req, res) => {
+    const { username, email, password, captcha_token } = req.body;
     if (!username || !email || !password)
         return res.status(400).json({ error: 'すべてのフィールドが必要です' });
     if (password.length < 8)
@@ -20,6 +51,10 @@ router.post('/register', (req, res) => {
         return res.status(400).json({ error: 'ユーザー名は3文字以上にしてください' });
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))
         return res.status(400).json({ error: '有効なメールアドレスを入力してください' });
+
+    // reCAPTCHA検証
+    const captchaOk = await verifyCaptcha(captcha_token);
+    if (!captchaOk) return res.status(400).json({ error: '自動送信の疑いがあります。もう一度お試しください' });
 
     const db = getDb();
     try {
@@ -39,9 +74,13 @@ router.post('/register', (req, res) => {
 
 
 // POST /api/auth/login
-router.post('/login', (req, res) => {
-    const { email, password } = req.body;
+router.post('/login', async (req, res) => {
+    const { email, password, captcha_token } = req.body;
     if (!email || !password) return res.status(400).json({ error: 'Email and password required' });
+
+    // reCAPTCHA検証
+    const captchaOk = await verifyCaptcha(captcha_token);
+    if (!captchaOk) return res.status(400).json({ error: '自動送信の疑いがあります。もう一度お試しください' });
 
     const db = getDb();
     const user = db.prepare('SELECT * FROM users WHERE email = ? AND status = ?').get(email, 'active');

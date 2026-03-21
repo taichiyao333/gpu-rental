@@ -135,11 +135,19 @@ document.getElementById('loginForm').addEventListener('submit', async (e) => {
     const errEl = document.getElementById('loginError');
     errEl.classList.add('hidden');
     try {
+        // reCAPTCHA v3 token
+        let captcha_token = null;
+        if (window.grecaptcha && window._recaptchaSiteKey) {
+            captcha_token = await new Promise(r => window.grecaptcha.ready(() =>
+                window.grecaptcha.execute(window._recaptchaSiteKey, { action: 'login' }).then(r)
+            ));
+        }
         const data = await apiFetch('/auth/login', {
             method: 'POST',
             body: JSON.stringify({
                 email: document.getElementById('loginEmail').value,
                 password: document.getElementById('loginPassword').value,
+                captcha_token,
             }),
         });
         state.token = data.token;
@@ -163,12 +171,20 @@ document.getElementById('registerForm').addEventListener('submit', async (e) => 
     const errEl = document.getElementById('regError');
     errEl.classList.add('hidden');
     try {
+        // reCAPTCHA v3 token
+        let captcha_token = null;
+        if (window.grecaptcha && window._recaptchaSiteKey) {
+            captcha_token = await new Promise(r => window.grecaptcha.ready(() =>
+                window.grecaptcha.execute(window._recaptchaSiteKey, { action: 'register' }).then(r)
+            ));
+        }
         const data = await apiFetch('/auth/register', {
             method: 'POST',
             body: JSON.stringify({
                 username: document.getElementById('regUsername').value,
                 email: document.getElementById('regEmail').value,
                 password: document.getElementById('regPassword').value,
+                captcha_token,
             }),
         });
         state.token = data.token;
@@ -1598,7 +1614,7 @@ async function purchaseTicket(planId, event) {
     const couponInput = document.getElementById('couponCodeInput');
     const couponCode = couponInput?.value.trim() || '';
     try {
-        const result = await apiFetch('/points/purchase', {
+        const result = await apiFetch('/stripe/checkout/points', {
             method: 'POST',
             body: JSON.stringify({ plan_id: planId, coupon_code: couponCode || undefined }),
         });
@@ -1606,9 +1622,9 @@ async function purchaseTicket(planId, event) {
             showToast(`✅ ${result.points_added}pt 付与されました！（テストモード）`, 'success');
             loadPointBalance();
             renderTicketPlans();
-        } else if (result.redirect_url) {
-            showToast('GMOイプシロン決済ページに移動します...', 'info');
-            setTimeout(() => { window.location.href = result.redirect_url; }, 1000);
+        } else if (result.checkout_url || result.redirect_url) {
+            showToast('Stripe決済ページに移動します...', 'info');
+            setTimeout(() => { window.location.href = result.checkout_url || result.redirect_url; }, 1000);
         }
     } catch (e) {
         showToast('購入エラー: ' + e.message, 'error');
@@ -1646,8 +1662,8 @@ function createTicketModal() {
           <div style="text-align:center;padding:2rem;color:var(--text2)">読み込み中...</div>
         </div>
         <div style="margin-top:1rem">
-          <a href="https://www.epsilon.jp/" target="_blank" style="font-size:0.72rem;color:var(--text3)">
-            🔒 GMOイプシロン（クレジットカード）で安全に決済
+          <a href="https://stripe.com/jp" target="_blank" style="font-size:0.72rem;color:var(--text3)">
+            🔒 Stripe（クレジットカード）で安全に決済
           </a>
         </div>
       </div>

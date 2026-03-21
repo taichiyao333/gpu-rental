@@ -30,7 +30,22 @@
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="GPURental">
+
+    <!-- reCAPTCHA v3 (動的ロード - サイトキーが設定されている場合のみ) -->
+    <script>
+    (function() {
+        // /api/config からサイトキーを取得してreCAPTCHAを動的ロード
+        fetch('/api/config/recaptcha').then(r => r.json()).then(d => {
+            if (!d.site_key) return;
+            window._recaptchaSiteKey = d.site_key;
+            const s = document.createElement('script');
+            s.src = 'https://www.google.com/recaptcha/api.js?render=' + d.site_key;
+            document.head.appendChild(s);
+        }).catch(() => {}); // エラーは無視（CAPTCHAなしでも動作継続）
+    })();
+    </script>
 </head>
+
 
 <body>
     <!-- NAV -->

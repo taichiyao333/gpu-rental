@@ -218,11 +218,16 @@ app.use('/api/render', renderRoutes(io));
 app.use('/api/stripe', stripeRoutes);
 app.use('/api/admin', adminRoutes);
 
+// reCAPTCHA サイトキー公開エンドポイント（秘密キーは返さない）
+app.get('/api/config/recaptcha', (req, res) => {
+    res.json({ site_key: process.env.RECAPTCHA_SITE_KEY || null });
+});
 
 // Health check
 app.get('/api/health', (req, res) => {
     res.json({ status: 'ok', timestamp: new Date().toISOString(), version: '1.0.0' });
 });
+
 
 // ─── Bandwidth Benchmark ─────────────────────────────────────────────────────
 // ダウンロード速度計測用: ランダム 500KB ペイロード
