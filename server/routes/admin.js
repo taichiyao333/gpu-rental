@@ -87,20 +87,13 @@ router.delete('/users/:id', authMiddleware, adminOnly, (req, res) => {
     });
   }
 
-  // カスケード削除（トランザクション）
-  const deleteUser = db.transaction(() => {
-    // ポッドを停止
-    db.prepare("UPDATE pods SET status = 'terminated' WHERE renter_id = ?").run(targetId);
-    // 予約をキャンセル
-    db.prepare("UPDATE reservations SET status = 'cancelled' WHERE renter_id = ? AND status IN ('confirmed','pending')").run(targetId);
-    // 使用ログ削除
-    db.prepare('DELETE FROM usage_logs WHERE renter_id = ?').run(targetId);
-    // ユーザー削除
-    db.prepare('DELETE FROM users WHERE id = ?').run(targetId);
-  });
-
   try {
-    deleteUser();
+    // カスケード削除（sql.jsはtransaction未サポートのため個別実行）
+    db.prepare("UPDATE pods SET status = 'terminated' WHERE renter_id = ?").run(targetId);
+    db.prepare("UPDATE reservations SET status = 'cancelled' WHERE renter_id = ? AND status IN ('confirmed','pending')").run(targetId);
+    db.prepare('DELETE FROM usage_logs WHERE renter_id = ?').run(targetId);
+    db.prepare('DELETE FROM users WHERE id = ?').run(targetId);
+
     console.log(`🗑 User #${targetId} (${target.username}) deleted by admin #${req.user.id}`);
     res.json({ success: true, deleted: { id: targetId, username: target.username } });
   } catch (err) {
