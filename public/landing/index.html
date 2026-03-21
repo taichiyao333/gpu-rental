@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="ja">
 
 <head>
@@ -6,10 +6,16 @@
     <meta name="viewport" content="width=device-width,initial-scale=1">
     <title>GPU Rental — 日本初・個人GPU時間貸しプラットフォーム</title>
     <meta name="description" content="使っていないPCのGPUを時間貸しして収益を得るか、高性能GPUを低価格でレンタル。RTX 4090が¥650/hから。">
+    <!-- Resource Hints: 接続を事前確立して読み込みを高速化 -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="dns-prefetch" href="//gpurental.jp">
+    <link rel="dns-prefetch" href="//translate.google.com">
+    <!-- フォント: display=swap で初期表示をブロックしない -->
     <link
         href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;600&display=swap"
-        rel="stylesheet">
+        rel="stylesheet" media="print" onload="this.media='all'">
+    <noscript><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet"></noscript>
     <style>
         :root {
             --bg: #07070f;

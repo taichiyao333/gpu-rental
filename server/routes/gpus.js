@@ -4,36 +4,49 @@ const { getDb } = require('../db/database');
 const { getGpuNodesWithStats, fetchGpuProcesses } = require('../services/gpuManager');
 const { authMiddleware, adminOnly } = require('../middleware/auth');
 
-// GET /api/gpus/stats - public: platform statistics (no auth required)
+// ── シンプルなメモリキャッシュ ──────────────────────────────────────
+const _cache = {};
+function memCache(key, ttlMs, fn) {
+    const now = Date.now();
+    if (_cache[key] && now - _cache[key].ts < ttlMs) {
+        return _cache[key].data;
+    }
+    const data = fn();
+    _cache[key] = { data, ts: now };
+    return data;
+}
+
+// GET /api/gpus/stats - public: platform statistics (30秒キャッシュ)
 router.get('/stats', (req, res) => {
     try {
-        const db = getDb();
-        const gpuTotal = db.prepare("SELECT COUNT(*) as c FROM gpu_nodes").get().c;
-        const gpuAvail = db.prepare("SELECT COUNT(*) as c FROM gpu_nodes WHERE status = 'available'").get().c;
-        const gpuRented = db.prepare("SELECT COUNT(*) as c FROM gpu_nodes WHERE status = 'rented'").get().c;
-        const activePods = db.prepare("SELECT COUNT(*) as c FROM pods WHERE status IN ('running','paused')").get().c;
-        const userCount = db.prepare("SELECT COUNT(*) as c FROM users").get().c;
-        res.json({
-            gpu_total: gpuTotal,    // 登録GPU総数
-            gpu_avail: gpuAvail,    // 稼働中（利用可能）台数
-            gpu_rented: gpuRented,   // 使用中台数
-            active_pods: activePods,  // 稼働中Pod数
-            user_count: userCount,   // 登録ユーザー数
+        const data = memCache('gpuStats', 30000, () => {
+            const db = getDb();
+            return {
+                gpu_total:   db.prepare("SELECT COUNT(*) as c FROM gpu_nodes").get().c,
+                gpu_avail:   db.prepare("SELECT COUNT(*) as c FROM gpu_nodes WHERE status = 'available'").get().c,
+                gpu_rented:  db.prepare("SELECT COUNT(*) as c FROM gpu_nodes WHERE status = 'rented'").get().c,
+                active_pods: db.prepare("SELECT COUNT(*) as c FROM pods WHERE status IN ('running','paused')").get().c,
+                user_count:  db.prepare("SELECT COUNT(*) as c FROM users").get().c,
+            };
         });
+        res.setHeader('Cache-Control', 'public, max-age=30, stale-while-revalidate=60');
+        res.json(data);
     } catch (err) {
         res.status(500).json({ error: err.message });
     }
 });
 
-// GET /api/gpus - public: list all available GPUs
+// GET /api/gpus - public: list all available GPUs (10秒キャッシュ)
 router.get('/', (req, res) => {
     try {
-        const nodes = getGpuNodesWithStats();
+        const nodes = memCache('gpuList', 10000, () => getGpuNodesWithStats());
+        res.setHeader('Cache-Control', 'public, max-age=10, stale-while-revalidate=30');
         res.json(nodes);
     } catch (err) {
         res.status(500).json({ error: err.message });
     }
 });
+
 
 // GET /api/gpus/:id - GPU detail
 router.get('/:id', (req, res) => {

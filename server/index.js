@@ -137,13 +137,31 @@ app.get('/pricing', (req, res) => res.sendFile(path.join(__dirname, '../public/l
 app.get('/pricing.html', (req, res) => res.sendFile(path.join(__dirname, '../public/landing/pricing.html')));
 
 // Static files - serve each UI as a subdirectory
-app.use(express.static(path.join(__dirname, '../public')));
-app.use('/', express.static(path.join(__dirname, '../public/landing')));
-app.use('/portal', express.static(path.join(__dirname, '../public/portal')));
-app.use('/workspace', express.static(path.join(__dirname, '../public/workspace')));
-app.use('/admin', express.static(path.join(__dirname, '../public/admin')));
-app.use('/provider', express.static(path.join(__dirname, '../public/provider')));
-app.use('/mypage', express.static(path.join(__dirname, '../public/mypage')));
+// キャッシュ設定: CSS/JS/画像は7日間ブラウザキャッシュ, HTMLは毎回確認
+const staticOpts = {
+    maxAge: '7d',
+    setHeaders: (res, filePath) => {
+        // HTMLは常に最新を取得（no-cache）
+        if (filePath.endsWith('.html')) {
+            res.setHeader('Cache-Control', 'no-cache, must-revalidate');
+        } else if (/\.(css|js)$/.test(filePath)) {
+            // CSS/JSは長期キャッシュ
+            res.setHeader('Cache-Control', 'public, max-age=604800, stale-while-revalidate=86400');
+        } else if (/\.(png|jpg|jpeg|gif|svg|ico|webp|woff2|woff|ttf)$/.test(filePath)) {
+            // 画像/フォントは30日キャッシュ
+            res.setHeader('Cache-Control', 'public, max-age=2592000, immutable');
+        }
+    }
+};
+
+app.use(express.static(path.join(__dirname, '../public'), staticOpts));
+app.use('/', express.static(path.join(__dirname, '../public/landing'), staticOpts));
+app.use('/portal', express.static(path.join(__dirname, '../public/portal'), staticOpts));
+app.use('/workspace', express.static(path.join(__dirname, '../public/workspace'), staticOpts));
+app.use('/admin', express.static(path.join(__dirname, '../public/admin'), staticOpts));
+app.use('/provider', express.static(path.join(__dirname, '../public/provider'), staticOpts));
+app.use('/mypage', express.static(path.join(__dirname, '../public/mypage'), staticOpts));
+
 
 // Root → landing page
 app.get('/', (req, res) => res.sendFile(path.join(__dirname, '../public/landing/index.html')));
