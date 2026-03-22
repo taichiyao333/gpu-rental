@@ -729,15 +729,27 @@
 
                         <!-- Windows手順 -->
                         <div id="agentWin">
-                            <div style="font-size:.8rem;color:var(--text2);margin-bottom:.5rem;font-weight:600">① エージェントをダウンロード</div>
-                            <div style="background:var(--bg3);border-radius:8px;padding:.75rem;margin-bottom:.75rem;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:.5rem">
-                                <div style="font-size:.8rem;color:var(--text2)">🔗 <a href="/provider/" style="color:var(--accent);font-weight:600">プロバイダーポータル</a> → 「エージェントをダウンロード」ボタン</div>
-                                <a href="/provider/" style="padding:.4rem .9rem;background:linear-gradient(135deg,var(--primary),#8b5cf6);color:#fff;border-radius:7px;font-size:.78rem;font-weight:700;text-decoration:none;flex-shrink:0">📥 ポータルへ行く</a>
+                            <div style="font-size:.8rem;color:var(--text2);margin-bottom:.5rem;font-weight:600">① サーバープログラムをダウンロード</div>
+                            <div style="background:var(--bg3);border-radius:8px;padding:.875rem;margin-bottom:.75rem">
+                                <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:.5rem;margin-bottom:.625rem">
+                                    <div>
+                                        <div style="font-size:.82rem;font-weight:700;color:var(--text);margin-bottom:.2rem">📦 GPURental Server（ZIP）</div>
+                                        <div style="font-size:.75rem;color:var(--text3)">GitHubから最新版をダウンロード</div>
+                                    </div>
+                                    <a href="https://github.com/taichiyao333/gpu-rental/archive/refs/heads/main.zip"
+                                       style="padding:.5rem 1.1rem;background:linear-gradient(135deg,var(--primary),#8b5cf6);color:#fff;border-radius:8px;font-size:.82rem;font-weight:700;text-decoration:none;flex-shrink:0;display:inline-flex;align-items:center;gap:.4rem"
+                                       target="_blank">
+                                        📥 ZIPでダウンロード
+                                    </a>
+                                </div>
+                                <div style="font-size:.75rem;color:var(--text3);padding-top:.5rem;border-top:1px solid rgba(255,255,255,.06)">
+                                    ダウンロード後、ZIPファイルを展開（右クリック → すべて展開）
+                                </div>
                             </div>
                             <div style="font-size:.8rem;color:var(--text2);margin-bottom:.5rem;font-weight:600">② PowerShellで実行（管理者パワーシェル）</div>
                             <div style="background:var(--bg3);border-radius:8px;padding:.5rem .75rem;margin-bottom:.5rem;display:flex;gap:.5rem;align-items:center">
-                                <code style="flex:1;font-size:.78rem;color:#a08cff;font-family:'JetBrains Mono',monospace">cd gpu-rental-agent</code>
-                                <button onclick="copyCmd('cd gpu-rental-agent')" style="padding:.2rem .5rem;background:rgba(108,71,255,.2);border:none;color:#a08cff;border-radius:4px;font-size:.7rem;cursor:pointer">コピー</button>
+                                <code style="flex:1;font-size:.78rem;color:#a08cff;font-family:'JetBrains Mono',monospace">cd gpu-rental-main</code>
+                                <button onclick="copyCmd('cd gpu-rental-main')" style="padding:.2rem .5rem;background:rgba(108,71,255,.2);border:none;color:#a08cff;border-radius:4px;font-size:.7rem;cursor:pointer">コピー</button>
                             </div>
                             <div style="background:var(--bg3);border-radius:8px;padding:.5rem .75rem;margin-bottom:.5rem;display:flex;gap:.5rem;align-items:center">
                                 <code style="flex:1;font-size:.78rem;color:#a08cff;font-family:'JetBrains Mono',monospace">npm install</code>
@@ -751,14 +763,14 @@
 
                         <!-- macOS/Linux手順 -->
                         <div id="agentMac" style="display:none">
-                            <div style="font-size:.8rem;color:var(--text2);margin-bottom:.5rem;font-weight:600">① エージェントをクローン</div>
+                            <div style="font-size:.8rem;color:var(--text2);margin-bottom:.5rem;font-weight:600">① リポジトリをクローン</div>
                             <div style="background:var(--bg3);border-radius:8px;padding:.5rem .75rem;margin-bottom:.5rem;display:flex;gap:.5rem;align-items:center">
-                                <code style="flex:1;font-size:.78rem;color:#a08cff;font-family:'JetBrains Mono',monospace">git clone https://github.com/gpurental/agent.git</code>
-                                <button onclick="copyCmd('git clone https://github.com/gpurental/agent.git')" style="padding:.2rem .5rem;background:rgba(108,71,255,.2);border:none;color:#a08cff;border-radius:4px;font-size:.7rem;cursor:pointer">コピー</button>
+                                <code style="flex:1;font-size:.78rem;color:#a08cff;font-family:'JetBrains Mono',monospace">git clone https://github.com/taichiyao333/gpu-rental.git</code>
+                                <button onclick="copyCmd('git clone https://github.com/taichiyao333/gpu-rental.git')" style="padding:.2rem .5rem;background:rgba(108,71,255,.2);border:none;color:#a08cff;border-radius:4px;font-size:.7rem;cursor:pointer">コピー</button>
                             </div>
                             <div style="background:var(--bg3);border-radius:8px;padding:.5rem .75rem;margin-bottom:.5rem;display:flex;gap:.5rem;align-items:center">
-                                <code style="flex:1;font-size:.78rem;color:#a08cff;font-family:'JetBrains Mono',monospace">cd agent &amp;&amp; npm install</code>
-                                <button onclick="copyCmd('cd agent && npm install')" style="padding:.2rem .5rem;background:rgba(108,71,255,.2);border:none;color:#a08cff;border-radius:4px;font-size:.7rem;cursor:pointer">コピー</button>
+                                <code style="flex:1;font-size:.78rem;color:#a08cff;font-family:'JetBrains Mono',monospace">cd gpu-rental && npm install</code>
+                                <button onclick="copyCmd('cd gpu-rental && npm install')" style="padding:.2rem .5rem;background:rgba(108,71,255,.2);border:none;color:#a08cff;border-radius:4px;font-size:.7rem;cursor:pointer">コピー</button>
                             </div>
                             <div style="background:var(--bg3);border-radius:8px;padding:.5rem .75rem;margin-bottom:.75rem;display:flex;gap:.5rem;align-items:center">
                                 <code style="flex:1;font-size:.78rem;color:var(--success);font-family:'JetBrains Mono',monospace">npm start</code>
