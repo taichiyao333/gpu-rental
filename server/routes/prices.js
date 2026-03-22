@@ -1,4 +1,4 @@
-﻿/**
+/**
  * GPU Price Catalog API
  * GET  /api/prices              - public: full price list
  * GET  /api/prices/:model       - public: price for one model
@@ -123,6 +123,28 @@ router.delete('/:model', authMiddleware, adminOnly, (req, res) => {
     db.prepare('DELETE FROM gpu_price_catalog WHERE model = ?').run(req.params.model);
     const def = DEFAULT_CATALOG.find(d => d.model === req.params.model);
     res.json({ success: true, reverted_to: def?.default_price || null });
+});
+
+// POST /api/prices/sync-nodes — admin: sync all gpu_nodes prices to current catalog
+// 既存のgpu_nodesの単価を料金表カタログに一括同期する
+router.post('/sync-nodes', authMiddleware, adminOnly, (req, res) => {
+    const db = getDb();
+    const prices = getMergedPrices(db);
+    let updated = 0;
+    const log = [];
+
+    prices.forEach(p => {
+        // gpu_nodes.nameにモデル名が含まれるものを更新
+        const result = db.prepare(
+            `UPDATE gpu_nodes SET price_per_hour = ? WHERE name LIKE ? AND price_per_hour != ?`
+        ).run(p.price_per_hour, `%${p.model}%`, p.price_per_hour);
+        if (result.changes > 0) {
+            updated += result.changes;
+            log.push({ model: p.model, new_price: p.price_per_hour, updated: result.changes });
+        }
+    });
+
+    res.json({ success: true, updated_nodes: updated, log });
 });
 
 // Export default catalog for seeding
