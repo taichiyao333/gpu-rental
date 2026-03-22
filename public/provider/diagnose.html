@@ -848,28 +848,60 @@
                             <!-- ③ コマンド実行 -->
                             <div style="display:flex;align-items:center;gap:.5rem;margin-bottom:.5rem">
                                 <span style="background:var(--primary);color:#fff;border-radius:50%;width:20px;height:20px;display:inline-flex;align-items:center;justify-content:center;font-size:.72rem;font-weight:800;flex-shrink:0">3</span>
-                                <span style="font-size:.85rem;font-weight:700;color:var(--text)">PowerShellで以下のコマンドを順に実行</span>
+                                <span style="font-size:.85rem;font-weight:700;color:var(--text)">PowerShellでフォルダに移動する</span>
                             </div>
-                            <div style="font-size:.78rem;color:var(--text3);margin-bottom:.4rem">まずフォルダを移動します（コピーして貼り付けてEnter）：</div>
-                            <div style="background:var(--bg3);border-radius:8px;padding:.6rem .75rem;margin-bottom:.5rem;display:flex;gap:.5rem;align-items:center">
+                            <div style="font-size:.78rem;color:var(--text3);margin-bottom:.4rem">以下をコピーして貼り付け、Enterを押してください：</div>
+                            <div style="background:var(--bg3);border-radius:8px;padding:.6rem .75rem;margin-bottom:1rem;display:flex;gap:.5rem;align-items:center">
                                 <code style="flex:1;font-size:.82rem;color:#fbbf24;font-family:'JetBrains Mono',monospace">cd C:\gpu-rental-main</code>
                                 <button onclick="copyCmd('cd C:\\gpu-rental-main')" style="padding:.25rem .6rem;background:rgba(251,191,36,.15);border:none;color:#fbbf24;border-radius:4px;font-size:.72rem;cursor:pointer;flex-shrink:0">コピー</button>
                             </div>
-                            <div style="font-size:.78rem;color:var(--text3);margin-bottom:.4rem">必要なライブラリをインストールします（少し時間がかかります）：</div>
+
+                            <!-- ④ .env設定 -->
+                            <div style="display:flex;align-items:center;gap:.5rem;margin-bottom:.5rem">
+                                <span style="background:var(--primary);color:#fff;border-radius:50%;width:20px;height:20px;display:inline-flex;align-items:center;justify-content:center;font-size:.72rem;font-weight:800;flex-shrink:0">4</span>
+                                <span style="font-size:.85rem;font-weight:700;color:var(--text)">設定ファイル（.env）を作成する</span>
+                            </div>
+                            <div style="background:rgba(251,191,36,.06);border:1px solid rgba(251,191,36,.2);border-radius:10px;padding:1rem;margin-bottom:1rem;font-size:.82rem;color:var(--text2);line-height:1.8">
+                                <strong style="color:#fbbf24">⚙️ .envファイルとは？</strong><br>
+                                サーバーの動作に必要な設定（保存先フォルダ・ログイン情報など）を記録するファイルです。<br>
+                                <span style="color:var(--text3);font-size:.75rem">テンプレートが入っているので、コピーするだけでOKです。</span>
+                            </div>
+                            <div style="font-size:.78rem;color:var(--text3);margin-bottom:.4rem">以下のコマンドで、テンプレートを <code style="color:var(--text);font-family:'JetBrains Mono',monospace">.env</code> としてコピーします：</div>
                             <div style="background:var(--bg3);border-radius:8px;padding:.6rem .75rem;margin-bottom:.5rem;display:flex;gap:.5rem;align-items:center">
+                                <code style="flex:1;font-size:.82rem;color:#a08cff;font-family:'JetBrains Mono',monospace">copy .env.example .env</code>
+                                <button onclick="copyCmd('copy .env.example .env')" style="padding:.25rem .6rem;background:rgba(108,71,255,.2);border:none;color:#a08cff;border-radius:4px;font-size:.72rem;cursor:pointer;flex-shrink:0">コピー</button>
+                            </div>
+                            <div style="background:rgba(0,229,160,.06);border:1px solid rgba(0,229,160,.15);border-radius:8px;padding:.75rem;margin-bottom:1rem;font-size:.8rem;color:var(--text2)">
+                                ✅ データの保存先は <code style="color:#fbbf24;font-family:'JetBrains Mono',monospace">C:\gpu-rental-main\data</code> に設定済みです。<br>
+                                <span style="color:var(--text3);font-size:.75rem">Cドライブに展開した場合は変更不要です。そのままお使いください。</span>
+                            </div>
+
+                            <!-- ⑤ npm install -->
+                            <div style="display:flex;align-items:center;gap:.5rem;margin-bottom:.5rem">
+                                <span style="background:var(--primary);color:#fff;border-radius:50%;width:20px;height:20px;display:inline-flex;align-items:center;justify-content:center;font-size:.72rem;font-weight:800;flex-shrink:0">5</span>
+                                <span style="font-size:.85rem;font-weight:700;color:var(--text)">必要なライブラリをインストールする</span>
+                            </div>
+                            <div style="font-size:.78rem;color:var(--text3);margin-bottom:.4rem">少し時間がかかります（1〜3分）。完了まで待ってください：</div>
+                            <div style="background:var(--bg3);border-radius:8px;padding:.6rem .75rem;margin-bottom:1rem;display:flex;gap:.5rem;align-items:center">
                                 <code style="flex:1;font-size:.82rem;color:#a08cff;font-family:'JetBrains Mono',monospace">npm install</code>
                                 <button onclick="copyCmd('npm install')" style="padding:.25rem .6rem;background:rgba(108,71,255,.2);border:none;color:#a08cff;border-radius:4px;font-size:.72rem;cursor:pointer;flex-shrink:0">コピー</button>
                             </div>
-                            <div style="font-size:.78rem;color:var(--text3);margin-bottom:.4rem">サーバーを起動します：</div>
+
+                            <!-- ⑥ npm start -->
+                            <div style="display:flex;align-items:center;gap:.5rem;margin-bottom:.5rem">
+                                <span style="background:var(--primary);color:#fff;border-radius:50%;width:20px;height:20px;display:inline-flex;align-items:center;justify-content:center;font-size:.72rem;font-weight:800;flex-shrink:0">6</span>
+                                <span style="font-size:.85rem;font-weight:700;color:var(--text)">サーバーを起動する</span>
+                            </div>
                             <div style="background:var(--bg3);border-radius:8px;padding:.6rem .75rem;margin-bottom:.75rem;display:flex;gap:.5rem;align-items:center">
                                 <code style="flex:1;font-size:.85rem;color:var(--success);font-family:'JetBrains Mono',monospace;font-weight:700">npm start</code>
                                 <button onclick="copyCmd('npm start')" style="padding:.25rem .6rem;background:rgba(0,229,160,.15);border:none;color:var(--success);border-radius:4px;font-size:.72rem;cursor:pointer;flex-shrink:0">コピー</button>
                             </div>
                             <div style="background:rgba(0,229,160,.06);border:1px solid rgba(0,229,160,.2);border-radius:8px;padding:.75rem;font-size:.8rem;color:var(--text2)">
-                                ✅ PowerShellに <code style="color:var(--success);font-family:'JetBrains Mono',monospace">Server running at http://localhost:3000</code> と表示されれば起動成功です！<br>
+                                ✅ PowerShellに <code style="color:var(--success);font-family:'JetBrains Mono',monospace">Server running at http://localhost:3000</code> と表示されれば起動成功！<br>
                                 <span style="font-size:.75rem;color:var(--text3)">このウィンドウは閉じないでください。閉じるとサーバーが停止します。</span>
                             </div>
                         </div>
+
 
 
                         <!-- macOS/Linux手順 -->

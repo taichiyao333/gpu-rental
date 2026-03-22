@@ -1,4 +1,4 @@
-require('dotenv').config();
+﻿require('dotenv').config();
 const path = require('path');
 
 module.exports = {
@@ -21,8 +21,8 @@ module.exports = {
     },
 
     storage: {
-        basePath: process.env.STORAGE_PATH || 'F:/gpu-rental',
-        dbPath: process.env.DB_PATH || 'F:/gpu-rental/db/platform.db',
+        basePath: process.env.STORAGE_PATH || 'C:/gpu-rental-main/data',
+        dbPath: process.env.DB_PATH || 'C:/gpu-rental-main/data/db/platform.db',
         get usersPath() { return path.join(this.basePath, 'users'); },
         get sharedPath() { return path.join(this.basePath, 'shared'); },
     },
