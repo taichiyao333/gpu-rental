@@ -1034,23 +1034,26 @@ function cancelReservation(id) {
     modal.id = 'cancelResModal';
     modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.75);backdrop-filter:blur(4px);display:flex;align-items:center;justify-content:center;z-index:9999';
     modal.innerHTML = `
-        <div style="background:#13132a;border:1px solid rgba(255,71,87,.35);border-radius:16px;padding:1.75rem;width:400px;max-width:95vw;text-align:center">
-            <div style="font-size:2rem;margin-bottom:0.75rem">🗑️</div>
-            <h3 style="font-size:1rem;font-weight:800;margin-bottom:0.5rem;color:#e8e8f0">予約のキャンセル</h3>
-            <p style="color:#9898b8;font-size:0.85rem;margin-bottom:1.25rem">
-                この予約をキャンセルしますか？<br>
-                <span style="color:#ff4757;font-size:0.78rem">※ キャンセル後は取り消せません。</span>
+        <div style="background:#13132a;border:1px solid rgba(251,191,36,.35);border-radius:16px;padding:1.75rem;width:420px;max-width:95vw;text-align:center">
+            <div style="font-size:2rem;margin-bottom:0.75rem">⚠️</div>
+            <h3 style="font-size:1rem;font-weight:800;margin-bottom:0.5rem;color:#e8e8f0">キャンセルについて</h3>
+            <p style="color:#9898b8;font-size:0.85rem;margin-bottom:1.25rem;line-height:1.7">
+                予約後のキャンセル・返金は<strong style="color:#fbbf24">原則お受けできません。</strong><br>
+                どうしても問題が生じた場合は、<br>運営までお問い合わせください。<br>
+                <a href="mailto:info@metadatalab.net"
+                   style="color:#00d4ff;font-size:0.82rem;margin-top:0.5rem;display:inline-block">
+                    📧 info@metadatalab.net
+                </a>
             </p>
-            <div style="display:flex;gap:0.75rem;justify-content:flex-end">
+            <div style="display:flex;gap:0.75rem;justify-content:center">
                 <button onclick="document.getElementById('cancelResModal').remove()"
-                    style="padding:8px 20px;border-radius:8px;border:1px solid #2a2a5a;background:transparent;color:#9898b8;cursor:pointer;font-size:0.85rem">
-                    戻る
+                    style="padding:8px 28px;border-radius:8px;border:1px solid #2a2a5a;background:transparent;color:#9898b8;cursor:pointer;font-size:0.85rem">
+                    閉じる
                 </button>
-                <button id="confirmCancelResBtn"
-                    onclick="executeCancel(${id})"
-                    style="padding:8px 20px;border-radius:8px;border:none;background:linear-gradient(135deg,#ff4757,#ff6b6b);color:#fff;cursor:pointer;font-size:0.85rem;font-weight:700">
-                    キャンセルする
-                </button>
+                <a href="mailto:info@metadatalab.net?subject=予約キャンセルについて（予約ID:${id}）"
+                   style="padding:8px 28px;border-radius:8px;border:none;background:linear-gradient(135deg,#6c47ff,#00d4ff);color:#fff;cursor:pointer;font-size:0.85rem;font-weight:700;text-decoration:none;display:inline-flex;align-items:center">
+                    運営に問い合わせる
+                </a>
             </div>
         </div>`;
     document.body.appendChild(modal);
