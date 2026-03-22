@@ -1026,18 +1026,49 @@
             const btn = document.getElementById('btnCheckAgent');
             btn.textContent = '⏳ 確認中...';
             btn.disabled = true;
-            box.innerHTML = '<span style="color:var(--text3)">⏳ エージェントへ接続確認中...</span>';
 
+            const isLocalhost = location.hostname === 'localhost' || location.hostname === '127.0.0.1';
+
+            if (!isLocalhost) {
+                // ── 本番URL（gpurental.jp）からアクセスしている場合 ──
+                // ブラウザのセキュリティ上、HTTPSページからlocalhost(HTTP)へのアクセスはブロックされる
+                box.innerHTML = `
+                    <div style="background:rgba(251,191,36,.08);border:1px solid rgba(251,191,36,.25);border-radius:10px;padding:1rem;font-size:.82rem;line-height:1.9">
+                        <div style="font-weight:700;color:#fbbf24;margin-bottom:.5rem">ℹ️ この確認は localhost から行ってください</div>
+                        <div style="color:var(--text2)">
+                            現在このページを <strong style="color:var(--text)">gpurental.jp</strong>（本番サイト）から開いています。<br>
+                            ブラウザのセキュリティ上、本番サイトからローカルPCの起動確認はできません。
+                        </div>
+                        <div style="margin-top:.75rem;padding:.75rem;background:rgba(0,229,160,.06);border:1px solid rgba(0,229,160,.2);border-radius:8px;">
+                            <div style="font-weight:700;color:var(--success);margin-bottom:.4rem">✅ PowerShellに以下が表示されていれば、起動成功です！</div>
+                            <code style="color:var(--success);font-family:'JetBrains Mono',monospace;font-size:.82rem">Server running at http://localhost:3000</code>
+                        </div>
+                        <div style="margin-top:.75rem">
+                            または、ブラウザで以下のURLを開いて確認することもできます：<br>
+                            <a href="http://localhost:3000/api/health" target="_blank"
+                               style="display:inline-flex;align-items:center;gap:.4rem;margin-top:.4rem;padding:.4rem .9rem;background:rgba(0,212,255,.1);border:1px solid rgba(0,212,255,.3);color:var(--accent);border-radius:7px;font-size:.8rem;font-weight:700;text-decoration:none">
+                                🔗 http://localhost:3000/api/health を開く
+                            </a><br>
+                            <span style="font-size:.75rem;color:var(--text3)">{"status":"ok"} と表示されれば起動中です</span>
+                        </div>
+                    </div>`;
+                btn.textContent = '🔄 確認する';
+                btn.disabled = false;
+                return;
+            }
+
+            // ── localhost から直接アクセスしている場合 ── APIチェック実行
+            box.innerHTML = '<span style="color:var(--text3)">⏳ ローカルサーバーへ接続確認中...</span>';
             try {
                 const r = await fetch('/api/health', { signal: AbortSignal.timeout(4000) });
                 const d = await r.json();
                 if (r.ok) {
                     box.innerHTML = `
-                        <div style="display:flex;align-items:center;gap:.75rem;background:rgba(0,229,160,.08);border:1px solid rgba(0,229,160,.25);border-radius:8px;padding:.75rem">
+                        <div style="display:flex;align-items:center;gap:.75rem;background:rgba(0,229,160,.08);border:1px solid rgba(0,229,160,.25);border-radius:8px;padding:.875rem">
                             <span style="font-size:1.5rem">✅</span>
                             <div>
                                 <div style="font-weight:700;color:var(--success)">エージェントは正常に起動しています</div>
-                                <div style="font-size:.75rem;color:var(--text3);margin-top:.2rem">サーバー稼働時間: ${d.uptime ? Math.floor(d.uptime/60) + '分' : '–'} · バージョン: ${d.version || '–'}</div>
+                                <div style="font-size:.75rem;color:var(--text3);margin-top:.2rem">稼働時間: ${d.uptime ? Math.floor(d.uptime/60) + '分' : '–'} · バージョン: ${d.version || '–'}</div>
                             </div>
                         </div>
                         <div style="margin-top:.6rem;font-size:.78rem;color:var(--text2)">✨ 次のステップ「4. GPUを登録する」に進んでください！</div>`;
@@ -1046,7 +1077,7 @@
                 }
             } catch (e) {
                 box.innerHTML = `
-                    <div style="display:flex;align-items:flex-start;gap:.75rem;background:rgba(255,71,87,.08);border:1px solid rgba(255,71,87,.25);border-radius:8px;padding:.75rem">
+                    <div style="display:flex;align-items:flex-start;gap:.75rem;background:rgba(255,71,87,.08);border:1px solid rgba(255,71,87,.25);border-radius:8px;padding:.875rem">
                         <span style="font-size:1.5rem">❌</span>
                         <div>
                             <div style="font-weight:700;color:var(--danger)">エージェントが起動していません</div>
@@ -1054,8 +1085,8 @@
                         </div>
                     </div>
                     <div style="margin-top:.6rem;font-size:.78rem;color:var(--text2)">
-                        👆 上の手順で <code style="background:var(--bg3);padding:.1rem .4rem;border-radius:4px">npm start</code> を実行し、
-                        ターミナルに <span style="color:var(--success)">「Server running」</span> と表示されたら再度「確認する」を押してください。
+                        👆 PowerShellで <code style="background:var(--bg3);padding:.1rem .4rem;border-radius:4px">npm start</code> を実行し、
+                        <span style="color:var(--success)">「Server running」</span> と表示されてから再度「確認する」を押してください。
                     </div>`;
             }
             btn.textContent = '🔄 確認する';
