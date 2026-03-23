@@ -167,9 +167,20 @@ function startSetupUI(callback) {
   const setupHtml = getSetupHTML();
   
   const server = http.createServer((req, res) => {
+    // CORS headers for local requests
+    res.setHeader('Access-Control-Allow-Origin', '*');
+
     if (req.method === 'GET' && req.url === '/') {
       res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
       res.end(setupHtml);
+      return;
+    }
+
+    // ── GPU情報エンドポイント（setupUIから呼ばれる） ──
+    if (req.method === 'GET' && req.url === '/gpu') {
+      const gpus = detectGPU();
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ gpus }));
       return;
     }
     
@@ -181,9 +192,9 @@ function startSetupUI(callback) {
           const data = JSON.parse(body);
           log(`登録試行: ${data.email}`);
           
-          // プラットフォームへの登録
+          // プラットフォームへの登録（正しいエンドポイント）
           const axios = require('axios');
-          const response = await axios.post(`${PLATFORM_URL}/api/provider/register-agent`, {
+          const response = await axios.post(`${PLATFORM_URL}/api/agent/register`, {
             email: data.email,
             agentVersion: AGENT_VERSION,
             gpus: detectGPU(),

@@ -190,3 +190,6 @@ refactor: リファクタリング
 | 比較スタートが動かない | 外部API呼び出し失敗 | landing/index.html の runGpuReal はシミュレーション |
 | サーバー起動しない | ポート3000競合 | `netstat -ano \| findstr 3000` で確認 |
 | FTPデプロイ後に古いUIが表示 | ブラウザキャッシュ | Ctrl+Shift+R でハードリロード |
+| エージェントsetupでGPU表示されない | `/gpu` エンドポイント未実装 | ✅ agent/src/index.js で修正済み |
+| エージェント登録が失敗する | APIパスが `/api/provider/register-agent` だった | ✅ `/api/agent/register` に修正済み |
+| 決済後にポイントが付与されない | Stripe Webhook が localhost に届かない | 本番: Stripe DashboardでWebhook URL を `https://gpurental.jp/api/payments/webhook` に設定 |
