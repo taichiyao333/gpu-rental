@@ -663,13 +663,35 @@
             <div class="start-card">
                 <div class="start-icon">🔍</div>
                 <h2>GPU貸し出しの準備チェック</h2>
-                        <h4>NVIDIAドライバをインストール</h4>
-                        <p><a href="https://www.nvidia.com/drivers" target="_blank"
-                                style="color:var(--accent)">nvidia.com/drivers</a>
-                            から最新ドライバをダウンロードしてインストール。<br>インストール後に再起動が必要です。</p>
-                    </div>
+                <p>
+                    ボタンを押すと、あなたのPCでGPU貸し出しに必要な環境が<br>
+                    すべて整っているか自動的に確認します。<br>
+                    問題があれば、その場で解決手順をご案内します。
+                </p>
+                <div style="display:flex;gap:1rem;justify-content:center;flex-wrap:wrap">
+                    <button class="btn btn-primary" onclick="startDiagnosis()">
+                        🚀 診断を開始する
+                    </button>
+                    <a href="#guide" class="btn btn-secondary" onclick="showGuide()">
+                        📖 セットアップガイドを見る
+                    </a>
                 </div>
-                <div class="guide-step">
+            </div>
+                <div 
+            <!-- ★ それでも面倒な方へ（ガイド冒頭） ★ -->
+            <div style="background:linear-gradient(135deg,rgba(0,229,160,.1),rgba(108,71,255,.12));border:1px solid rgba(0,229,160,.3);border-radius:14px;padding:1.25rem 1.5rem;margin:.75rem 0 1.75rem;display:flex;align-items:center;justify-content:space-between;gap:1rem;flex-wrap:wrap;">
+                <div>
+                    <div style="font-size:.7rem;color:rgba(0,229,160,.9);font-weight:700;text-transform:uppercase;letter-spacing:.6px;margin-bottom:.3rem">&#x1F4A1; それでも面倒な方へ</div>
+                    <div style="font-size:.92rem;font-weight:800;color:#fff;margin-bottom:.25rem">EXEをダウンロードするだけで即接続</div>
+                    <div style="font-size:.79rem;color:rgba(255,255,255,.5)">ダブルクリック &#8594; メール入力 &#8594; 完了。Node.js&#x30FB;設定一切不要。</div>
+                </div>
+                <a href="/downloads/gpurental-agent.exe" download
+                   style="padding:.75rem 1.5rem;background:linear-gradient(135deg,#6c47ff,#00e5a0);color:#fff;font-weight:700;font-size:.88rem;border-radius:10px;text-decoration:none;white-space:nowrap;display:inline-flex;align-items:center;gap:.5rem;box-shadow:0 4px 16px rgba(108,71,255,.35);flex-shrink:0"
+                   onmouseover="this.style.filter='brightness(1.12)'" onmouseout="this.style.filter=''">
+                    &#x1F4E5; エージェントDL
+                </a>
+            </div>
+            class="guide-step">
                     <div class="guide-step-num">1</div>
                     <div class="guide-step-body">
                         <h4>NVIDIAドライバ（CUDA対応版）をインストール</h4>
@@ -993,7 +1015,26 @@
             </div>
 
             <!-- チェック結果 -->
-            <div class="check-list" id="checkList"></div>
+            <div class="check-list" 
+            <!-- ★ それでも面倒な方へ - エージェントDLバナー ★ -->
+            <div style="margin:0 0 1.5rem;background:linear-gradient(135deg,rgba(108,71,255,.15),rgba(0,229,160,.1));border:1px solid rgba(108,71,255,.35);border-radius:16px;padding:1.5rem 1.75rem;display:flex;align-items:center;justify-content:space-between;gap:1.25rem;flex-wrap:wrap;position:relative;overflow:hidden;">
+                <div style="position:absolute;top:-40px;right:-40px;width:180px;height:180px;background:radial-gradient(circle,rgba(0,229,160,.12),transparent 70%);pointer-events:none"></div>
+                <div style="flex:1;min-width:180px">
+                    <div style="font-size:.7rem;text-transform:uppercase;letter-spacing:.8px;color:rgba(0,229,160,.9);font-weight:700;margin-bottom:.35rem">&#x1F4A1; それでも面倒な方へ</div>
+                    <div style="font-size:1.05rem;font-weight:800;color:#fff;line-height:1.35;margin-bottom:.35rem">エージェントをDLするだけで<br><span style="color:#00e5a0">ワンクリック接続</span>できます</div>
+                    <div style="font-size:.8rem;color:rgba(255,255,255,.5);line-height:1.6">ダブルクリックして起動 &#8594; メールアドレスを入力するだけ。<br>Node.js&#x30FB;ドライバ設定&#x30FB;コマンド入力は一切不要です。</div>
+                </div>
+                <div style="display:flex;flex-direction:column;align-items:center;gap:.5rem;flex-shrink:0">
+                    <a href="/downloads/gpurental-agent.exe" download
+                       style="display:inline-flex;align-items:center;gap:.6rem;padding:.9rem 1.8rem;background:linear-gradient(135deg,#6c47ff,#00e5a0);color:#fff;font-weight:800;font-size:.95rem;border-radius:12px;text-decoration:none;box-shadow:0 6px 24px rgba(108,71,255,.4);white-space:nowrap;"
+                       onmouseover="this.style.filter='brightness(1.12)';this.style.transform='translateY(-2px)'"
+                       onmouseout="this.style.filter='';this.style.transform=''">
+                        &#x2B07;&#xFE0F; エージェントをダウンロード (.exe)
+                    </a>
+                    <div style="font-size:.72rem;color:rgba(255,255,255,.35);text-align:center">Windows対応 &middot; 無料 &middot; 約10MB</div>
+                </div>
+            </div>
+            id="checkList"></div>
 
             <!-- アクションボタン -->
             <div class="action-row">
