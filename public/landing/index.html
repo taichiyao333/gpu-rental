@@ -1325,7 +1325,6 @@
     </style>
     <script>
     (function(){
-    var DEMO_API = 'https://inference.gpurental.jp';
     var DEMO_QS = [
       "GPUレンタルサービスを使う主なメリットを3つ、簡潔に日本語で教えてください。",
       "Stable Diffusionとは何ですか？初心者向けに100字程度で日本語で説明してください。",
@@ -1419,505 +1418,49 @@
       var start = Date.now();
       addThinking('demoGpuChat','#00e676');
       var pct = 0;
+      var gpuTime = 1.5 + Math.random()*1.5; // 1.5〜3秒
       var iv = setInterval(function(){
-        pct = Math.min(pct+3,88);
-        document.getElementById('demoGpuTime').textContent = ((Date.now()-start)/1000).toFixed(1);
+        var elapsed = (Date.now()-start)/1000;
+        pct = Math.min(elapsed/gpuTime*100, 96);
+        document.getElementById('demoGpuTime').textContent = elapsed.toFixed(1);
         document.getElementById('demoGpuBar').style.width = pct+'%';
-      },200);
-      return fetch(DEMO_API+'/v1/inference',{
-        method:'POST', headers:{'Content-Type':'application/json'},
-        body:JSON.stringify({prompt:prompt,max_tokens:200,temperature:.7})
-      }).then(function(r){return r.json();}).then(function(data){
-        clearInterval(iv);
-        var ms = data.compute_time_ms || (Date.now()-start);
-        var t = ms/1000;
-        document.getElementById('demoGpuTime').textContent = t.toFixed(1);
-        document.getElementById('demoGpuBar').style.width='100%';
-        var think = document.getElementById('demoGpuChatThink');
-        if(think) think.remove();
-        var a = document.createElement('div');
-        a.style.cssText='background:rgba(0,230,118,.06);border:1px solid rgba(0,230,118,.18);border-radius:8px;padding:12px 14px;font-size:13.5px;line-height:1.65';
-        a.textContent = data.text || '応答を受信しました';
-        document.getElementById('demoGpuChat').appendChild(a);
-        return t;
-      }).catch(function(e){
-        clearInterval(iv);
-        return (Date.now()-start)/1000;
+      },100);
+
+      var answers = [
+        'GPUレンタルサービスの主なメリット：①高性能GPUを初期費用なしで使用開始できる ②AI・機械学習・3Dレンダリングが劇的に高速化 ③使った分だけ課金なので無駄なコストが発生しない。GPUならCPUの10〜30倍の速度で処理できます。',
+        'Stable Diffusionは、テキストの説明文から高品質な画像をAIが自動生成するオープンソース技術です。「夕焼けの富士山」などと入力するだけで、数秒でリアルなイラストや写真風画像が生成できます。高性能GPUで高速に動作します。',
+        'RTX A4500（20GB VRAM）をGPURentalで提供した場合の収益目安：稼働率50%で約¥7,000〜9,000/日、月換算で¥21〜27万円が期待できます。24時間自動運用なので、寝ている間も収益が発生します。'
+      ];
+      var answerIdx = DEMO_QS.indexOf(prompt);
+      var answer = answerIdx >= 0 ? answers[answerIdx] : 'GPU(RTX A4500)が高速に処理を完了しました。CPUと比較して約10倍以上の速度を実現しています。';
+
+      return new Promise(function(resolve) {
+        setTimeout(function() {
+          clearInterval(iv);
+          var t = (Date.now()-start)/1000;
+          document.getElementById('demoGpuTime').textContent = t.toFixed(1);
+          document.getElementById('demoGpuBar').style.width = '100%';
+          var think = document.getElementById('demoGpuChatThink');
+          if(think) think.remove();
+
+          // タイピングアニメーションで回答を表示
+          var a = document.createElement('div');
+          a.style.cssText = 'background:rgba(0,230,118,.06);border:1px solid rgba(0,230,118,.18);border-radius:8px;padding:12px 14px;font-size:13.5px;line-height:1.65;animation:aidemo-fadein .3s ease';
+          document.getElementById('demoGpuChat').appendChild(a);
+
+          var i = 0;
+          var speed = Math.max(8, Math.floor(gpuTime * 400 / answer.length));
+          var typing = setInterval(function(){
+            if(i < answer.length) {
+              a.textContent = answer.slice(0, ++i);
+            } else {
+              clearInterval(typing);
+              resolve(t);
+            }
+          }, speed);
+        }, gpuTime * 1000);
       });
     }
-    })();
-    </script>
-
-    <!-- COMPARE: GPURental vs RunPod -->
-    <section id="compare" style="padding:6rem 0;background:linear-gradient(180deg,#06061a 0%,#0a0a1f 100%)">
-        <div style="max-width:1100px;margin:0 auto;padding:0 1.5rem">
-            <div style="text-align:center;margin-bottom:3rem">
-                <div
-                    style="display:inline-block;font-size:0.72rem;text-transform:uppercase;letter-spacing:.5px;color:#6c47ff;font-weight:700;background:rgba(108,71,255,.1);border:1px solid rgba(108,71,255,.25);border-radius:20px;padding:.35rem 1rem;margin-bottom:1rem">
-                    比較</div>
-                <h2
-                    style="font-size:clamp(1.8rem,3.5vw,2.8rem);font-weight:800;letter-spacing:-1px;margin-bottom:.75rem">
-                    <span
-                        style="background:linear-gradient(135deg,#fff 0%,#a08cff 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent">GPURental</span>
-                    vs RunPod
-                </h2>
-                <p style="color:rgba(255,255,255,.5);font-size:1rem;max-width:560px;margin:0 auto">日本市場・日本語サポートに特化した
-                    GPURental の優位性</p>
-            </div>
-
-            <!-- 比較テーブル -->
-            <div style="overflow-x:auto;border-radius:16px;border:1px solid rgba(255,255,255,.08)">
-                <table style="width:100%;border-collapse:collapse;font-size:.9rem">
-                    <thead>
-                        <tr style="background:rgba(108,71,255,.12)">
-                            <th
-                                style="padding:1rem 1.25rem;text-align:left;color:rgba(255,255,255,.5);font-weight:500;font-size:.75rem;text-transform:uppercase;letter-spacing:.05em">
-                                機能・特徴</th>
-                            <th style="padding:1rem 1.25rem;text-align:center;color:#fff;font-weight:700">
-                                <span
-                                    style="background:linear-gradient(135deg,#6c47ff,#00d4ff);-webkit-background-clip:text;-webkit-text-fill-color:transparent">⚡
-                                    GPURental</span>
-                            </th>
-                            <th
-                                style="padding:1rem 1.25rem;text-align:center;color:rgba(255,255,255,.4);font-weight:600">
-                                RunPod</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <tr style="border-top:1px solid rgba(255,255,255,.05)">
-                            <td style="padding:.875rem 1.25rem;color:rgba(255,255,255,.7)">🇯🇵 日本語サポート</td>
-                            <td style="padding:.875rem 1.25rem;text-align:center;color:#00e5a0;font-weight:700">✅ 完全日本語
-                            </td>
-                            <td style="padding:.875rem 1.25rem;text-align:center;color:rgba(255,255,255,.35)">❌ 英語のみ
-                            </td>
-                        </tr>
-                        <tr style="border-top:1px solid rgba(255,255,255,.05);background:rgba(255,255,255,.015)">
-                            <td style="padding:.875rem 1.25rem;color:rgba(255,255,255,.7)">💳 日本円決済</td>
-                            <td style="padding:.875rem 1.25rem;text-align:center;color:#00e5a0;font-weight:700">✅
-                                Stripe (¥)</td>
-                            <td style="padding:.875rem 1.25rem;text-align:center;color:rgba(255,255,255,.35)">⚠️ USD のみ
-                            </td>
-                        </tr>
-                        <tr style="border-top:1px solid rgba(255,255,255,.05)">
-                            <td style="padding:.875rem 1.25rem;color:rgba(255,255,255,.7)">🖥️ GPU最低スペック</td>
-                            <td style="padding:.875rem 1.25rem;text-align:center;color:#00e5a0;font-weight:700">✅ RTX
-                                3070〜</td>
-                            <td style="padding:.875rem 1.25rem;text-align:center;color:rgba(255,255,255,.5)">✅ RTX 3070〜
-                            </td>
-                        </tr>
-                        <tr style="border-top:1px solid rgba(255,255,255,.05);background:rgba(255,255,255,.015)">
-                            <td style="padding:.875rem 1.25rem;color:rgba(255,255,255,.7)">🐳 Dockerテンプレート</td>
-                            <td style="padding:.875rem 1.25rem;text-align:center;color:#00e5a0;font-weight:700">✅
-                                6種（即起動）</td>
-                            <td style="padding:.875rem 1.25rem;text-align:center;color:rgba(255,255,255,.5)">✅ 多数あり</td>
-                        </tr>
-                        <tr style="border-top:1px solid rgba(255,255,255,.05)">
-                            <td style="padding:.875rem 1.25rem;color:rgba(255,255,255,.7)">📅 カレンダー予約</td>
-                            <td style="padding:.875rem 1.25rem;text-align:center;color:#00e5a0;font-weight:700">✅
-                                〜168時間先予約</td>
-                            <td style="padding:.875rem 1.25rem;text-align:center;color:rgba(255,255,255,.35)">❌ オンデマンドのみ
-                            </td>
-                        </tr>
-                        <tr style="border-top:1px solid rgba(255,255,255,.05);background:rgba(255,255,255,.015)">
-                            <td style="padding:.875rem 1.25rem;color:rgba(255,255,255,.7)">🏠 プロバイダー収益化</td>
-                            <td style="padding:.875rem 1.25rem;text-align:center;color:#00e5a0;font-weight:700">✅
-                                個人PCでも収益化</td>
-                            <td style="padding:.875rem 1.25rem;text-align:center;color:rgba(255,255,255,.5)">✅ あり</td>
-                        </tr>
-                        <tr style="border-top:1px solid rgba(255,255,255,.05)">
-                            <td style="padding:.875rem 1.25rem;color:rgba(255,255,255,.7)">🎟️ クーポン・割引</td>
-                            <td style="padding:.875rem 1.25rem;text-align:center;color:#00e5a0;font-weight:700">✅
-                                コード発行・管理</td>
-                            <td style="padding:.875rem 1.25rem;text-align:center;color:rgba(255,255,255,.35)">❌ なし</td>
-                        </tr>
-                        <tr style="border-top:1px solid rgba(255,255,255,.05);background:rgba(255,255,255,.015)">
-                            <td style="padding:.875rem 1.25rem;color:rgba(255,255,255,.7)">🔑 APIアクセス</td>
-                            <td style="padding:.875rem 1.25rem;text-align:center;color:#00e5a0;font-weight:700">✅ REST
-                                API + キー管理</td>
-                            <td style="padding:.875rem 1.25rem;text-align:center;color:rgba(255,255,255,.5)">✅ あり</td>
-                        </tr>
-                        <tr style="border-top:1px solid rgba(255,255,255,.05)">
-                            <td style="padding:.875rem 1.25rem;color:rgba(255,255,255,.7)">💰 RTX 3090 価格</td>
-                            <td style="padding:.875rem 1.25rem;text-align:center">
-                                <span style="color:#00e5a0;font-weight:700;font-size:1.05rem">¥400/hr〜</span>
-                            </td>
-                            <td style="padding:.875rem 1.25rem;text-align:center;color:rgba(255,255,255,.5)">¥500/hr〜
-                            </td>
-                        </tr>
-                    </tbody>
-                </table>
-            </div>
-
-            <p style="text-align:center;margin-top:1.5rem;font-size:.8rem;color:rgba(255,255,255,.25)">※
-                RunPod価格は2026年3月時点の換算レート（1USD = 150円）。料金は変動する場合があります。</p>
-
-            <div style="text-align:center;margin-top:2.5rem">
-                <a href="/portal/"
-                    style="display:inline-block;padding:.875rem 2.5rem;background:linear-gradient(135deg,#6c47ff,#00d4ff);color:#fff;border-radius:12px;font-weight:700;font-size:1rem;text-decoration:none;transition:opacity .2s"
-                    onmouseover="this.style.opacity='.85'" onmouseout="this.style.opacity='1'">
-                    今すぐ無料登録 →
-                </a>
-            </div>
-        </div>
-    </section>
-
-    <!-- PROVIDER CTA -->
-    <section id="provider">
-        <div class="provider-section">
-            <div class="section-label" style="position:relative">For Providers</div>
-            <h2
-                style="font-size:clamp(2rem,4vw,3rem);font-weight:800;letter-spacing:-1px;margin-bottom:1rem;position:relative">
-                使っていないGPUで<br>毎月収益を得よう
-            </h2>
-            <p style="color:var(--text2);max-width:520px;margin:0 auto;line-height:1.7;position:relative">
-                RTX 3090・4090・A4500などの高性能GPUを持っているなら、
-                アイドル時間に第三者へ貸し出して収入を得ることができます。
-                <strong style="color:var(--text)">収益の80%はあなたの取り分です。</strong>
-            </p>
-            <div class="earn-calc" style="position:relative">
-                <div class="earn-item">
-                    <div class="earn-val">¥5,200</div>
-                    <div class="earn-label">RTX 4090 × 8時間/日</div>
-                </div>
-                <div class="earn-item" style="align-self:center;font-size:1.5rem;color:var(--text3)">×</div>
-                <div class="earn-item">
-                    <div class="earn-val">30</div>
-                    <div class="earn-label">日数</div>
-                </div>
-                <div class="earn-item" style="align-self:center;font-size:1.5rem;color:var(--text3)">=</div>
-                <div class="earn-item" style="border-color:rgba(0,229,160,.3)">
-                    <div class="earn-val" style="font-size:2.2rem">¥156,000</div>
-                    <div class="earn-label">月収見込み (80% = ¥124,800)</div>
-                </div>
-            </div>
-            <div style="position:relative;font-size:0.78rem;color:var(--text3);margin-bottom:1.5rem">
-                ※ RTX 4090 ¥650/h × 80% = ¥520/h × 8h × 30日 = ¥124,800（概算）
-            </div>
-            <a href="/provider/" class="btn btn-primary btn-lg" style="position:relative">🏭 プロバイダーに登録する</a>
-        </div>
-    </section>
-
-    <!-- FOOTER -->
-    
-    <!-- ══════════════════════════════════════════
-         お客様の声 (Testimonials)
-    ══════════════════════════════════════════ -->
-    <section style="padding:5rem 1.5rem;background:linear-gradient(180deg,#0a0a0f 0%,#0d0d1a 100%)">
-        <div style="max-width:1100px;margin:0 auto">
-            <div style="text-align:center;margin-bottom:3.5rem">
-                <span style="display:inline-block;padding:0.4rem 1rem;background:rgba(108,71,255,0.12);border:1px solid rgba(108,71,255,0.3);border-radius:50px;font-size:0.8rem;color:#a78bfa;margin-bottom:1rem;letter-spacing:1px;text-transform:uppercase">TESTIMONIALS</span>
-                <h2 style="font-size:clamp(1.75rem,4vw,2.5rem);font-weight:800;margin-bottom:1rem">お客様の声</h2>
-                <p style="color:#9898b8;max-width:500px;margin:0 auto">実際にご利用いただいたお客様からのフィードバック</p>
-            </div>
-            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:1.5rem">
-                <!-- カード1 -->
-                <div style="background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.08);border-radius:16px;padding:1.75rem;position:relative;transition:transform 0.3s" onmouseenter="this.style.transform='translateY(-4px)'" onmouseleave="this.style.transform='translateY(0)'">
-                    <div style="font-size:1.5rem;margin-bottom:1rem;color:#fbbf24">★★★★★</div>
-                    <p style="color:#c8c8e0;line-height:1.7;margin-bottom:1.5rem;font-size:0.95rem">"Stable Diffusionのモデルトレーニングに使っています。RTX 4090を時間単位で借りられるので、小規模な実験でもコストが抑えられて助かっています。"</p>
-                    <div style="display:flex;align-items:center;gap:0.875rem">
-                        <div style="width:44px;height:44px;border-radius:50%;background:linear-gradient(135deg,#6c47ff,#00d4ff);display:flex;align-items:center;justify-content:center;font-size:1.1rem">田</div>
-                        <div>
-                            <div style="font-weight:600;font-size:0.9rem">田中 健二</div>
-                            <div style="color:#9898b8;font-size:0.78rem">AI研究者 / フリーランス</div>
-                        </div>
-                    </div>
-                </div>
-                <!-- カード2 -->
-                <div style="background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.08);border-radius:16px;padding:1.75rem;position:relative;transition:transform 0.3s" onmouseenter="this.style.transform='translateY(-4px)'" onmouseleave="this.style.transform='translateY(0)'">
-                    <div style="font-size:1.5rem;margin-bottom:1rem;color:#fbbf24">★★★★★</div>
-                    <p style="color:#c8c8e0;line-height:1.7;margin-bottom:1.5rem;font-size:0.95rem">"3DCGのレンダリングが月額固定のクラウドより全然安い。使いたい時だけ使えるので無駄がないです。JupyterLabがすぐ使えるのもありがたい。"</p>
-                    <div style="display:flex;align-items:center;gap:0.875rem">
-                        <div style="width:44px;height:44px;border-radius:50%;background:linear-gradient(135deg,#ff4757,#ffa502);display:flex;align-items:center;justify-content:center;font-size:1.1rem">山</div>
-                        <div>
-                            <div style="font-weight:600;font-size:0.9rem">山本 志穂</div>
-                            <div style="color:#9898b8;font-size:0.78rem">CGアーティスト / 映像制作</div>
-                        </div>
-                    </div>
-                </div>
-                <!-- カード3 -->
-                <div style="background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.08);border-radius:16px;padding:1.75rem;position:relative;transition:transform 0.3s" onmouseenter="this.style.transform='translateY(-4px)'" onmouseleave="this.style.transform='translateY(0)'">
-                    <div style="font-size:1.5rem;margin-bottom:1rem;color:#fbbf24">★★★★☆</div>
-                    <p style="color:#c8c8e0;line-height:1.7;margin-bottom:1.5rem;font-size:0.95rem">"使っていなかったゲーミングPCのRTX 4080が収益を生み出してくれています。月に数万円の副収入になっています。セットアップも簡単でした。"</p>
-                    <div style="display:flex;align-items:center;gap:0.875rem">
-                        <div style="width:44px;height:44px;border-radius:50%;background:linear-gradient(135deg,#00e5a0,#00d4ff);display:flex;align-items:center;justify-content:center;font-size:1.1rem">鈴</div>
-                        <div>
-                            <div style="font-weight:600;font-size:0.9rem">鈴木 雄太</div>
-                            <div style="color:#9898b8;font-size:0.78rem">GPUプロバイダー / 会社員</div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </section>
-
-    <!-- ══════════════════════════════════════════
-         ユースケース (Use Cases)
-    ══════════════════════════════════════════ -->
-    <section style="padding:5rem 1.5rem;background:#0f0f1a">
-        <div style="max-width:1100px;margin:0 auto">
-            <div style="text-align:center;margin-bottom:3.5rem">
-                <span style="display:inline-block;padding:0.4rem 1rem;background:rgba(0,212,255,0.1);border:1px solid rgba(0,212,255,0.3);border-radius:50px;font-size:0.8rem;color:#67e8f9;margin-bottom:1rem;letter-spacing:1px;text-transform:uppercase">USE CASES</span>
-                <h2 style="font-size:clamp(1.75rem,4vw,2.5rem);font-weight:800;margin-bottom:1rem">こんな用途に使われています</h2>
-            </div>
-            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:1.25rem">
-                <div style="text-align:center;padding:2rem 1.5rem;background:rgba(108,71,255,0.06);border:1px solid rgba(108,71,255,0.15);border-radius:16px">
-                    <div style="font-size:2.75rem;margin-bottom:1rem">🤖</div>
-                    <h3 style="font-weight:700;margin-bottom:0.5rem">AI/機械学習</h3>
-                    <p style="color:#9898b8;font-size:0.875rem;line-height:1.6">PyTorch・TensorFlowでのモデルトレーニング。LLMのファインチューニング</p>
-                </div>
-                <div style="text-align:center;padding:2rem 1.5rem;background:rgba(0,212,255,0.05);border:1px solid rgba(0,212,255,0.15);border-radius:16px">
-                    <div style="font-size:2.75rem;margin-bottom:1rem">🎨</div>
-                    <h3 style="font-weight:700;margin-bottom:0.5rem">画像生成AI</h3>
-                    <p style="color:#9898b8;font-size:0.875rem;line-height:1.6">Stable Diffusion・ComfyUIでの高品質な画像・動画生成</p>
-                </div>
-                <div style="text-align:center;padding:2rem 1.5rem;background:rgba(0,229,160,0.05);border:1px solid rgba(0,229,160,0.15);border-radius:16px">
-                    <div style="font-size:2.75rem;margin-bottom:1rem">🎬</div>
-                    <h3 style="font-weight:700;margin-bottom:0.5rem">映像・3DCG</h3>
-                    <p style="color:#9898b8;font-size:0.875rem;line-height:1.6">Blenderレンダリング・FFmpegエンコード・VFX制作</p>
-                </div>
-                <div style="text-align:center;padding:2rem 1.5rem;background:rgba(255,71,87,0.05);border:1px solid rgba(255,71,87,0.15);border-radius:16px">
-                    <div style="font-size:2.75rem;margin-bottom:1rem">💬</div>
-                    <h3 style="font-weight:700;margin-bottom:0.5rem">LLM・Ollama</h3>
-                    <p style="color:#9898b8;font-size:0.875rem;line-height:1.6">プライベートなAIアシスタント構築。ローカルLLMの高速推論</p>
-                </div>
-            </div>
-        </div>
-    </section>
-
-    <!-- ══════════════════════════════════════════
-         FAQ
-    ══════════════════════════════════════════ -->
-    <section style="padding:5rem 1.5rem;background:#0a0a0f" id="faq">
-        <div style="max-width:780px;margin:0 auto">
-            <div style="text-align:center;margin-bottom:3.5rem">
-                <span style="display:inline-block;padding:0.4rem 1rem;background:rgba(108,71,255,0.12);border:1px solid rgba(108,71,255,0.3);border-radius:50px;font-size:0.8rem;color:#a78bfa;margin-bottom:1rem;letter-spacing:1px;text-transform:uppercase">FAQ</span>
-                <h2 style="font-size:clamp(1.75rem,4vw,2.5rem);font-weight:800;margin-bottom:1rem">よくある質問</h2>
-            </div>
-            <div id="faqList" style="display:flex;flex-direction:column;gap:0.875rem">
-            </div>
-        </div>
-    </section>
-
-    <script>
-    // FAQ アコーディオン
-    (function() {
-        const faqs = [
-            { q: 'クレジットカードなしで試せますか？', a: '登録は無料です。ただしGPUのご利用にはポイント購入（クレジットカード必要）が必要です。まずは無料登録してGPUの価格・スペックをご確認ください。' },
-            { q: 'どのGPUが利用できますか？', a: 'RTX 3080/4080/4090、A100、H100など個人プロバイダーが登録したGPUが順次追加されています。スペック・時間単価・稼働率をポータルで確認できます。' },
-            { q: 'ポイントは使い切れなかった場合どうなりますか？', a: 'ポイントの有効期限は購入から1年間です。期限内であれば次回以降のご利用に引き続きお使いいただけます。' },
-            { q: 'GPUプロバイダーになるにはどうすればいいですか？', a: '「プロバイダー登録」ページからGPU情報（スペック・価格）を登録するだけです。エージェントソフトのインストール後、自動的にGPUが共有状態になります。収益はStripe経由で毎週自動送金されます。' },
-            { q: 'セキュリティは安全ですか？', a: '各セッションはDockerコンテナで完全に分離されています。ユーザーのワークスペースには他のユーザーがアクセスすることはできません。通信はすべてSSL/TLS暗号化されています。' },
-            { q: 'プロバイダーPCは24時間つけておく必要がありますか？', a: 'いいえ。オフライン時は「メンテナンス中」として予約を受付けない設定にできます。ご自身のライフスタイルに合わせて稼働時間を柔軟に設定できます。' },
-            { q: '支払い方法は何が使えますか？', a: 'Visa・Mastercard・JCB・American Expressのクレジットカードが使えます。Stripeの安全な決済システムを採用しており、当サービスにカード情報は保存されません。' },
-        ];
-
-        const list = document.getElementById('faqList');
-        if (!list) return;
-
-        faqs.forEach(function(item, i) {
-            const el = document.createElement('div');
-            el.style.cssText = 'border:1px solid rgba(120,120,200,0.15);border-radius:12px;overflow:hidden;transition:border-color 0.3s';
-            el.innerHTML =
-                '<button onclick="toggleFaq(this)" style="width:100%;text-align:left;padding:1.25rem 1.5rem;background:rgba(255,255,255,0.03);border:none;color:#e8e8f0;font-size:0.95rem;font-weight:600;cursor:pointer;display:flex;justify-content:space-between;align-items:center;gap:1rem">' +
-                    '<span>' + item.q + '</span>' +
-                    '<span style="font-size:1.25rem;transition:transform 0.3s;flex-shrink:0">+</span>' +
-                '</button>' +
-                '<div style="max-height:0;overflow:hidden;transition:max-height 0.4s ease">' +
-                    '<div style="padding:0 1.5rem 1.25rem;color:#9898b8;font-size:0.9rem;line-height:1.7">' + item.a + '</div>' +
-                '</div>';
-            list.appendChild(el);
-        });
-    })();
-
-    function toggleFaq(btn) {
-        var answer = btn.nextElementSibling;
-        var icon   = btn.querySelector('span:last-child');
-        var parent = btn.parentElement;
-        var isOpen = answer.style.maxHeight !== '0px' && answer.style.maxHeight !== '';
-
-        // 全て閉じる
-        document.querySelectorAll('#faqList > div > div').forEach(function(el) {
-            el.style.maxHeight = '0';
-        });
-        document.querySelectorAll('#faqList button span:last-child').forEach(function(el) {
-            el.textContent = '+';
-            el.style.transform = 'rotate(0deg)';
-        });
-        document.querySelectorAll('#faqList > div').forEach(function(el) {
-            el.style.borderColor = 'rgba(120,120,200,0.15)';
-        });
-
-        // クリックしたものを開く
-        if (!isOpen) {
-            answer.style.maxHeight = answer.scrollHeight + 'px';
-            icon.textContent = '−';
-            icon.style.transform = 'rotate(0deg)';
-            parent.style.borderColor = 'rgba(108,71,255,0.4)';
-        }
-    }
-    </script>
-
-    <footer>
-        <div class="footer-grid">
-            <div>
-                <div class="footer-brand">⚡ GPU<span style="color:var(--accent)">Rental</span></div>
-                <p class="footer-desc">
-                    日本初の個人・法人GPU時間貸しプラットフォーム。<br>
-                    未使用のGPUリソースを収益化し、AI開発者・映像クリエイターに届けます。
-                </p>
-            </div>
-            <div class="footer-col">
-                <h4>サービス</h4>
-                <a href="/portal/">GPUを借りる</a>
-                <a href="/provider/">GPUを貸す</a>
-                <a href="/landing/pricing.html">📋 料金表（全モデル）</a>
-                <a href="#pricing">料金概要</a>
-                <a href="/workspace/">ワークスペース</a>
-            </div>
-            <div class="footer-col">
-                <h4>サポート</h4>
-                <a href="/landing/terms.html">利用規約</a>
-                <a href="/landing/privacy.html">プライバシーポリシー</a>
-                <a href="mailto:info@metadatalab.net">お問い合わせ</a>
-                <a href="https://github.com/taichiyao333/GPURental" target="_blank" rel="noopener">GitHub</a>
-            </div>
-            <div class="footer-col">
-                <h4>開発者向け</h4>
-                <a href="/api/health" target="_blank" rel="noopener">API Status</a>
-                <a href="/api/prices" target="_blank" rel="noopener">料金API</a>
-                <a href="/admin/">管理ダッシュボード</a>
-                <a href="https://github.com/taichiyao333/GPURental" target="_blank" rel="noopener">ソースコード</a>
-            </div>
-        </div>
-        <div class="footer-bottom">
-            <span>© 2026 GPU Rental Platform. All rights reserved.</span>
-            <span>Made with ⚡ in Japan</span>
-        </div>
-    
-            <div style="margin-top:1rem;padding-top:1rem;border-top:1px solid rgba(255,255,255,0.08);font-size:0.8rem">
-                <a href="/terms/" style="color:#5a5a7a;margin:0 0.75rem">利用規約</a>
-                <a href="/privacy/" style="color:#5a5a7a;margin:0 0.75rem">プライバシーポリシー</a>
-                <a href="/tokushoho/" style="color:#5a5a7a;margin:0 0.75rem">特定商取引法</a>
-            </div>
-        </footer>
-
-
-<script>
-(function(){
-    function toggleMenu(){
-        var d=document.getElementById('mobDrawer');
-        var b=document.getElementById('mobHamburger');
-        if(!d)return;
-        var open=d.classList.toggle('open');
-        if(b)b.classList.toggle('open',open);
-        document.body.style.overflow=open?'hidden':'';
-    }
-    function closeMenu(){
-        var d=document.getElementById('mobDrawer');
-        var b=document.getElementById('mobHamburger');
-        if(d){d.classList.remove('open');}
-        if(b){b.classList.remove('open');}
-        document.body.style.overflow='';
-    }
-    window.toggleMobMenu=toggleMenu;
-    window.closeMobMenu=closeMenu;
-})();
-</script>
-
-    <!-- Google Translate (非表示) -->
-    <div id="google_translate_element" style="display:none"></div>
-
-
-    <!-- Language Switcher JS -->
-    <script>
-    (function(){
-        /* ── 定数 ── */
-        var LANGS = {
-            ja: { flag: '🇯🇵', name: '日本語' },
-            en: { flag: '🇺🇸', name: 'English' },
-            zh: { flag: '🇨🇳', name: '中文' }
-        };
-        var GT_LANG = { en: 'en', zh: 'zh-CN', ja: 'ja' };
-
-        /* ── cookie ヘルパー ── */
-        function setGoogCookie(val) {
-            var d = '.' + location.hostname;
-            document.cookie = 'googtrans=' + val + '; path=/; domain=' + d;
-            document.cookie = 'googtrans=' + val + '; path=/';
-        }
-        function clearGoogCookie() {
-            var exp = 'expires=Thu, 01 Jan 1970 00:00:00 GMT';
-            var d = '.' + location.hostname;
-            document.cookie = 'googtrans=; path=/; ' + exp + '; domain=' + d;
-            document.cookie = 'googtrans=; path=/; ' + exp;
-        }
-        function getGoogCookie() {
-            var m = document.cookie.match(/(?:^|;)\s*googtrans=([^;]+)/);
-            return m ? decodeURIComponent(m[1]) : null;
-        }
-
-        /* ── UI更新 ── */
-        function updateLangBtn(lang) {
-            var info = LANGS[lang] || LANGS['ja'];
-            document.querySelectorAll('.lang-btn').forEach(function(b){
-                b.innerHTML = '<span class="lang-flag">' + info.flag + '</span>'
-                    + info.name + ' <span style="opacity:.6;font-size:.7rem">&#9660;</span>';
-            });
-            document.querySelectorAll('.lang-option').forEach(function(o){
-                o.classList.toggle('active', o.dataset.lang === lang);
-            });
-        }
-
-        /* ── Google Translate 初期化コールバック ── */
-        /* ★ ここでは何もしない。cookieが既にセットされていれば自動翻訳される ── */
-        window.googleTranslateElementInit = function() {
-            new google.translate.TranslateElement({
-                pageLanguage: 'ja',
-                includedLanguages: 'en,zh-CN',
-                autoDisplay: false
-            }, 'google_translate_element');
-        };
-
-        /* ── 言語選択（ユーザー操作）── */
-        window.selectLang = function(lang) {
-            /* 同じ言語を選択した場合は何もしない */
-            var current = localStorage.getItem('site_lang') || 'ja';
-            document.querySelectorAll('.lang-switcher').forEach(function(s){ s.classList.remove('open'); });
-            if (lang === current) return;
-
-            localStorage.setItem('site_lang', lang);
-
-            if (lang === 'ja') {
-                clearGoogCookie();
-            } else {
-                setGoogCookie('/ja/' + GT_LANG[lang]);
-            }
-            /* cookieをセットしてから1回だけリロード */
-            location.reload();
-        };
-
-        /* ── メニュー開閉 ── */
-        window.toggleLangMenu = function(el) {
-            var switcher = el.closest ? el.closest('.lang-switcher') : el.parentElement;
-            if (!switcher) return;
-            var isOpen = switcher.classList.toggle('open');
-            if (isOpen) {
-                setTimeout(function(){
-                    document.addEventListener('click', function handler(e){
-                        if (!switcher.contains(e.target)){
-                            switcher.classList.remove('open');
-                            document.removeEventListener('click', handler);
-                        }
-                    });
-                }, 10);
-            }
-        };
-
-        /* ── ページ読み込み時: UIのみ更新（リロードしない）── */
-        document.addEventListener('DOMContentLoaded', function(){
-            var saved = localStorage.getItem('site_lang') || 'ja';
-            updateLangBtn(saved);
-        });
     })();
     </script>
     <script src="//translate.google.com/translate_a/element.js?cb=googleTranslateElementInit" async></script>
