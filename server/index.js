@@ -1,4 +1,4 @@
-﻿require('dotenv').config();
+require('dotenv').config();
 const express = require('express');
 const http = require('http');
 const { Server } = require('socket.io');
@@ -35,6 +35,7 @@ const { router: apiKeyRoutes } = require('./routes/apikeys');
 const diagnosticsRoutes = require('./routes/diagnostics');
 const renderRoutes = require('./routes/render');
 const stripeRoutes = require('./routes/stripe');
+const agentRoutes = require('./routes/agent');
 
 
 // ─── Startup Environment Validation ────────────────────────────────────────
@@ -99,19 +100,21 @@ app.use(helmet({
     // ── CSP: XSS攻撃をブロック ──
     contentSecurityPolicy: {
         directives: {
-            defaultSrc:  ["'self'"],
-            scriptSrc:   ["'self'", "'unsafe-inline'",
-                          "https://translate.google.com", "https://translate.googleapis.com",
-                          "https://www.google.com", "https://www.gstatic.com",
-                          "https://js.stripe.com", "https://cdn.socket.io"],
-            styleSrc:    ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com",
-                          "https://translate.googleapis.com"],
-            fontSrc:     ["'self'", "https://fonts.gstatic.com", "data:"],
-            imgSrc:      ["'self'", "data:", "https:", "blob:"],
-            connectSrc:  ["'self'", "https://api.stripe.com", "wss:", "ws:",
-                          "https://translate.googleapis.com"],
-            frameSrc:    ["https://js.stripe.com", "https://hooks.stripe.com"],
-            objectSrc:   ["'none'"],
+            defaultSrc:    ["'self'"],
+            scriptSrc:     ["'self'", "'unsafe-inline'",
+                            "https://translate.google.com", "https://translate.googleapis.com",
+                            "https://www.google.com", "https://www.gstatic.com",
+                            "https://js.stripe.com", "https://cdn.socket.io"],
+            // onclick="..." 等のインラインイベントハンドラを許可
+            scriptSrcAttr: ["'unsafe-hashes'", "'unsafe-inline'"],
+            styleSrc:      ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com",
+                            "https://translate.googleapis.com"],
+            fontSrc:       ["'self'", "https://fonts.gstatic.com", "data:"],
+            imgSrc:        ["'self'", "data:", "https:", "blob:"],
+            connectSrc:    ["'self'", "https://api.stripe.com", "wss:", "ws:",
+                            "https://translate.googleapis.com"],
+            frameSrc:      ["https://js.stripe.com", "https://hooks.stripe.com"],
+            objectSrc:     ["'none'"],
         }
     },
     // ── HSTS: HTTPS強制 ──
@@ -260,6 +263,66 @@ app.use('/api/diagnose', diagnosticsRoutes);
 app.use('/api/render', renderRoutes(io));
 app.use('/api/stripe', stripeRoutes);
 app.use('/api/admin', adminRoutes);
+app.use('/api/agent', agentRoutes);
+
+// ─── AI Inference Proxy ───────────────────────────────────────────────────────
+// /api/inference/* → FastAPI inference server (port 8000)
+// GPURental AI Kitのag_server.pyにプロキシする
+const inferenceProxy = (() => {
+    const INFERENCE_BASE = process.env.INFERENCE_SERVER_URL || 'http://localhost:8000';
+    return async (req, res) => {
+        const targetPath = req.path.replace(/^\/api\/inference/, '') || '/';
+        const targetUrl = `${INFERENCE_BASE}${targetPath}`;
+        try {
+            const httpModule = require('http');
+            const urlObj = new URL(targetUrl);
+            const options = {
+                hostname: urlObj.hostname,
+                port: urlObj.port || 8000,
+                path: urlObj.pathname + (urlObj.search || '') + (req.url.includes('?') ? (urlObj.search ? '&' : '?') + req.url.split('?')[1] : ''),
+                method: req.method,
+                headers: {
+                    ...req.headers,
+                    host: urlObj.host,
+                    'X-Forwarded-For': req.ip,
+                    'X-GPU-Rental-Proxy': '1',
+                },
+                timeout: 60000,
+            };
+            delete options.headers['content-length']; // will be recalculated
+
+            const proxyReq = httpModule.request(options, (proxyRes) => {
+                res.status(proxyRes.statusCode);
+                Object.entries(proxyRes.headers).forEach(([k, v]) => {
+                    if (!['transfer-encoding'].includes(k.toLowerCase())) res.setHeader(k, v);
+                });
+                proxyRes.pipe(res, { end: true });
+            });
+
+            proxyReq.on('error', (err) => {
+                if (!res.headersSent) {
+                    res.status(503).json({
+                        error: 'inference_server_unavailable',
+                        message: '推論サーバーに接続できません。ag_server.py が起動中か確認してください。',
+                        detail: err.message
+                    });
+                }
+            });
+
+            if (req.body && Object.keys(req.body).length > 0) {
+                const bodyStr = JSON.stringify(req.body);
+                proxyReq.setHeader('Content-Type', 'application/json');
+                proxyReq.setHeader('Content-Length', Buffer.byteLength(bodyStr));
+                proxyReq.write(bodyStr);
+            }
+            proxyReq.end();
+        } catch (err) {
+            res.status(500).json({ error: 'proxy_error', detail: err.message });
+        }
+    };
+})();
+
+app.use('/api/inference', inferenceProxy);
 
 // reCAPTCHA サイトキー公開エンドポイント（秘密キーは返さない）
 app.get('/api/config/recaptcha', (req, res) => {
