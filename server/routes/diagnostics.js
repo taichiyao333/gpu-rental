@@ -71,16 +71,21 @@ router.post('/gpu', async (req, res) => {
             label: 'GPU認識 (nvidia-smi)',
             status: 'error',
             message: 'nvidia-smiが実行できません',
-            detail: nvRaw.stderr || 'コマンドが見つかりません。NVIDIAドライバがインストールされているか確認してください。',
+            detail: nvRaw.stderr || 'NVIDIAドライバがインストールされていません。\n以下の手順でドライバをインストールしてください。',
             fix: {
-                title: 'ドライバのインストール手順',
+                title: 'NVIDIAドライバのインストール手順',
                 steps: [
-                    'NVIDIAドライバダウンロード: https://www.nvidia.com/drivers',
-                    '「GeForce」→ お使いのGPU型番を選択',
-                    'ダウンロードして実行 → 再起動',
-                    'コマンドプロンプトで nvidia-smi を実行して確認',
+                    '① 下のリンクからNVIDIAドライバページを開く',
+                    '② 製品ライン→「GeForce」、お使いのGPU型番を選択',
+                    '③ 最新の「Game Ready Driver」をダウンロード',
+                    '④ インストーラーを実行 →「エクスプレスインストール」を選択',
+                    '⑤ PC再起動後、この診断ページをリロードして再確認',
                 ],
-                commands: ['nvidia-smi'],
+                commands: ['winget install NVIDIA.GeForceExperience', 'nvidia-smi'],
+                links: [
+                    'https://www.nvidia.com/ja-jp/geforce/drivers/',
+                    'https://www.nvidia.com/Download/index.aspx?lang=jp',
+                ],
             },
         });
     }
@@ -103,7 +108,32 @@ router.post('/gpu', async (req, res) => {
             label: 'CUDAドライバ',
             status: nvRaw.success ? 'warning' : 'error',
             message: 'CUDAバージョン取得不可',
-            detail: 'GPUが認識されていないか、ドライバが古い可能性があります (CUDA 11.8以上推奨)',
+            detail: nvRaw.success
+                ? 'ドライバが古い可能性があります。CUDA 11.8以上のドライバへの更新を推奨します。'
+                : 'GPUが認識されていません。NVIDIAドライバ（CUDA対応版）をインストールしてください。',
+            fix: {
+                title: nvRaw.success
+                    ? 'NVIDIAドライバをCUDA対応版に更新する手順'
+                    : 'NVIDIAドライバ（CUDA対応版）のインストール手順',
+                steps: nvRaw.success ? [
+                    '① 下のリンクからNVIDIAドライバページを開く',
+                    '② 「製品タイプ」→「GeForce」、お使いのGPU型番を選択',
+                    '③ 「CUDAツールキット」のバージョンが最新のものを選んでダウンロード',
+                    '④ インストール実行（「エクスプレスインストール」でOK）',
+                    '⑤ PCを再起動後、診断をもう一度実行',
+                ] : [
+                    '① 下のリンクからNVIDIAドライバページを開く',
+                    '② 「製品タイプ」→「GeForce」、お使いのGPU型番を選択',
+                    '③ 最新バージョンをダウンロード（「Game Ready Driver」または「Studio Driver」）',
+                    '④ インストーラーを実行 → 「エクスプレスインストール」を選択',
+                    '⑤ PCを再起動後、診断をもう一度実行して確認',
+                ],
+                commands: ['nvidia-smi'],
+                links: [
+                    'https://www.nvidia.com/ja-jp/geforce/drivers/',
+                    'https://www.nvidia.com/Download/index.aspx?lang=jp',
+                ],
+            },
         });
     }
 
