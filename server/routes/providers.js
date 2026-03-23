@@ -223,4 +223,72 @@ router.get('/earnings', authMiddleware, (req, res) => {
     res.json(summary);
 });
 
+/**
+ * GET /api/providers/my-status - エージェントのオンライン状態 + GPU stats
+ */
+router.get('/my-status', authMiddleware, (req, res) => {
+    const db = getDb();
+    try {
+        const provider = db.prepare(`
+            SELECT agent_status, agent_last_seen, agent_hostname, agent_version,
+                   gpu_info, gpu_stats
+            FROM providers WHERE user_id = ?
+        `).get(req.user.id);
+
+        if (!provider) {
+            return res.json({ online: false, agent_status: 'offline', message: 'エージェント未登録' });
+        }
+
+        // 5分以内にheartbeatがあれば online
+        const lastSeen = provider.agent_last_seen ? new Date(provider.agent_last_seen + ' UTC') : null;
+        const isOnline = provider.agent_status === 'online' &&
+            lastSeen && (Date.now() - lastSeen.getTime()) < 5 * 60 * 1000;
+
+        res.json({
+            online: isOnline,
+            agent_status: isOnline ? 'online' : 'offline',
+            agent_hostname: provider.agent_hostname,
+            agent_version: provider.agent_version,
+            agent_last_seen: provider.agent_last_seen,
+            gpu_info: provider.gpu_info ? JSON.parse(provider.gpu_info) : [],
+            gpu_stats: provider.gpu_stats ? JSON.parse(provider.gpu_stats) : [],
+        });
+    } catch (err) {
+        res.json({ online: false, agent_status: 'offline', error: err.message });
+    }
+});
+
+/**
+ * GET /api/providers/all-status - 全プロバイダーのオンライン状態 (管理者用)
+ */
+router.get('/all-status', authMiddleware, adminOnly, (req, res) => {
+    const db = getDb();
+    try {
+        const providers = db.prepare(`
+            SELECT u.id, u.username, u.email,
+                   p.agent_status, p.agent_last_seen, p.agent_hostname, p.agent_version, p.gpu_info, p.gpu_stats
+            FROM users u
+            LEFT JOIN providers p ON p.user_id = u.id
+            WHERE u.role IN ('provider', 'admin')
+            ORDER BY p.agent_last_seen DESC
+        `).all();
+
+        const result = providers.map(p => {
+            const lastSeen = p.agent_last_seen ? new Date(p.agent_last_seen + ' UTC') : null;
+            const isOnline = p.agent_status === 'online' &&
+                lastSeen && (Date.now() - lastSeen.getTime()) < 5 * 60 * 1000;
+            return {
+                ...p,
+                online: isOnline,
+                gpu_info: p.gpu_info ? JSON.parse(p.gpu_info) : [],
+                gpu_stats: p.gpu_stats ? JSON.parse(p.gpu_stats) : [],
+            };
+        });
+
+        res.json({ providers: result, online_count: result.filter(p => p.online).length });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
 module.exports = router;
