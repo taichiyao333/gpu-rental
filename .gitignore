@@ -48,3 +48,5 @@ temp/
 
 # GPU Rental Storage (F:ドライブのデータは除外)
 # F:/gpu-rental/ は .gitignore の対象外 (別ドライブのため)
+
+agent/node_modules/
