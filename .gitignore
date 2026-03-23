@@ -52,3 +52,6 @@ temp/
 agent/node_modules/
 
 public/downloads/
+
+gpu-monitor/data/
+gpu-monitor/node_modules/
