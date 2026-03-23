@@ -50,3 +50,5 @@ temp/
 # F:/gpu-rental/ は .gitignore の対象外 (別ドライブのため)
 
 agent/node_modules/
+
+public/downloads/

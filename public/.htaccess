@@ -1,0 +1,3 @@
+﻿RewriteEngine On
+RewriteCond %{HTTP_HOST} ^gpurental\.jp$ [NC]
+RewriteRule ^(.*)$ https://www.gpurental.jp/ [R=301,L]
