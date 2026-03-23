@@ -265,10 +265,26 @@ async function runMigrations() {
     "ALTER TABLE users ADD COLUMN stripe_connected INTEGER DEFAULT 0",
     "ALTER TABLE reservations ADD COLUMN stripe_session_id TEXT",
     "ALTER TABLE point_purchases ADD COLUMN stripe_session_id TEXT",
+    // ワンクリックエージェント用トークン
+    "ALTER TABLE users ADD COLUMN agent_token TEXT",
   ];
   for (const sql of alterList) {
     try { db.exec(sql); } catch (_) { /* column already exists */ }
   }
+
+  // ─── Providers (エージェント情報) ─────────────────────────────────────
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS providers (
+      id               INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id          INTEGER NOT NULL UNIQUE,
+      agent_version    TEXT,
+      agent_hostname   TEXT,
+      agent_status     TEXT DEFAULT 'offline', -- 'online'|'offline'
+      agent_last_seen  DATETIME,
+      created_at       DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (user_id) REFERENCES users(id)
+    );
+  `);
 
   // ─── Coupons (クーポンコード) ──────────────────────────────────────
   db.exec(`
