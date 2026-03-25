@@ -28,7 +28,8 @@ async function fetchGpuStats() {
         ].join(',');
 
         const { stdout } = await execAsync(
-            `nvidia-smi --query-gpu=${query} --format=csv,noheader,nounits`
+            `nvidia-smi --query-gpu=${query} --format=csv,noheader,nounits`,
+            { windowsHide: true }
         );
 
         const gpus = stdout.trim().split('\n').map((line, index) => {
@@ -67,7 +68,8 @@ async function fetchGpuStats() {
 async function fetchGpuProcesses() {
     try {
         const { stdout } = await execAsync(
-            'nvidia-smi --query-compute-apps=gpu_index,pid,used_memory,name --format=csv,noheader,nounits'
+            'nvidia-smi --query-compute-apps=gpu_index,pid,used_memory,name --format=csv,noheader,nounits',
+            { windowsHide: true }
         );
         if (!stdout.trim()) return [];
         return stdout.trim().split('\n').map(line => {
