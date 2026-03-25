@@ -104,7 +104,7 @@ app.use(helmet({
             scriptSrc:     ["'self'", "'unsafe-inline'",
                             "https://translate.google.com", "https://translate.googleapis.com",
                             "https://www.google.com", "https://www.gstatic.com",
-                            "https://js.stripe.com", "https://cdn.socket.io"],
+                            "https://js.stripe.com"],
             // onclick="..." 等のインラインイベントハンドラを許可
             scriptSrcAttr: ["'unsafe-hashes'", "'unsafe-inline'"],
             styleSrc:      ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com",
