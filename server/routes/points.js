@@ -164,7 +164,7 @@ router.get('/epsilon/callback', (req, res) => {
         const purchase = db.prepare('SELECT * FROM point_purchases WHERE id = ? AND epsilon_order = ?').get(pid, order);
         if (purchase && purchase.status === 'pending') {
             db.prepare("UPDATE point_purchases SET status='completed', paid_at=CURRENT_TIMESTAMP WHERE id=?").run(pid);
-            db.prepare("UPDATE users SET point_balance = point_balance + ? WHERE id=?").run(purchase.points, purchase.user_id);
+            db.prepare("UPDATE users SET point_balance = point_balance + ?, wallet_balance = wallet_balance + ? WHERE id=?").run(purchase.points, purchase.points, purchase.user_id);
             db.prepare(`INSERT INTO point_logs (user_id, points, type, description, ref_id)
                         VALUES (?, ?, 'purchase', ?, ?)`).run(
                 purchase.user_id, purchase.points, `${purchase.plan_name}を購入`, pid

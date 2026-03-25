@@ -276,7 +276,7 @@ router.post('/users/:id/bonus', authMiddleware, adminOnly, (req, res) => {
   } catch (e) { /* exists */ }
 
   // ポイント残高更新
-  db.prepare('UPDATE users SET point_balance = point_balance + ? WHERE id = ?').run(pts, targetId);
+  db.prepare('UPDATE users SET point_balance = point_balance + ?, wallet_balance = wallet_balance + ? WHERE id = ?').run(pts, pts, targetId);
 
   // point_logs に記録
   db.prepare(`INSERT INTO point_logs (user_id, points, type, description, ref_id)
@@ -669,8 +669,8 @@ router.post('/purchases/:id/approve', authMiddleware, adminOnly, async (req, res
     // ポイント付与
     db.prepare("UPDATE point_purchases SET status = 'completed', paid_at = datetime('now') WHERE id = ?")
       .run(purchase.id);
-    db.prepare('UPDATE users SET point_balance = point_balance + ? WHERE id = ?')
-      .run(purchase.points, purchase.user_id);
+    db.prepare('UPDATE users SET point_balance = point_balance + ?, wallet_balance = wallet_balance + ? WHERE id = ?')
+      .run(purchase.points, purchase.points, purchase.user_id);
     db.prepare("INSERT INTO point_logs (user_id, points, type, description, ref_id) VALUES (?, ?, 'purchase', ?, ?)")
       .run(purchase.user_id, purchase.points, `管理者手動承認: ${purchase.plan_name}`, purchase.id);
 

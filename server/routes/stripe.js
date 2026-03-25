@@ -1,4 +1,4 @@
-﻿/**
+/**
  * Stripe Connect 完全実装ルート
  * 
  * エンドポイント:
@@ -331,12 +331,12 @@ router.get('/verify-payment', authMiddleware, async (req, res) => {
             return res.json({ ok: false, payment_status: session.payment_status });
         }
 
-        // ポイント付与（DBトランザクション内で）
+        // ポイント付与 — wallet_balance（予約残高）に加算（point_balanceも同期）
         db.prepare("UPDATE point_purchases SET status = 'completed', paid_at = datetime('now'), epsilon_trans = ? WHERE id = ?")
           .run(session.payment_intent, purchase.id);
 
-        db.prepare('UPDATE users SET point_balance = point_balance + ? WHERE id = ?')
-          .run(purchase.points, purchase.user_id);
+        db.prepare('UPDATE users SET wallet_balance = wallet_balance + ?, point_balance = point_balance + ? WHERE id = ?')
+          .run(purchase.points, purchase.points, purchase.user_id);
 
         db.prepare(`INSERT INTO point_logs (user_id, points, type, description, ref_id) VALUES (?, ?, 'purchase', ?, ?)`)
           .run(purchase.user_id, purchase.points, `Stripe決済完了: ${purchase.plan_name}`, purchase.id);
@@ -484,8 +484,9 @@ async function webhookHandler(req, res) {
                     db.prepare("UPDATE point_purchases SET status = 'completed', paid_at = datetime('now'), epsilon_trans = ? WHERE id = ?")
                       .run(session.payment_intent, purchase.id);
 
-                    db.prepare('UPDATE users SET point_balance = point_balance + ? WHERE id = ?')
-                      .run(purchase.points, purchase.user_id);
+                    // wallet_balance（予約残高）に加算（point_balanceも同期）
+                    db.prepare('UPDATE users SET wallet_balance = wallet_balance + ?, point_balance = point_balance + ? WHERE id = ?')
+                      .run(purchase.points, purchase.points, purchase.user_id);
 
                     db.prepare(`INSERT INTO point_logs (user_id, points, type, description, ref_id) VALUES (?, ?, 'purchase', ?, ?)`)
                       .run(purchase.user_id, purchase.points, `Stripe Webhook: ${purchase.plan_name}購入`, purchase.id);
