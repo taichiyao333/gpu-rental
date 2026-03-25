@@ -357,13 +357,7 @@ function createPod(reservationId) {
     const pod = db.prepare('SELECT * FROM pods WHERE id = ?').get(podId);
     console.log(`✅ Pod created: #${pod.id} | GPU: ${reservation.gpu_name} | User: ${reservation.renter_id}`);
 
-    // Launch container asynchronously (don't block response)
-    createPodAsync(reservationId).catch(err => {
-        console.error(`[podManager] createPodAsync error for reservation ${reservationId}:`, err.message);
-    });
-
-    // Fix: createPodAsync creates a duplicate pod record - revert to sync approach
-    // and just kick off container work from here after returning the pod
+    // Background: launch Docker container without blocking the response
     if (DOCKER_AVAILABLE) {
         const templateId = reservation.docker_template || 'pytorch';
         const tpl = getTemplate(templateId);
