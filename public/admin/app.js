@@ -359,8 +359,13 @@ async function markPaid(id) {
     try { await api(`/admin/payouts/${id}/paid`, { method: 'POST' }); loadPayouts(); } catch (e) { alert(e.message); }
 }
 
+let _usersLoading = false;
 /* ── USERS ──────────────────────────────────────────────────────── */
 async function loadUsers() {
+    if (_usersLoading) return;
+    _usersLoading = true;
+    const tbody = document.getElementById('userTableBody');
+    if (tbody) tbody.innerHTML = '<tr><td colspan="9" style="text-align:center;padding:2rem;color:var(--text3)"><span style="font-size:1.2rem">&#8987;</span> '+'\u30ed\u30fc\u30c9\u4e2d...</td></tr>';
     try {
         const list = await api('/admin/users');
         const roleBadge = { admin: 'b-danger', provider: 'b-primary', user: 'b-muted' };
@@ -382,7 +387,13 @@ async function loadUsers() {
             }
           </td>
         </tr>`).join('') || '<tr><td colspan="9" style="text-align:center;color:var(--text3);padding:2rem">ユーザーなし</td></tr>';
-    } catch (err) { console.error(err); }
+    } catch (err) {
+        console.error('loadUsers error:', err);
+        const tb = document.getElementById('userTableBody');
+        if (tb) tb.innerHTML = '<tr><td colspan="9" style="text-align:center;padding:2rem;color:var(--danger)">\u8aad\u307f\u8fbc\u307f\u30a8\u30e9\u30fc: ' + err.message + '</td></tr>';
+    } finally {
+        _usersLoading = false;
+    }
 }
 
 async function toggleUser(id, currentStatus) {

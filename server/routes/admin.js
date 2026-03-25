@@ -44,16 +44,15 @@ router.get('/overview', authMiddleware, adminOnly, (req, res) => {
 // GET /api/admin/users
 router.get('/users', authMiddleware, adminOnly, (req, res) => {
   const db = getDb();
+  // サブクエリ方式: LEFT JOIN二重結合によるデカルト積を解消
   const users = db.prepare(`
     SELECT u.id, u.username, u.email, u.role, u.status, u.wallet_balance, u.point_balance,
            u.created_at, u.last_login,
-           COUNT(r.id) as total_reservations,
-           COALESCE(SUM(ul.cost), 0) as total_spent
+           (SELECT COUNT(*) FROM reservations r WHERE r.renter_id = u.id) as total_reservations,
+           (SELECT COALESCE(SUM(ul.cost), 0) FROM usage_logs ul WHERE ul.renter_id = u.id) as total_spent
     FROM users u
-    LEFT JOIN reservations r ON r.renter_id = u.id
-    LEFT JOIN usage_logs ul ON ul.renter_id = u.id
-    GROUP BY u.id
     ORDER BY u.created_at DESC
+    LIMIT 500
   `).all();
   res.json(users);
 });
