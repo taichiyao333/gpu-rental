@@ -1619,15 +1619,15 @@ async function purchaseTicket(planId, event) {
     try {
         const result = await apiFetch('/stripe/checkout/points', {
             method: 'POST',
-            body: JSON.stringify({ plan_id: planId, coupon_code: couponCode || undefined }),
+            body: JSON.stringify({ plan_id: planId, coupon_code: couponCode || undefined, return_to: 'portal' }),
         });
         if (result.test_mode) {
             showToast(`✅ ${result.points_added}pt 付与されました！（テストモード）`, 'success');
             loadPointBalance();
             renderTicketPlans();
-        } else if (result.checkout_url || result.redirect_url) {
+        } else if (result.url || result.checkout_url || result.redirect_url) {
             showToast('Stripe決済ページに移動します...', 'info');
-            setTimeout(() => { window.location.href = result.checkout_url || result.redirect_url; }, 1000);
+            setTimeout(() => { window.location.href = result.url || result.checkout_url || result.redirect_url; }, 1000);
         }
     } catch (e) {
         showToast('購入エラー: ' + e.message, 'error');
@@ -1789,17 +1789,59 @@ async function loadMyReservations() {
 (function checkPaymentReturn() {
     const params = new URLSearchParams(location.search);
     const payment = params.get('payment');
-    const pts = params.get('points');
-    if (payment === 'success' && pts) {
+    const pts     = params.get('points');
+    const sid     = params.get('session_id');
+    const pid     = params.get('purchase');
+
+    history.replaceState({}, '', location.pathname);
+
+    if (payment === 'success' && sid && pid) {
+        // Stripe Checkout からの戻り → verify-payment でポイント付与確認
+        const token = localStorage.getItem('gpu_token');
+        if (!token) { showToast('✅ 決済完了！ログインしてポイントを確認してください', 'success'); return; }
+        fetch(`/api/stripe/verify-payment?session_id=${sid}&purchase_id=${pid}`, {
+            headers: { 'Authorization': 'Bearer ' + token }
+        }).then(r => r.json()).then(d => {
+            if (d.ok) {
+                const msg = d.already_granted
+                    ? '✅ ポイント付与済みです'
+                    : `✅ ${d.points_added.toLocaleString()}pt が付与されました！`;
+                showToast(msg, 'success');
+                loadPointBalance();
+            } else {
+                showToast('⚠️ 決済確認中...しばらくお待ちください', 'warning');
+                setTimeout(() => loadPointBalance(), 3000);
+            }
+        }).catch(() => {
+            showToast('✅ 決済完了！ポイント残高を確認してください', 'success');
+            setTimeout(() => loadPointBalance(), 1000);
+        });
+    } else if (payment === 'success' && pts) {
         showToast(`✅ 決済完了！${Number(pts).toLocaleString()}pt が付与されました`, 'success');
         loadPointBalance();
-        history.replaceState({}, '', location.pathname);
     } else if (payment === 'failed') {
         showToast('❌ 決済が失敗しました', 'error');
-        history.replaceState({}, '', location.pathname);
     } else if (payment === 'cancelled') {
         showToast('決済がキャンセルされました', 'info');
-        history.replaceState({}, '', location.pathname);
+    }
+})();
+
+/* ─── ?tab=register で登録モーダルを自動表示 ─────────────────────── */
+(function checkTabParam() {
+    const params = new URLSearchParams(location.search);
+    const tab = params.get('tab');
+    if (tab === 'register' && !state.user) {
+        // DOMContentLoaded 後に開く
+        const open = () => openAuthModal('register');
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', open, { once: true });
+        } else {
+            setTimeout(open, 300); // 他の初期化処理が終わってから
+        }
+        // URLからtabパラメータを除去（ブラウザ履歴をきれいに）
+        const url = new URL(location.href);
+        url.searchParams.delete('tab');
+        history.replaceState({}, '', url.toString());
     }
 })();
 

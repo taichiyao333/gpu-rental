@@ -779,9 +779,9 @@
 
         <!-- TABS -->
         <div class="tabs">
-            <button class="tab-btn active" data-tab="points" onclick="switchTab('points')">💎 ポイント残高・履歴</button>
-            <button class="tab-btn" data-tab="gpus" onclick="switchTab('gpus')">🖥️ マイGPU &amp; 収益</button>
+            <button class="tab-btn active" data-tab="points" onclick="switchTab('points')">💳 ポイント残高・購入</button>
             <button class="tab-btn" data-tab="reservations" onclick="switchTab('reservations')">📅 予約履歴</button>
+            <button class="tab-btn" data-tab="gpus" onclick="switchTab('gpus')">🖥️ マイGPU（貸出）</button>
             <button class="tab-btn" data-tab="payout" onclick="switchTab('payout')">💸 出金申請</button>
             <button class="tab-btn" data-tab="apikeys" onclick="switchTab('apikeys')">🔑 APIキー</button>
         </div>
@@ -802,18 +802,27 @@
                     <div class="stat-unit">円相当（1pt = 10円）</div>
                 </div>
             </div>
-                    <!-- Stripe ポイント購入 -->
+                            <!-- GPU一覧へのCTA -->
+        <div style="background:linear-gradient(135deg,rgba(0,212,255,0.07),rgba(108,71,255,0.07));border:1px solid rgba(0,212,255,0.2);border-radius:14px;padding:1.25rem 1.5rem;margin-bottom:1.25rem;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:1rem">
+            <div>
+                <div style="font-size:0.75rem;color:#9898b8;margin-bottom:3px;text-transform:uppercase;letter-spacing:0.08em">GPU&#x30EC;&#x30F3;&#x30BF;&#x30EB;</div>
+                <div style="font-weight:700;font-size:0.95rem">&#x30DD;&#x30A4;&#x30F3;&#x30C8;&#x3092;&#x4F7F;&#x3063;&#x3066;GPU&#x3092;&#x501F;&#x308A;&#x307E;&#x3057;&#x3087;&#x3046;</div>
+                <div style="font-size:0.8rem;color:#9898b8;margin-top:2px">&#x30DD;&#x30A4;&#x30F3;&#x30C8;&#x306F;GPU&#x30EC;&#x30F3;&#x30BF;&#x30EB;&#x306E;&#x652F;&#x6255;&#x3044;&#x306B;&#x4F7F;&#x7528;&#x3067;&#x304D;&#x307E;&#x3059;&#x3002;</div>
+            </div>
+            <a href="/portal/" style="display:inline-flex;align-items:center;gap:6px;padding:0.6rem 1.25rem;background:linear-gradient(135deg,#6c47ff,#00d4ff);border-radius:10px;color:#fff;font-weight:700;font-size:0.875rem;text-decoration:none">&#x1F5A5; GPU&#x4E00;&#x89A7;&#x3078; &#x2192;</a>
+        </div>
+<!-- Stripe ポイント購入 -->
         <div class="table-card" style="margin-bottom:1.5rem">
             <div class="table-header" style="margin-bottom:1rem">
                 <span class="table-title">💳 ポイント購入（Stripeカード決済）</span>
             </div>
             <div style="display:flex;gap:0.75rem;align-items:center;margin-bottom:1.25rem;flex-wrap:wrap">
-                <select id="stripePlanSelect" style="flex:1;min-width:200px;padding:0.6rem 1rem;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.12);border-radius:8px;color:#e8e8f0;font-size:0.9rem">
-                    <option value="plan_1h">1時間チケット  — ¥800 / 80pt</option>
-                    <option value="plan_3h">3時間チケット  — ¥2,400 / 240pt</option>
-                    <option value="plan_10h" selected>10時間チケット — ¥7,500 / 750pt ⭐ 6%OFF</option>
-                    <option value="plan_30h">30時間チケット — ¥21,000 / 2,100pt 🔥 12%OFF</option>
-                    <option value="plan_100h">100時間チケット — ¥65,000 / 6,500pt 🏆 18%OFF</option>
+                <select id="stripePlanSelect" style="flex:1;min-width:200px;padding:0.6rem 1rem;background:#1a1a3a;border:1px solid rgba(255,255,255,0.2);border-radius:8px;color:#e8e8f0;font-size:0.9rem;color-scheme:dark">
+                    <option value="plan_1h"   style="background:#1a1a3a;color:#e8e8f0">1時間チケット  — ¥800 / 80pt</option>
+                    <option value="plan_3h"   style="background:#1a1a3a;color:#e8e8f0">3時間チケット  — ¥2,400 / 240pt</option>
+                    <option value="plan_10h" selected style="background:#1a1a3a;color:#e8e8f0">10時間チケット — ¥7,500 / 750pt ⭐ 6%OFF</option>
+                    <option value="plan_30h"  style="background:#1a1a3a;color:#e8e8f0">30時間チケット — ¥21,000 / 2,100pt 🔥 12%OFF</option>
+                    <option value="plan_100h" style="background:#1a1a3a;color:#e8e8f0">100時間チケット — ¥65,000 / 6,500pt 🏆 18%OFF</option>
                 </select>
                 <div style="display:flex;gap:0.5rem;align-items:center">
                     <input type="text" id="stripeCouponInput" placeholder="クーポンコード（任意）"
@@ -1770,10 +1779,11 @@
         });
     })();
     </script>
-    <script src="//translate.google.com/translate_a/element.js?cb=googleTranslateElementInit" async>
+    <script src="//translate.google.com/translate_a/element.js?cb=googleTranslateElementInit" async></script>
+<script>
     // Stripe ポイント購入
     async function stripeCheckoutPoints() {
-        var token = localStorage.getItem("token");
+        var token = localStorage.getItem("gpu_token");
         if (!token) { alert("ログインが必要です"); return; }
         var planEl   = document.getElementById("stripePlanSelect");
         var couponEl = document.getElementById("stripeCouponInput");
@@ -1798,14 +1808,38 @@
             if(btn){ btn.disabled=false; btn.textContent="💳 Stripeで購入"; }
         }
     }
-    // 購入完了URLチェック
+    // 購入完了URLチェック（verify-payment でポイント付与確定）
     (function(){
         var p = new URLSearchParams(location.search);
         if (p.get("payment") === "success") {
             var pid = p.get("purchase");
-            showToast("✅ ポイント購入完了！" + (pid ? " (注文#" + pid + ")" : ""), "success");
-            setTimeout(function(){ loadPointBalance(); loadPointLogs(); }, 500);
+            var sid = p.get("session_id");
             history.replaceState(null, "", "/mypage/");
+            if (pid && sid) {
+                // Stripeセッションを検証してポイント付与
+                var token = localStorage.getItem("gpu_token");
+                fetch("/api/stripe/verify-payment?session_id=" + sid + "&purchase_id=" + pid, {
+                    headers: { "Authorization": "Bearer " + token }
+                }).then(function(r){ return r.json(); }).then(function(d){
+                    if (d.ok) {
+                        var msg = d.already_granted
+                            ? "✅ ポイント付与済みです"
+                            : "✅ " + d.points_added + "pt が付与されました！";
+                        showToast(msg, "success");
+                        loadPointBalance();
+                        loadPointLogs();
+                    } else {
+                        showToast("⚠️ 決済確認中... しばらくお待ちください", "warning");
+                        setTimeout(function(){ loadPointBalance(); loadPointLogs(); }, 3000);
+                    }
+                }).catch(function(){
+                    showToast("✅ 決済完了！ポイント残高を確認してください", "success");
+                    setTimeout(function(){ loadPointBalance(); loadPointLogs(); }, 1000);
+                });
+            } else {
+                showToast("✅ ポイント購入完了！" + (pid ? " (注文#" + pid + ")" : ""), "success");
+                setTimeout(function(){ loadPointBalance(); loadPointLogs(); }, 500);
+            }
         } else if (p.get("payment") === "cancelled") {
             showToast("決済がキャンセルされました", "warning");
             history.replaceState(null, "", "/mypage/");

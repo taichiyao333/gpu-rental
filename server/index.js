@@ -132,6 +132,13 @@ if (compression) {
     }}));
     console.log('✅ gzip compression enabled');
 }
+// ⚠️ Stripe Webhook は express.json() より前に raw body で登録する必要がある
+// （署名検証に raw Buffer が必要なため）
+app.post('/api/stripe/webhook', express.raw({ type: 'application/json' }), (req, res, next) => {
+    // stripe.js の webhook ハンドラを raw body 状態で呼び出す
+    require('./routes/stripe').webhookHandler(req, res, next);
+});
+
 app.use(express.json({ limit: '100mb' }));
 app.use(express.urlencoded({ extended: true, limit: '100mb' }));
 

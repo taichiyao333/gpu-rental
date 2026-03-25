@@ -55,3 +55,7 @@ public/downloads/
 
 gpu-monitor/data/
 gpu-monitor/node_modules/
+
+# Temporary scripts
+fix*.js
+check_status.js

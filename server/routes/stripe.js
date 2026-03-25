@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Stripe Connect 完全実装ルート
  * 
  * エンドポイント:
@@ -192,7 +192,9 @@ router.post('/checkout/points', authMiddleware, async (req, res) => {
     const stripe = getStripe();
     if (!stripe) return res.status(503).json({ error: 'Stripe not configured. Set STRIPE_SECRET_KEY in .env' });
 
-    const { plan_id, coupon_code } = req.body;
+    const { plan_id, coupon_code, return_to } = req.body;
+    // return_to: 'portal' or 'mypage' (default: mypage)
+    const returnPage = (return_to === 'portal') ? 'portal' : 'mypage';
     const db = getDb();
 
     // プラン定義（points.jsと同じ）
@@ -271,8 +273,8 @@ router.post('/checkout/points', authMiddleware, async (req, res) => {
                 plan_id,
                 points:      String(plan.points),
             },
-            success_url: `${baseUrl}/mypage/?payment=success&purchase=${purchase.lastInsertRowid}`,
-            cancel_url:  `${baseUrl}/mypage/?payment=cancelled`,
+            success_url: `${baseUrl}/${returnPage}/?payment=success&purchase=${purchase.lastInsertRowid}&session_id={CHECKOUT_SESSION_ID}`,
+            cancel_url:  `${baseUrl}/${returnPage}/?payment=cancelled`,
             customer_email: db.prepare('SELECT email FROM users WHERE id = ?').get(req.user.id)?.email,
         });
 
@@ -287,6 +289,79 @@ router.post('/checkout/points', authMiddleware, async (req, res) => {
         });
     } catch (err) {
         console.error('Stripe checkout error:', err);
+        res.status(500).json({ error: err.message });
+    }
+});
+
+/**
+ * GET /api/stripe/verify-payment?session_id=cs_xxx&purchase_id=N
+ * Stripe決済完了後のフォールバック確認・ポイント付与。
+ * Webhookが届かない場合でも、success_urlからこのエンドポイントを呼ぶことでポイントを付与する。
+ */
+router.get('/verify-payment', authMiddleware, async (req, res) => {
+    const stripe = getStripe();
+    if (!stripe) return res.status(503).json({ error: 'Stripe not configured' });
+
+    const { session_id, purchase_id } = req.query;
+    if (!session_id || !purchase_id) {
+        return res.status(400).json({ error: 'session_id and purchase_id required' });
+    }
+
+    const db = getDb();
+
+    try {
+        // DBのpurchaseレコードを取得
+        const purchase = db.prepare('SELECT * FROM point_purchases WHERE id = ?').get(Number(purchase_id));
+        if (!purchase) return res.status(404).json({ error: 'Purchase not found' });
+
+        // 本人確認
+        if (purchase.user_id !== req.user.id) {
+            return res.status(403).json({ error: 'Forbidden' });
+        }
+
+        // 既に付与済みなら即返す
+        if (purchase.status === 'completed') {
+            return res.json({ ok: true, points_added: purchase.points, already_granted: true });
+        }
+
+        // Stripeでセッションを検証
+        const session = await stripe.checkout.sessions.retrieve(session_id);
+
+        if (session.payment_status !== 'paid') {
+            return res.json({ ok: false, payment_status: session.payment_status });
+        }
+
+        // ポイント付与（DBトランザクション内で）
+        db.prepare("UPDATE point_purchases SET status = 'completed', paid_at = datetime('now'), epsilon_trans = ? WHERE id = ?")
+          .run(session.payment_intent, purchase.id);
+
+        db.prepare('UPDATE users SET point_balance = point_balance + ? WHERE id = ?')
+          .run(purchase.points, purchase.user_id);
+
+        db.prepare(`INSERT INTO point_logs (user_id, points, type, description, ref_id) VALUES (?, ?, 'purchase', ?, ?)`)
+          .run(purchase.user_id, purchase.points, `Stripe決済完了: ${purchase.plan_name}`, purchase.id);
+
+        // クーポン使用数更新
+        if (purchase.coupon_id) {
+            db.prepare('UPDATE coupons SET used_count = used_count + 1 WHERE id = ?').run(purchase.coupon_id);
+        }
+
+        // メール通知
+        try {
+            const buyer = db.prepare('SELECT username, email FROM users WHERE id = ?').get(purchase.user_id);
+            if (buyer?.email) {
+                mailPointPurchased({
+                    to: buyer.email, username: buyer.username,
+                    purchase: { ...purchase, payment_method: 'Stripe' },
+                }).catch(() => {});
+            }
+        } catch (_) {}
+
+        console.log(`[verify-payment] ✅ Points granted: user=${purchase.user_id} +${purchase.points}pt purchase=${purchase.id}`);
+        res.json({ ok: true, points_added: purchase.points });
+
+    } catch (err) {
+        console.error('verify-payment error:', err);
         res.status(500).json({ error: err.message });
     }
 });
@@ -377,8 +452,9 @@ router.post('/checkout/session', authMiddleware, async (req, res) => {
 /**
  * POST /api/stripe/webhook
  * Stripeからのイベント（署名検証あり）
+ * ※ index.js で express.raw() を使って先取りし、この関数を直接呼び出す
  */
-router.post('/webhook', express.raw({ type: 'application/json' }), async (req, res) => {
+async function webhookHandler(req, res) {
     const stripe = getStripe();
     if (!stripe) return res.json({ received: true });
 
@@ -411,106 +487,41 @@ router.post('/webhook', express.raw({ type: 'application/json' }), async (req, r
                     db.prepare('UPDATE users SET point_balance = point_balance + ? WHERE id = ?')
                       .run(purchase.points, purchase.user_id);
 
-                    db.prepare(`
-                        INSERT INTO point_logs (user_id, points, type, description, ref_id)
-                        VALUES (?, ?, 'purchase', ?, ?)
-                    `).run(purchase.user_id, purchase.points, `Stripeで${purchase.plan_name}購入`, purchase.id);
+                    db.prepare(`INSERT INTO point_logs (user_id, points, type, description, ref_id) VALUES (?, ?, 'purchase', ?, ?)`)
+                      .run(purchase.user_id, purchase.points, `Stripe Webhook: ${purchase.plan_name}購入`, purchase.id);
 
-                    // クーポン使用数更新
                     if (purchase.coupon_id) {
-                        db.prepare('UPDATE coupons SET used_count = used_count + 1 WHERE id = ?')
-                          .run(purchase.coupon_id);
-                        db.prepare(`INSERT INTO coupon_uses (coupon_id, user_id, purchase_id, discount_yen) VALUES (?, ?, ?, ?)`)
+                        db.prepare('UPDATE coupons SET used_count = used_count + 1 WHERE id = ?').run(purchase.coupon_id);
+                        db.prepare('INSERT INTO coupon_uses (coupon_id, user_id, purchase_id, discount_yen) VALUES (?, ?, ?, ?)')
                           .run(purchase.coupon_id, purchase.user_id, purchase.id, purchase.coupon_discount_yen || 0);
                     }
 
-                    // ✉️ ポイント購入完了メール送信
                     const buyer = db.prepare('SELECT username, email FROM users WHERE id = ?').get(purchase.user_id);
+                    const { mailPointPurchased } = require('../services/email');
                     if (buyer?.email) {
                         mailPointPurchased({
-                            to:       buyer.email,
-                            username: buyer.username,
-                            purchase: {
-                                ...purchase,
-                                plan_name:  purchase.plan_name,
-                                points:     purchase.points,
-                                amount_yen: purchase.amount_yen,
-                                payment_method: 'Stripe',
-                            },
-                        }).catch(e => console.error('Mail error:', e.message));
+                            to: buyer.email, username: buyer.username,
+                            purchase: { ...purchase, payment_method: 'Stripe' },
+                        }).catch(e => console.error('Mail error:', e));
                     }
-
-                    console.log(`✅ Point purchase #${purchase.id}: +${purchase.points}pt for user ${purchase.user_id}`);
+                    console.log(`✅ [Webhook] Points granted: user=${purchase.user_id} +${purchase.points}pt purchase=${purchase.id}`);
                 }
-
-            } else if (meta.type === 'reservation') {
-                // 予約直接支払い完了
-                const reservationId = meta.reservation_id;
-                db.prepare("UPDATE reservations SET status = 'paid' WHERE id = ? AND status IN ('pending','confirmed')")
-                  .run(Number(reservationId));
-
-                // ✉️ 予約確定メール送信
-                const resData = db.prepare(`
-                    SELECT r.*, gn.name as gpu_name, gn.price_per_hour, u.username, u.email
-                    FROM reservations r
-                    JOIN gpu_nodes gn ON r.gpu_id = gn.id
-                    JOIN users u ON r.renter_id = u.id
-                    WHERE r.id = ?
-                `).get(Number(reservationId));
-                if (resData?.email) {
-                    mailReservationConfirmed({
-                        to:          resData.email,
-                        username:    resData.username,
-                        reservation: resData,
-                    }).catch(e => console.error('Mail error:', e.message));
-                }
-
-                console.log(`✅ Reservation #${reservationId} paid via Stripe`);
             }
             break;
         }
-
-        // ─── 支払い失敗 ───────────────────────────────────────
-        case 'checkout.session.expired':
-        case 'payment_intent.payment_failed': {
-            const obj  = event.data.object;
-            const meta = obj.metadata || {};
-            if (meta.type === 'point_purchase' && meta.purchase_id) {
-                db.prepare("UPDATE point_purchases SET status = 'failed' WHERE id = ? AND status = 'pending'")
-                  .run(Number(meta.purchase_id));
-            }
-            console.log(`⚠️ Payment failed/expired: ${event.type}`);
-            break;
-        }
-
-        // ─── Connect アカウント更新 ────────────────────────────
-        case 'account.updated': {
-            const account  = event.data.object;
-            const connected = account.details_submitted && account.charges_enabled ? 1 : 0;
-            db.prepare('UPDATE users SET stripe_connected = ? WHERE stripe_account_id = ?')
-              .run(connected, account.id);
-            console.log(`↔️ Stripe account ${account.id} updated: connected=${connected}`);
-            break;
-        }
-
-        // ─── 送金完了 ─────────────────────────────────────────
-        case 'transfer.created': {
-            const transfer = event.data.object;
-            console.log(`💸 Transfer to ${transfer.destination}: ¥${transfer.amount}`);
-            break;
-        }
-
-        case 'payment_intent.succeeded':
-            console.log(`💳 PaymentIntent succeeded: ${event.data.object.id}`);
-            break;
-
         default:
-            // その他のイベントは無視
             break;
     }
 
     res.json({ received: true });
-});
+}
+
+// router にも webhook を登録（/api/stripe/webhook → router経由でも動くように）
+router.post('/webhook', express.raw({ type: 'application/json' }), webhookHandler);
+
+module.exports = router;
+module.exports.webhookHandler = webhookHandler;
+
 
 /* ═══════════════════════════════════════════════════════════
    ADMIN — Stripe Connect管理

@@ -1,4 +1,4 @@
-﻿const express = require('express');
+const express = require('express');
 const router = express.Router();
 const { getDb } = require('../db/database');
 const { authMiddleware, adminOnly } = require('../middleware/auth');
@@ -623,13 +623,73 @@ router.get('/stats/summary', authMiddleware, adminOnly, (req, res) => {
     });
 });
 
-module.exports = router;
+
+// ─── Stripe 購入履歴・手動承認 ───────────────────────────────────────────────
+
+// GET /api/admin/purchases?status=pending — 購入履歴一覧
+router.get('/purchases', authMiddleware, adminOnly, (req, res) => {
+    const db = getDb();
+    const { status, limit = 50 } = req.query;
+    const safeStatus = (status || '').replace(/[^a-z]/g, '');
+    const where = safeStatus ? `WHERE pp.status = '${safeStatus}'` : '';
+    const rows = db.prepare(`
+        SELECT pp.*, u.username, u.email
+        FROM point_purchases pp
+        JOIN users u ON pp.user_id = u.id
+        ${where}
+        ORDER BY pp.created_at DESC
+        LIMIT ?
+    `).all(parseInt(limit));
+    res.json(rows);
+});
+
+// POST /api/admin/purchases/:id/approve — pending購入を手動でcompleted（ポイント付与）
+router.post('/purchases/:id/approve', authMiddleware, adminOnly, async (req, res) => {
+    const db = getDb();
+    const purchase = db.prepare('SELECT * FROM point_purchases WHERE id = ?').get(parseInt(req.params.id));
+    if (!purchase) return res.status(404).json({ error: '購入レコードが見つかりません' });
+    if (purchase.status === 'completed') return res.json({ ok: true, message: '既に付与済みです', already_granted: true });
+
+    // Stripe sessionが存在する場合は検証
+    let stripeVerified = false;
+    if (purchase.epsilon_order && purchase.epsilon_order.startsWith('cs_')) {
+        try {
+            const Stripe = require('stripe');
+            const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, { apiVersion: '2024-12-18.acacia' });
+            const session = await stripe.checkout.sessions.retrieve(purchase.epsilon_order);
+            stripeVerified = session.payment_status === 'paid';
+            if (!stripeVerified && !req.query.force) {
+                return res.status(400).json({ error: `Stripeの支払いステータスが paid ではありません (${session.payment_status})。強制付与は ?force=1 で実行できます。` });
+            }
+        } catch (e) {
+            if (!req.query.force) return res.status(400).json({ error: `Stripe検証エラー: ${e.message}。強制付与は ?force=1 で実行できます。` });
+        }
+    }
+
+    // ポイント付与
+    db.prepare("UPDATE point_purchases SET status = 'completed', paid_at = datetime('now') WHERE id = ?")
+      .run(purchase.id);
+    db.prepare('UPDATE users SET point_balance = point_balance + ? WHERE id = ?')
+      .run(purchase.points, purchase.user_id);
+    db.prepare("INSERT INTO point_logs (user_id, points, type, description, ref_id) VALUES (?, ?, 'purchase', ?, ?)")
+      .run(purchase.user_id, purchase.points, `管理者手動承認: ${purchase.plan_name}`, purchase.id);
+
+    const user = db.prepare('SELECT username, email, point_balance FROM users WHERE id = ?').get(purchase.user_id);
+    console.log(`✅ [Admin approve] Purchase #${purchase.id} → ${purchase.points}pt → user #${purchase.user_id} (${user?.email}) by admin #${req.user.id}`);
+
+    res.json({
+        ok: true,
+        points_added: purchase.points,
+        user: { id: purchase.user_id, email: user?.email, new_balance: user?.point_balance },
+        stripe_verified: stripeVerified,
+        forced: !!req.query.force,
+    });
+});
 
 // GET /api/admin/security/logs - セキュリティイベントログ（管理者専用）
 router.get('/security/logs', authMiddleware, adminOnly, (req, res) => {
     const lines = parseInt(req.query.lines || '200', 10);
     const logs  = getRecentLogs(Math.min(lines, 1000));
-    // イベント別集計
     const summary = logs.reduce((acc, log) => {
         acc[log.event] = (acc[log.event] || 0) + 1;
         return acc;
@@ -637,5 +697,5 @@ router.get('/security/logs', authMiddleware, adminOnly, (req, res) => {
     res.json({ total: logs.length, summary, logs });
 });
 
-
+module.exports = router;
 

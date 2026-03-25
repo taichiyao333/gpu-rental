@@ -2881,3 +2881,23 @@ button {
         grid-template-columns: 1fr;
     }
 }
+/* ── Borrower-first enhancements ── */
+.hero-benefit-bar {
+    display: flex; gap: 1.5rem; flex-wrap: wrap; justify-content: center;
+    background: rgba(0,212,255,0.05); border: 1px solid rgba(0,212,255,0.15);
+    border-radius: 14px; padding: 1rem 1.5rem; margin-top: 1.5rem;
+    font-size: 0.8rem; color: #9898b8;
+}
+.hero-benefit-item { display: flex; align-items: center; gap: 6px; white-space: nowrap; }
+.hero-benefit-item strong { color: #e8e8f0; }
+.section-badge {
+    display: inline-block; font-size: 0.72rem; font-weight: 700;
+    letter-spacing: 0.12em; text-transform: uppercase; color: #6c47ff;
+    margin-bottom: 0.5rem;
+}
+.price-badge {
+    display: inline-flex; align-items: center; gap: 4px;
+    background: rgba(0,229,160,0.1); border: 1px solid rgba(0,229,160,0.25);
+    border-radius: 100px; padding: 2px 10px; font-size: 0.72rem;
+    font-weight: 700; color: #00e5a0; margin-left: 0.5rem;
+}

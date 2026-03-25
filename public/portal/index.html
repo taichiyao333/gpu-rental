@@ -4,8 +4,8 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>GPU Rental — High-Performance GPU Cloud</title>
-    <meta name="description" content="個人・企業・データセンターのGPUを時間単位でレンタル。RTX A4500から始まるオープンGPUマーケットプレイス。" />
+    <title>GPURental — GPU計算クラウド | AI・機械学習・3DCG向けGPUレンタル</title>
+    <meta name="description" content="RTX 4090・A100・H100などのハイエンドGPUを時間単位でレンタル。AI開発・機械学習・動画レンダリングに。初期費用0円、¥200/時間から。" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link
         href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap"
@@ -55,9 +55,9 @@
             <span class="nav-title">GPU<span class="accent">Rental</span></span>
         </div>
         <div class="nav-links" id="navLinks">
-            <a href="#gpus" class="nav-link">GPU一覧</a>
-            <a href="#how" class="nav-link">使い方</a>
-            <a href="/pricing.html" class="nav-link" target="_blank">料金</a>
+            <a href="#gpus" class="nav-link">&#x1F5A5; GPU&#x4E00;&#x89A7;&#x30FB;&#x6599;&#x91D1;</a>
+            <a href="#how" class="nav-link">&#x4F7F;&#x3044;&#x65B9;</a>
+            <a href="/landing/" class="nav-link">&#x30B5;&#x30FC;&#x30D3;&#x30B9;&#x7D39;&#x4ECB;</a>
         </div>
         <div class="nav-auth" id="navAuth">
             <button class="btn btn-ghost" id="btnLogin">ログイン</button>
@@ -73,7 +73,7 @@
             <button class="btn btn-ghost" id="btnLogout">ログアウト</button>
         </div>
         <!-- ナビバー: ログイン不要でも表示するGPU公開ボタン -->
-        <button class="btn btn-provide" id="btnProvideGuidePublic" title="自分のPCのGPUを貸し出す">🏭 GPUを公開する</button>
+        <button class="btn btn-provide" id="btnProvideGuidePublic" title="自分のPCのGPUを貸し出す" style="font-size:0.78rem;opacity:0.6">GPU貸出（パートナー）</button>
     <!-- ハンバーガーボタン -->
         <div class="lang-switcher" id="langSwitcher">
         <button class="lang-btn" onclick="toggleLangMenu(this)" aria-label="言語切り替え">
@@ -135,23 +135,30 @@
     <section class="hero">
         <div class="hero-bg"></div>
         <div class="hero-content">
-            <div class="hero-badge">🚀 Today: RTX A4500 · 20GB VRAM Available</div>
-            <h1 class="hero-title">あなたのGPUを<br /><span class="gradient-text">世界に貸し出す</span></h1>
-            <p class="hero-sub">個人・企業・データセンターのGPUを時間単位でレンタル。<br />AI学習・動画レンダリング・研究計算に最適。</p>
+            <div class="hero-badge">&#x26A1; &#x9AD8;&#x6027;&#x80FD;GPU&#x30AF;&#x30E9;&#x30A6;&#x30C9;&#x30EC;&#x30F3;&#x30BF;&#x30EB;&#x30B5;&#x30FC;&#x30D3;&#x30B9; &#x2014; &#x6642;&#x9593;&#x5358;&#x4F4D;&#x3067;&#x5373;&#x5229;&#x7528;</div>
+            <h1 class="hero-title">&#x5FC5;&#x8981;&#x306A;&#x6642;&#x3060;&#x3051;&#x3001;<br /><span class="gradient-text">&#x6700;&#x9AD8;&#x5CF0;&#x306E;&#x8A08;&#x7B97;&#x30D1;&#x30EF;&#x30FC;&#x3092;&#x3002;</span></h1>
+            <p class="hero-sub">RTX 4090&#x30FBRTX 4080&#x30FBA100&#x306A;&#x3069;&#x306E;&#x30CF;&#x30A4;&#x30A8;&#x30F3;&#x30C9;GPU&#x3092;<strong>&#x6642;&#x9593;&#x5358;&#x4F4D;</strong>&#x3067;&#x30EC;&#x30F3;&#x30BF;&#x30EB;&#x3002;<br />AI&#x958B;&#x767A;&#x30FB;&#x6A5F;&#x68B0;&#x5B66;&#x7FD2;&#x30FB;&#x52D5;&#x753B;&#x30EC;&#x30F3;&#x30C0;&#x30EA;&#x30F3;&#x30B0;&#x306B;&#x3002;&#x521D;&#x671F;&#x8CBB;&#x75280;&#x5186;&#x3001;&#xFFE5;200/&#x6642;&#x9593;&#x304B;&#x3089;&#x3002;</p>
             <div class="hero-actions">
-                <button class="btn btn-primary btn-lg" id="heroReserve">今すぐ予約する</button>
-                <button class="btn btn-outline btn-lg" id="heroProvide">GPUを貸し出す</button>
+                <button class="btn btn-primary btn-lg" id="heroReserve">&#x1F5A5; &#x5229;&#x7528;&#x53EF;&#x80FD;&#x306AGPU&#x3092;&#x898B;&#x308B;</button>
+                <button class="btn btn-outline btn-lg" id="heroProvide" style="font-size:0.85rem;opacity:0.75">GPU&#x3092;&#x8CB8;&#x3057;&#x51FA;&#x3059;</button>
             </div>
             <div class="hero-stats">
                 <div class="stat">
-                    <span class="stat-val" id="statGpus">—</span>
-                    <span class="stat-label">GPU登録数</span>
+                    <span class="stat-val" id="statGpus">&#x2014;</span>
+                    <span class="stat-label">&#x767B;&#x9332;GPU&#x6570;</span>
                 </div>
                 <div class="stat-div"></div>
                 <div class="stat">
-                    <span class="stat-val" id="statAvail" style="color:#00e5a0">—</span>
-                    <span class="stat-label">稼働中GPU</span>
+                    <span class="stat-val" id="statAvail" style="color:#00e5a0">&#x2014;</span>
+                    <span class="stat-label">&#x4ECA;&#x3059;&#x3050;&#x501F;&#x308A;&#x3089;&#x308C;&#x308B;GPU</span>
                 </div>
+                <div class="stat-div"></div>
+                <div class="stat">
+                    <span class="stat-val" id="statUsers">&#x2014;</span>
+                    <span class="stat-label">&#x5229;&#x7528;&#x30E6;&#x30FC;&#x30B6;&#x30FC;&#x6570;</span>
+                </div>
+            </div>
+        </div>
                 <div class="stat-div"></div>
                 <div class="stat">
                     <span class="stat-val" id="statUsers">—</span>
@@ -170,13 +177,24 @@
             </div>
         </div>
     </section>
+    <!-- BENEFIT BAR -->
+    <div style="background:rgba(0,212,255,0.04);border-top:1px solid rgba(0,212,255,0.1);border-bottom:1px solid rgba(0,212,255,0.1);padding:0.875rem 2rem">
+        <div style="max-width:1100px;margin:0 auto;display:flex;gap:2rem;flex-wrap:wrap;justify-content:center;font-size:0.82rem;color:#9898b8">
+            <span>&#x2705; <strong style="color:#e8e8f0">&#x521D;&#x671F;&#x8CBB;&#x75280;&#x5186;</strong></span>
+            <span>&#x2705; <strong style="color:#e8e8f0">1&#x6642;&#x9593;&#x5358;&#x4F4D;</strong>&#x3067;&#x4E88;&#x7D04;&#x53EF;&#x80FD;</span>
+            <span>&#x2705; <strong style="color:#e8e8f0">&#xFFE5;200/h&#x5186;</strong>&#x304B;&#x3089;</span>
+            <span>&#x2705; Stripe&#x5B89;&#x5168;&#x6C7A;&#x6E08;&#xFF08;Visa&#x30FB;JCB&#x30FB;&#x4ED6&#xFF09;</span>
+            <span>&#x2705; 35&#x7A2E;&#x985E;&#x4EE5;&#x4E0A;&#x306FGPU&#x5BFE;&#x5FDC;</span>
+        </div>
+    </div>
+
 
     <!-- GPU LIST -->
     <section class="section" id="gpus">
         <div class="container">
             <div class="section-header">
-                <h2 class="section-title">利用可能な GPU</h2>
-                <p class="section-sub">リアルタイムで空き状況を確認できます</p>
+                <h2 class="section-title">&#x30EC;&#x30F3;&#x30BF;&#x30EB;&#x53EF;&#x80FD;&#x306A; GPU &#x4E00;&#x89A7;</h2>
+                <p class="section-sub">&#x30EA;&#x30A2;&#x30EB;&#x30BF;&#x30A4;&#x30E0;&#x3067;&#x7A7A;&#x304D;&#x72B6;&#x6CC1;&#x3092;&#x78BA;&#x8A8D;&#x3067;&#x304D;&#x307E;&#x3059;&#x3002;&#x7528;&#x9014;&#x30FB;&#x4E88;&#x7B97;&#x306B;&#x5408;&#x308F;&#x305B;&#x3066;GPU&#x3092;&#x9078;&#x3093;&#x3067;&#x4E88;&#x7D04;&#x3057;&#x3066;&#x304F;&#x3060;&#x3055;&#x3044;&#x3002;</p>
                 <div class="filter-bar">
                     <button class="filter-btn active" data-filter="all">すべて</button>
                     <button class="filter-btn" data-filter="available">空きあり</button>
@@ -194,11 +212,11 @@
     <!-- HOW IT WORKS -->
     <section class="section section-dark" id="how">
         <div class="container">
-            <h2 class="section-title">使い方</h2>
+            <h2 class="section-title">3&#x30B9;&#x30C6;&#x30C3;&#x30D7;&#x3067;&#x3059;&#x3050;&#x4F7F;&#x3048;&#x308B;</h2>
             <div class="steps">
                 <div class="step">
                     <div class="step-icon">📅</div>
-                    <h3>1. 予約</h3>
+                    <h3>1. GPU&#x3092;&#x9078;&#x3093;&#x3067;&#x4E88;&#x7D04;</h3>
                     <p>GPUを選んで利用時間を予約。カレンダーで空き状況を確認。</p>
                 </div>
                 <div class="step-arrow">→</div>
@@ -792,7 +810,15 @@
     </div>
 
     <!-- FOOTER -->
-    <footer class="footer site-footer">
+        <!-- SAFETY BANNER -->
+    <div style="background:rgba(0,229,160,0.04);border-top:1px solid rgba(0,229,160,0.15);padding:1.5rem 2rem;text-align:center">
+        <div style="max-width:800px;margin:0 auto;font-size:0.82rem;color:#9898b8;line-height:1.7">
+            <strong style="color:#00e5a0">&#x1F512; &#x6C7A;&#x6E08;&#x306E;&#x5B89;&#x5168;&#x6027;&#x306B;&#x3064;&#x3044;&#x3066;</strong><br>
+            &#x5F53;&#x30B5;&#x30FC;&#x30D3;&#x30B9;&#x306F;Stripe&#xFF08;PCI DSS&#x6E96;&#x62E0;&#xFF09;&#x306B;&#x3088;&#x308B;&#x5B89;&#x5168;&#x306A;&#x30AF;&#x30EC;&#x30B8;&#x30C3;&#x30C8;&#x30AB;&#x30FC;&#x30C9;&#x6C7A;&#x6E08;&#x3092;&#x63A1;&#x7528;&#x3002;Visa&#x30FBMastercard&#x30FBJCB&#x30FBAmex&#x5BFE;&#x5FDC;&#x3002;&#x30AB;&#x30FC;&#x30C9;&#x60C5;&#x5831;&#x306F;&#x5F53;&#x30B5;&#x30FC;&#x30D3;&#x30B9;&#x306E;&#x30B5;&#x30FC;&#x30D0;&#x30FC;&#x306B;&#x306F;&#x4E00;&#x5207;&#x4FDD;&#x5B58;&#x3055;&#x308C;&#x307E;&#x305B;&#x3093;&#x3002;
+            &#x30C7;&#x30FC;&#x30BF;&#x306E;&#x53D6;&#x308A;&#x6271;&#x3044;&#x306B;&#x3064;&#x3044;&#x3066;&#x306F;<a href="/privacy/" style="color:#00d4ff">&#x30D7;&#x30E9;&#x30A4;&#x30D0;&#x30B7;&#x30FC;&#x30DD;&#x30EA;&#x30B7;&#x30FC;</a>&#x3092;&#x3001;&#x5546;&#x53D6;&#x5F15;&#x306B;&#x3064;&#x3044;&#x3066;&#x306F;<a href="/tokushoho/" style="color:#00d4ff">&#x7279;&#x5B9A;&#x5546;&#x53D6;&#x5F15;&#x6CD5;&#x306B;&#x57FA;&#x3065;&#x304F;&#x8868;&#x8A18;</a>&#x3092;&#x3054;&#x78BA;&#x8A8D;&#x304F;&#x3060;&#x3055;&#x3044;&#x3002;
+        </div>
+    </div>
+<footer class="footer site-footer">
         <div class="sf-inner">
             <div class="sf-brand">
                 <div class="sf-logo">⚡ GPU<span style="color:var(--primary)">Rental</span></div>

@@ -995,9 +995,13 @@
             <h2 class="register-title">🖥 GPUを登録する</h2>
             <p class="register-sub">登録後すぐに貸し出しを開始できます。無料・手数料20%のみ。</p>
 
-            <div id="authRequired" class="hidden">
-                <div class="form-error">ログインが必要です。ポータルでログイン後、このページに戻ってください。</div>
-                <a href="/portal/" class="btn btn-primary btn-full">ログイン / 登録へ</a>
+            <div id="authRequired" class="hidden" style="text-align:center;padding:1.5rem 0">
+                <div style="font-size:2.5rem;margin-bottom:0.75rem">&#x1F511;</div>
+                <p style="color:var(--text2);font-size:0.9rem;margin-bottom:1.25rem">GPU&#x767B;&#x9332;&#x306B;&#x306F;&#x30A2;&#x30AB;&#x30A6;&#x30F3;&#x30C8;&#x304C;&#x5FC5;&#x8981;&#x3067;&#x3059;</p>
+                <div style="display:flex;gap:0.75rem;justify-content:center;flex-wrap:wrap">
+                    <button class="btn btn-primary" onclick="openProviderAuth('register')" style="min-width:160px;padding:0.75rem 1.5rem;font-size:1rem">&#x1F4DD; &#x7121;&#x6599;&#x3067;&#x767B;&#x9332;&#x3059;&#x308B;</button>
+                    <button class="btn btn-ghost" onclick="openProviderAuth('login')" style="min-width:120px">&#x30ED;&#x30B0;&#x30A4;&#x30F3;</button>
+                </div>
             </div>
 
             <form id="registerForm" class="hidden">
@@ -1319,9 +1323,50 @@
             </footer>
 
             <script>
-                const token = localStorage.getItem('gpu_token');
-                const user = JSON.parse(localStorage.getItem('gpu_user') || 'null');
+                let token = localStorage.getItem('gpu_token');
+                let user = JSON.parse(localStorage.getItem('gpu_user') || 'null');
                 const API = ''; // same-origin
+
+                /* ── Provider auth modal ── */
+                function openProviderAuth(tab) {
+                    document.getElementById('providerAuthModal').style.display = 'flex';
+                    switchProviderAuthTab(tab || 'register');
+                }
+                function closeProviderAuth() { document.getElementById('providerAuthModal').style.display = 'none'; }
+                function switchProviderAuthTab(tab) {
+                    const isReg = tab === 'register';
+                    document.getElementById('pTabLogin').classList.toggle('active', !isReg);
+                    document.getElementById('pTabRegister').classList.toggle('active', isReg);
+                    document.getElementById('pLoginForm').style.display = isReg ? 'none' : 'block';
+                    document.getElementById('pRegisterForm').style.display = isReg ? 'block' : 'none';
+                }
+                async function providerLogin(e) {
+                    e.preventDefault(); const errEl = document.getElementById('pLoginError'); errEl.style.display='none';
+                    try {
+                        const res = await fetch('/api/auth/login', { method:'POST', headers:{'Content-Type':'application/json'},
+                            body: JSON.stringify({ email: document.getElementById('pLoginEmail').value, password: document.getElementById('pLoginPassword').value }) });
+                        const data = await res.json(); if (!res.ok) throw new Error(data.error);
+                        token=data.token; user=data.user; localStorage.setItem('gpu_token',token); localStorage.setItem('gpu_user',JSON.stringify(user));
+                        closeProviderAuth(); onProviderAuthSuccess();
+                    } catch(err) { errEl.textContent=err.message; errEl.style.display='block'; }
+                }
+                async function providerRegister(e) {
+                    e.preventDefault(); const errEl = document.getElementById('pRegError'); errEl.style.display='none';
+                    try {
+                        const res = await fetch('/api/auth/register', { method:'POST', headers:{'Content-Type':'application/json'},
+                            body: JSON.stringify({ username: document.getElementById('pRegUsername').value, email: document.getElementById('pRegEmail').value, password: document.getElementById('pRegPassword').value }) });
+                        const data = await res.json(); if (!res.ok) throw new Error(data.error);
+                        token=data.token; user=data.user; localStorage.setItem('gpu_token',token); localStorage.setItem('gpu_user',JSON.stringify(user));
+                        closeProviderAuth(); onProviderAuthSuccess();
+                    } catch(err) { errEl.textContent=err.message; errEl.style.display='block'; }
+                }
+                function onProviderAuthSuccess() {
+                    const nu=document.getElementById('navUser'); if(nu){nu.textContent=`&#x1F464; ${user.username}`;nu.classList.remove('hidden');}
+                    const bl=document.getElementById('btnLogout'); if(bl) bl.classList.remove('hidden');
+                    document.getElementById('authRequired').classList.add('hidden');
+                    document.getElementById('registerForm').classList.remove('hidden');
+                    loadMyGpus(); runWebglDetect();
+                } // same-origin
 
                 async function apiFetch(path, opts = {}) {
                     const res = await fetch(`${API}/api${path}`, {
@@ -1970,10 +2015,47 @@
 
 </script>
 
-</body>
 
-</html>
-<div class="mob-drawer" id="mobDrawer">
-    <a href="/portal/" onclick="closeMobMenu()">🏠 GPU一覧</a>
-    <a href="/mypage/" onclick="closeMobMenu()">👤 マイページ</a>
-</div>
+    <!-- ── Provider inline auth modal ── -->
+    <div id="providerAuthModal" style="display:none;position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,0.75);backdrop-filter:blur(8px);align-items:center;justify-content:center" onclick="if(event.target===this)closeProviderAuth()">
+        <div style="background:#13132a;border:1px solid rgba(108,71,255,0.4);border-radius:20px;padding:2rem;width:min(420px,94vw);position:relative">
+            <button onclick="closeProviderAuth()" style="position:absolute;top:1rem;right:1rem;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);border-radius:8px;padding:4px 10px;color:#e8e8f0;cursor:pointer;font-size:1rem">&#x2715;</button>
+            <div style="text-align:center;margin-bottom:1.5rem">
+                <div style="font-size:1.8rem;margin-bottom:0.5rem">&#x26A1;</div>
+                <h3 style="font-size:1.2rem;font-weight:800">GPURentalに参加する</h3>
+                <p style="font-size:0.82rem;color:var(--text2);margin-top:0.25rem">無料登録で今すぐGPUの貸し出しを開始</p>
+            </div>
+            <!-- tabs -->
+            <div style="display:flex;background:rgba(255,255,255,0.04);border-radius:10px;padding:3px;margin-bottom:1.5rem">
+                <button id="pTabRegister" onclick="switchProviderAuthTab('register')" style="flex:1;padding:0.5rem;border:none;border-radius:8px;cursor:pointer;font-size:0.875rem;font-weight:700;background:linear-gradient(135deg,#6c47ff,#8b5cf6);color:#fff;transition:all .2s">新規登録</button>
+                <button id="pTabLogin" onclick="switchProviderAuthTab('login')" style="flex:1;padding:0.5rem;border:none;border-radius:8px;cursor:pointer;font-size:0.875rem;font-weight:500;background:transparent;color:var(--text2);transition:all .2s">ログイン</button>
+            </div>
+            <!-- register form -->
+            <form id="pRegisterForm" onsubmit="providerRegister(event)">
+                <div style="margin-bottom:0.875rem">
+                    <input id="pRegUsername" type="text" placeholder="ユーザー名" required style="width:100%;padding:0.7rem 1rem;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.12);border-radius:10px;color:#e8e8f0;font-size:0.9rem;box-sizing:border-box">
+                </div>
+                <div style="margin-bottom:0.875rem">
+                    <input id="pRegEmail" type="email" placeholder="メールアドレス" required style="width:100%;padding:0.7rem 1rem;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.12);border-radius:10px;color:#e8e8f0;font-size:0.9rem;box-sizing:border-box">
+                </div>
+                <div style="margin-bottom:1rem">
+                    <input id="pRegPassword" type="password" placeholder="パスワード（6文字以上）" required minlength="6" style="width:100%;padding:0.7rem 1rem;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.12);border-radius:10px;color:#e8e8f0;font-size:0.9rem;box-sizing:border-box">
+                </div>
+                <div id="pRegError" style="display:none;background:rgba(255,71,87,0.1);border:1px solid rgba(255,71,87,0.3);border-radius:8px;padding:0.6rem 0.9rem;font-size:0.83rem;color:#ff4757;margin-bottom:0.75rem"></div>
+                <button type="submit" style="width:100%;padding:0.9rem;background:linear-gradient(135deg,#6c47ff,#8b5cf6);border:none;border-radius:12px;color:#fff;font-size:1rem;font-weight:700;cursor:pointer">&#x1F4DD; 無料で登録する</button>
+                <p style="text-align:center;font-size:0.78rem;color:var(--text2);margin-top:0.875rem">登録することで<a href="/terms/" style="color:var(--primary)">利用規約</a>に同意します</p>
+            </form>
+            <!-- login form -->
+            <form id="pLoginForm" style="display:none" onsubmit="providerLogin(event)">
+                <div style="margin-bottom:0.875rem">
+                    <input id="pLoginEmail" type="email" placeholder="メールアドレス" required style="width:100%;padding:0.7rem 1rem;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.12);border-radius:10px;color:#e8e8f0;font-size:0.9rem;box-sizing:border-box">
+                </div>
+                <div style="margin-bottom:1rem">
+                    <input id="pLoginPassword" type="password" placeholder="パスワード" required style="width:100%;padding:0.7rem 1rem;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.12);border-radius:10px;color:#e8e8f0;font-size:0.9rem;box-sizing:border-box">
+                </div>
+                <div id="pLoginError" style="display:none;background:rgba(255,71,87,0.1);border:1px solid rgba(255,71,87,0.3);border-radius:8px;padding:0.6rem 0.9rem;font-size:0.83rem;color:#ff4757;margin-bottom:0.75rem"></div>
+                <button type="submit" style="width:100%;padding:0.9rem;background:linear-gradient(135deg,#6c47ff,#8b5cf6);border:none;border-radius:12px;color:#fff;font-size:1rem;font-weight:700;cursor:pointer">ログイン</button>
+            </form>
+        </div>
+    </div>
+</body>
