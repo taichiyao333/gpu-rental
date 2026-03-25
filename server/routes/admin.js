@@ -697,5 +697,42 @@ router.get('/security/logs', authMiddleware, adminOnly, (req, res) => {
     res.json({ total: logs.length, summary, logs });
 });
 
+// ─── ヘルスチェック API ─────────────────────────────────────────────────────
+
+const path = require('path');
+const fs   = require('fs');
+const HEALTH_LATEST = path.join(__dirname, '../../logs/health/latest.json');
+
+// GET /api/admin/health/latest — 最新ヘルスチェック結果
+router.get('/health/latest', authMiddleware, adminOnly, (req, res) => {
+    try {
+        if (!fs.existsSync(HEALTH_LATEST)) {
+            return res.json(null); // まだ一度も実行されていない
+        }
+        const data = JSON.parse(fs.readFileSync(HEALTH_LATEST, 'utf8'));
+        res.json(data);
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// POST /api/admin/health/run — ヘルスチェックをその場で実行
+router.post('/health/run', authMiddleware, adminOnly, (req, res) => {
+    const { execFile } = require('child_process');
+    const scriptPath = path.join(__dirname, '../../scripts/health-check.js');
+
+    // バックグラウンドで実行（レスポンスはすぐ返す）
+    res.json({ ok: true, message: 'Health check started in background' });
+
+    execFile(process.execPath, [scriptPath], {
+        cwd: path.join(__dirname, '../..'),
+        timeout: 60000,
+        env: { ...process.env },
+    }, (err, stdout, stderr) => {
+        if (err) console.error('[health/run] Error:', err.message);
+        else console.log('[health/run] Done:\n' + stdout.slice(-500));
+    });
+});
+
 module.exports = router;
 

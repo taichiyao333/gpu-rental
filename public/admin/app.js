@@ -63,6 +63,8 @@ function loadSection(sec) {
         case 'backup': loadBackups(); loadKpiSummary(); break;
         case 'outage': loadOutageSection(); break;
         case 'apikeys': loadApiKeys(); break;
+        case 'monitoring': loadMonitoring(); break;
+        case 'purchases': loadPurchases(); break;
     }
 }
 
@@ -1501,3 +1503,98 @@ document.addEventListener('DOMContentLoaded', () => {
         loadRevenueChart(30);
     }, 1500);
 });
+
+/* ═══════════════════════════════════════════════════════════
+   🔍 HEALTH MONITOR
+═══════════════════════════════════════════════════════════ */
+
+async function loadMonitoring() {
+    const tbody = document.getElementById('monitorTableBody');
+    if (!tbody) return;
+    tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;padding:2rem"><div class="spinner"></div></td></tr>';
+    try {
+        const data = await api('/admin/health/latest');
+        if (!data || !data.results) {
+            tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;color:var(--text3);padding:2rem">データなし — 「今すぐ実行」でヘルスチェックを開始してください</td></tr>';
+            return;
+        }
+        document.getElementById('monitorLastRun').textContent = '最終チェック: ' + new Date(data.timestamp).toLocaleString('ja-JP');
+        const banner = document.getElementById('monitorStatusBanner');
+        const sc = { HEALTHY:{bg:'rgba(0,229,160,.12)',border:'rgba(0,229,160,.4)',text:'#00e5a0',icon:'✅',label:'全項目正常'}, WARNING:{bg:'rgba(255,179,0,.12)',border:'rgba(255,179,0,.4)',text:'#ffb300',icon:'⚠️',label:data.warnings+'件の警告'}, DEGRADED:{bg:'rgba(255,71,87,.12)',border:'rgba(255,71,87,.4)',text:'#ff4757',icon:'❌',label:data.errors+'件のエラー'} }[data.status] || {bg:'rgba(255,179,0,.12)',border:'rgba(255,179,0,.4)',text:'#ffb300',icon:'❓',label:data.status};
+        banner.style.cssText = `display:flex;background:${sc.bg};border:1px solid ${sc.border};border-radius:12px;padding:1rem 1.5rem;margin-bottom:1.5rem;align-items:center;gap:1rem;font-weight:600;color:${sc.text}`;
+        banner.innerHTML = `<span style="font-size:1.5rem">${sc.icon}</span><span>STATUS: ${data.status} — ${sc.label}</span><span style="margin-left:auto;font-size:0.8rem;font-weight:400">${data.total_checks}項目 (${data.duration_ms}ms)</span>`;
+        const navBadge = document.getElementById('monitorBadge');
+        if (navBadge) { if (data.errors>0||data.warnings>0){navBadge.style.display='';navBadge.textContent=(data.errors>0?'!':data.warnings);}else{navBadge.style.display='none';} }
+        const kv = (id, val, ok) => { const el=document.getElementById(id); if(el){el.textContent=val;el.parentElement.className=`kpi ${ok?'c-success':'c-danger'}`;} };
+        const results = data.results;
+        kv('mkLocal',    results.find(r=>r.check==='HTTP:Local')?.level==='OK'?'OK':'DOWN', results.find(r=>r.check==='HTTP:Local')?.level==='OK');
+        kv('mkExternal', results.find(r=>r.check==='HTTP:External')?.level!=='ERROR'?'OK':'DOWN', results.find(r=>r.check==='HTTP:External')?.level!=='ERROR');
+        kv('mkStripe',   results.find(r=>r.check==='Stripe:API')?.level==='OK'?'OK':'NG', results.find(r=>r.check==='Stripe:API')?.level==='OK');
+        const whItem=results.find(r=>r.check==='Stripe:Webhook'); const whCnt=whItem?.level==='OK'?0:(whItem?.detail?.length||'?'); kv('mkWebhook', whCnt+'件', whCnt===0);
+        const pendItem=results.find(r=>r.check==='DB:PendingPurchases'); const pendCnt=pendItem?.level==='OK'?0:(pendItem?.detail?.length||'?'); kv('mkPending', pendCnt+'件', pendCnt===0);
+        const diskItem=results.find(r=>r.check==='Disk:C:'); const diskVal=diskItem?.message?.match(/\d+GB/)?diskItem.message.match(/\d+GB/)[0]:'—'; kv('mkDisk', diskVal, diskItem?.level==='OK');
+        const levelIcon={OK:'✅',WARN:'⚠️',ERROR:'❌',INFO:'ℹ️'};
+        const levelCls={OK:'var(--success)',WARN:'var(--warning)',ERROR:'var(--danger)',INFO:'var(--accent)'};
+        tbody.innerHTML = results.map(r=>`<tr><td><span style="color:${levelCls[r.level]||'var(--text2)'};font-size:1.1rem">${levelIcon[r.level]||'?'}</span></td><td style="font-family:monospace;font-size:0.82rem">${r.check}</td><td>${r.message}</td><td style="font-size:0.75rem;color:var(--text3);max-width:280px;word-break:break-all">${r.detail?JSON.stringify(r.detail).substring(0,100)+'...':''}</td></tr>`).join('');
+    } catch (err) {
+        tbody.innerHTML = `<tr><td colspan="4" style="color:var(--danger);padding:1.5rem">エラー: ${err.message}<br>→ <code>node scripts/health-check.js</code> を実行してください</td></tr>`;
+    }
+}
+
+async function runHealthCheck() {
+    showToast('ヘルスチェックを開始しました...', 'info');
+    try {
+        await api('/admin/health/run', { method: 'POST' });
+        setTimeout(loadMonitoring, 4000);
+        showToast('✅ 完了。結果を読み込み中...', 'success');
+    } catch (e) {
+        showToast('実行エラー: ' + e.message, 'error');
+    }
+}
+
+/* ═══════════════════════════════════════════════════════════
+   💳 PURCHASES 決済承認管理
+═══════════════════════════════════════════════════════════ */
+
+async function loadPurchases() {
+    const tbody = document.getElementById('purchasesTableBody');
+    if (!tbody) return;
+    tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:2rem"><div class="spinner"></div></td></tr>';
+    try {
+        const status = document.getElementById('purchaseStatusFilter')?.value || 'pending';
+        const qs = status ? `?status=${status}` : '';
+        const rows = await api('/admin/purchases' + qs);
+        const allRows = await api('/admin/purchases').catch(()=>[]);
+        const pending = allRows.filter(r=>r.status==='pending').length;
+        const completed = allRows.filter(r=>r.status==='completed').length;
+        const totalPt = allRows.filter(r=>r.status==='completed').reduce((s,r)=>s+(r.points||0),0);
+        const el = (id,v) => { const e=document.getElementById(id); if(e) e.textContent=v; };
+        el('puPending', pending+'件'); el('puCompleted', completed+'件'); el('puTotalPt', totalPt.toLocaleString()+' pt');
+        const badge=document.getElementById('purchasesBadge'); if(badge){if(pending>0){badge.textContent=pending;badge.style.display='';}else{badge.style.display='none';}}
+        const stBadge={pending:'b-warning',completed:'b-success',failed:'b-danger'};
+        const stLabel={pending:'未付与',completed:'完了',failed:'失敗'};
+        tbody.innerHTML = (rows||[]).map(p=>`<tr>
+            <td class="mono">#${p.id}</td>
+            <td><div>${p.username||'—'}</div><div style="font-size:0.75rem;color:var(--text3)">${p.email||''}</div></td>
+            <td>${p.plan_name}</td>
+            <td class="mono" style="color:var(--accent)">¥${(p.amount_yen||0).toLocaleString()}</td>
+            <td class="mono" style="color:var(--warning)">${p.points} pt</td>
+            <td><span class="badge ${stBadge[p.status]||'b-muted'}">${stLabel[p.status]||p.status}</span></td>
+            <td style="color:var(--text3);font-size:0.8rem">${p.created_at?new Date(p.created_at).toLocaleString('ja-JP'):'—'}</td>
+            <td>${p.status==='pending'?`<button class="btn btn-primary btn-sm" onclick="approvePurchase(${p.id})">承認付与</button><button class="btn btn-ghost btn-sm" style="margin-left:4px" onclick="approvePurchase(${p.id},true)">強制</button>`:'—'}</td>
+        </tr>`).join('') || '<tr><td colspan="8" style="text-align:center;color:var(--text3);padding:2rem">データなし</td></tr>';
+    } catch (err) {
+        tbody.innerHTML = `<tr><td colspan="8" style="color:var(--danger);padding:1.5rem">${err.message}</td></tr>`;
+    }
+}
+
+async function approvePurchase(id, force=false) {
+    if (!confirm(force?`Purchase #${id} を強制付与します（Stripe検証なし）。よろしいですか？`:`Purchase #${id} を承認してポイントを付与しますか？`)) return;
+    try {
+        const result = await api(`/admin/purchases/${id}/approve${force?'?force=1':''}`, {method:'POST'});
+        showToast(result.already_granted?'既に付与済みです':`✅ +${result.points_added}pt を ${result.user?.email} に付与しました`, result.already_granted?'info':'success');
+        loadPurchases();
+    } catch (err) {
+        showToast('承認失敗: ' + err.message, 'error');
+    }
+}

@@ -28,3 +28,33 @@ detail: `logs/health/health-2026-03-25T00-49-34.json`
 
 detail: `logs/health/health-2026-03-25T00-50-00.json`
 ---
+
+## 2026-03-25T01:00:00.288Z — WARNING
+
+| Level | Check | Message |
+|-------|-------|---------|
+| **WARN** | DB:PendingPurchases | 17件のStripe支払い済み可能性あるpendingが2時間以上放置 |
+| **WARN** | Stripe:Webhook | 4件のWebhook未配信イベントあり |
+
+detail: `logs/health/health-2026-03-25T01-00-00.json`
+---
+
+## 2026-03-25T01:10:00.215Z — WARNING
+
+| Level | Check | Message |
+|-------|-------|---------|
+| **WARN** | DB:PendingPurchases | 17件のStripe支払い済み可能性あるpendingが2時間以上放置 |
+| **WARN** | Stripe:Webhook | 4件のWebhook未配信イベントあり |
+
+detail: `logs/health/health-2026-03-25T01-10-00.json`
+---
+
+## 2026-03-25T01:20:00.274Z — WARNING
+
+| Level | Check | Message |
+|-------|-------|---------|
+| **WARN** | DB:PendingPurchases | 17件のStripe支払い済み可能性あるpendingが2時間以上放置 |
+| **WARN** | Stripe:Webhook | 4件のWebhook未配信イベントあり |
+
+detail: `logs/health/health-2026-03-25T01-20-00.json`
+---

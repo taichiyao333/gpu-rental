@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="ja">
 
 <head>
@@ -1070,6 +1070,14 @@
             <button class="nav-item" data-section="backup">
                 <span class="nav-icon">🗄</span>バックアップ
             </button>
+            <button class="nav-item" data-section="monitoring" id="navMonitoring">
+                <span class="nav-icon">🔍</span>ヘルスモニター
+                <span class="nav-badge" id="monitorBadge" style="display:none;background:#ff4757">!</span>
+            </button>
+            <button class="nav-item" data-section="purchases">
+                <span class="nav-icon">💳</span>決済承認
+                <span class="nav-badge" id="purchasesBadge" style="display:none;background:#f59e0b">0</span>
+            </button>
                 <span class="nav-icon">⚡</span>障害管理
                 <span class="nav-badge" id="outageBadge" style="display:none;background:#ff4757">0</span>
             </button>
@@ -1781,6 +1789,84 @@
                 <div style="text-align:center;padding:2rem;color:var(--text2)"><div class="spinner"></div></div>
             </div>
         </div>
+
+            <!-- ═══ HEALTH MONITOR ═══ -->
+            <div class="section" id="section-monitoring">
+                <div class="section-header">
+                    <div>
+                        <div class="section-title">🔍 ヘルスモニター</div>
+                        <div class="section-sub" id="monitorLastRun">最終チェック: —</div>
+                    </div>
+                    <div style="display:flex;gap:8px">
+                        <button class="btn btn-ghost btn-sm" onclick="loadMonitoring()">↻ 更新</button>
+                        <button class="btn btn-primary btn-sm" onclick="runHealthCheck()">▶ 今すぐ実行</button>
+                    </div>
+                </div>
+
+                <!-- ステータスバナー -->
+                <div id="monitorStatusBanner" style="display:none;border-radius:12px;padding:1rem 1.5rem;margin-bottom:1.5rem;display:flex;align-items:center;gap:1rem;font-weight:600"></div>
+
+                <!-- KPIサマリー -->
+                <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:1rem;margin-bottom:1.5rem" id="monitorKpis">
+                    <div class="kpi c-success"><div class="kpi-icon">🌐</div><div class="kpi-val" id="mkLocal">—</div><div class="kpi-label">ローカルサーバー</div></div>
+                    <div class="kpi c-primary"><div class="kpi-icon">☁️</div><div class="kpi-val" id="mkExternal">—</div><div class="kpi-label">外部アクセス</div></div>
+                    <div class="kpi c-accent"><div class="kpi-icon">💳</div><div class="kpi-val" id="mkStripe">—</div><div class="kpi-label">Stripe API</div></div>
+                    <div class="kpi c-warning"><div class="kpi-icon">🔔</div><div class="kpi-val" id="mkWebhook">—</div><div class="kpi-label">Webhook未配信</div></div>
+                    <div class="kpi c-danger"><div class="kpi-icon">⚠️</div><div class="kpi-val" id="mkPending">—</div><div class="kpi-label">未処理購入</div></div>
+                    <div class="kpi c-success"><div class="kpi-icon">💾</div><div class="kpi-val" id="mkDisk">—</div><div class="kpi-label">Cドライブ空き</div></div>
+                </div>
+
+                <!-- チェック詳細一覧 -->
+                <div class="table-card">
+                    <div class="table-header">
+                        <h3>チェック詳細</h3>
+                    </div>
+                    <table>
+                        <thead><tr>
+                            <th>ステータス</th><th>チェック項目</th><th>メッセージ</th><th>詳細</th>
+                        </tr></thead>
+                        <tbody id="monitorTableBody">
+                            <tr><td colspan="4" style="text-align:center;color:var(--text3);padding:2rem"><div class="spinner"></div></td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- ═══ PURCHASES (決済承認) ═══ -->
+            <div class="section" id="section-purchases">
+                <div class="section-header">
+                    <div>
+                        <div class="section-title">💳 決済承認管理</div>
+                        <div class="section-sub">Webhook未着などでポイント付与されていない決済を手動承認</div>
+                    </div>
+                    <div style="display:flex;gap:8px">
+                        <select id="purchaseStatusFilter" onchange="loadPurchases()" style="background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:6px 12px;color:var(--text);font-size:0.82rem">
+                            <option value="pending">Pending（未付与）</option>
+                            <option value="">全件表示</option>
+                            <option value="completed">完了済み</option>
+                        </select>
+                        <button class="btn btn-ghost btn-sm" onclick="loadPurchases()">↻ 更新</button>
+                    </div>
+                </div>
+
+                <!-- 統計 -->
+                <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:1rem;margin-bottom:1.5rem">
+                    <div class="kpi c-warning"><div class="kpi-icon">⏳</div><div class="kpi-val" id="puPending">—</div><div class="kpi-label">Pending件数</div></div>
+                    <div class="kpi c-success"><div class="kpi-icon">✅</div><div class="kpi-val" id="puCompleted">—</div><div class="kpi-label">完了件数</div></div>
+                    <div class="kpi c-primary"><div class="kpi-icon">💰</div><div class="kpi-val" id="puTotalPt">—</div><div class="kpi-label">付与済みPt合計</div></div>
+                </div>
+
+                <div class="table-card">
+                    <table>
+                        <thead><tr>
+                            <th>ID</th><th>ユーザー</th><th>プラン</th><th>金額</th><th>ポイント</th><th>ステータス</th><th>日時</th><th>操作</th>
+                        </tr></thead>
+                        <tbody id="purchasesTableBody">
+                            <tr><td colspan="8" style="text-align:center;color:var(--text3);padding:2rem"><div class="spinner"></div></td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
 
 </main>
     </div>
