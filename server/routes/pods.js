@@ -225,4 +225,43 @@ router.post('/:id/force-stop', authMiddleware, adminOnly, async (req, res) => {
     }
 });
 
+// ─── GET /api/pods/:id/ssh-info ─ SSH接続情報 ─────────────────────────────
+router.get('/:id/ssh-info', authMiddleware, (req, res) => {
+    try {
+        const db = getDb();
+        const pod = db.prepare(`
+            SELECT p.*, gn.name as gpu_name, r.start_time, r.end_time,
+                   prov.tunnel_port, prov.tunnel_status
+            FROM pods p
+            JOIN reservations r ON p.reservation_id = r.id
+            JOIN gpu_nodes gn ON r.gpu_id = gn.id
+            LEFT JOIN providers prov ON gn.provider_id = prov.id
+            WHERE p.id = ? AND p.renter_id = ?
+        `).get(parseInt(req.params.id), req.user.id);
+
+        if (!pod) return res.status(404).json({ error: 'Pod not found' });
+
+        const sshHost = process.env.BASE_URL
+            ? new URL(process.env.BASE_URL).hostname
+            : 'gpurental.jp';
+        const sshPort = pod.tunnel_port || 2222;
+        const sshUser = `gpu-user-${req.user.id}`;
+        const connected = pod.tunnel_status === 'connected';
+
+        res.json({
+            ssh: {
+                host: sshHost,
+                port: sshPort,
+                user: sshUser,
+                command: `ssh -p ${sshPort} ${sshUser}@${sshHost}`,
+                tunnelActive: connected,
+            },
+            gpu: pod.gpu_name,
+            expiresAt: pod.end_time,
+        });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
 module.exports = router;

@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="ja">
 
 <head>
@@ -845,7 +845,7 @@
     </footer>
 
     <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
-    <script src="app.js"></script>
+    <script src="app.js?v=20260325"></script>
 
     <!-- Google Translate (非表示) -->
     <div id="google_translate_element" style="display:none"></div>
@@ -1053,11 +1053,109 @@
     </div>
 
 
+
+    <!-- Blender Cloud Render Section -->
+    <section id="blenderSection" style="max-width:1200px;margin:3rem auto 0;padding:0 1.5rem">
+        <div style="background:linear-gradient(135deg,rgba(108,71,255,0.06),rgba(0,229,160,0.04));border:1px solid rgba(108,71,255,0.15);border-radius:20px;padding:2.5rem;position:relative;overflow:hidden">
+            <!-- Decorative glow -->
+            <div style="position:absolute;top:-60px;right:-60px;width:200px;height:200px;background:radial-gradient(circle,rgba(108,71,255,0.15),transparent);border-radius:50%"></div>
+
+            <!-- Header -->
+            <div style="text-align:center;margin-bottom:2rem;position:relative;z-index:1">
+                <div style="font-size:2.5rem;margin-bottom:0.5rem">🎨</div>
+                <h2 style="font-size:1.6rem;font-weight:800;background:linear-gradient(135deg,#fff,#c4b5fd);-webkit-background-clip:text;-webkit-text-fill-color:transparent;margin-bottom:0.5rem">
+                    Blender クラウドレンダリング
+                </h2>
+                <p style="color:rgba(255,255,255,0.6);font-size:0.95rem;max-width:600px;margin:0 auto;line-height:1.6">
+                    自分のPCのBlenderから直接クラウドGPUでレンダリング。<br>
+                    GPUのないMacBookでも、RTX 4090クラスの高速レンダリングが可能です。
+                </p>
+            </div>
+
+            <!-- 4-Step Flow -->
+            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:1rem;margin-bottom:2rem">
+                <div style="background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.07);border-radius:14px;padding:1.2rem;text-align:center">
+                    <div style="width:36px;height:36px;background:linear-gradient(135deg,#6c47ff,#00e5a0);border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:0.9rem;color:#fff;margin:0 auto 10px">1</div>
+                    <div style="font-size:0.88rem;font-weight:600;margin-bottom:4px">Addonをダウンロード</div>
+                    <div style="font-size:0.75rem;color:rgba(255,255,255,0.5)">ワークスペースの「🎨 Blender」タブから1クリックでDL</div>
+                </div>
+                <div style="background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.07);border-radius:14px;padding:1.2rem;text-align:center">
+                    <div style="width:36px;height:36px;background:linear-gradient(135deg,#6c47ff,#00e5a0);border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:0.9rem;color:#fff;margin:0 auto 10px">2</div>
+                    <div style="font-size:0.88rem;font-weight:600;margin-bottom:4px">Blenderにインストール</div>
+                    <div style="font-size:0.75rem;color:rgba(255,255,255,0.5)">編集 → プリファレンス → アドオン → インストール</div>
+                </div>
+                <div style="background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.07);border-radius:14px;padding:1.2rem;text-align:center">
+                    <div style="width:36px;height:36px;background:linear-gradient(135deg,#6c47ff,#00e5a0);border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:0.9rem;color:#fff;margin:0 auto 10px">3</div>
+                    <div style="font-size:0.88rem;font-weight:600;margin-bottom:4px">GPUを選んでレンダリング</div>
+                    <div style="font-size:0.75rem;color:rgba(255,255,255,0.5)">サイドバー → GPURental → GPU選択 → ☁ 開始</div>
+                </div>
+                <div style="background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.07);border-radius:14px;padding:1.2rem;text-align:center">
+                    <div style="width:36px;height:36px;background:linear-gradient(135deg,#6c47ff,#00e5a0);border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:0.9rem;color:#fff;margin:0 auto 10px">4</div>
+                    <div style="font-size:0.88rem;font-weight:600;margin-bottom:4px">結果を自動ダウンロード</div>
+                    <div style="font-size:0.75rem;color:rgba(255,255,255,0.5)">レンダリング完了後、結果画像をワンクリックでDL</div>
+                </div>
+            </div>
+
+            <!-- Features row -->
+            <div style="display:flex;flex-wrap:wrap;justify-content:center;gap:1rem;margin-bottom:1.5rem">
+                <div style="display:flex;align-items:center;gap:6px;font-size:0.82rem;color:rgba(255,255,255,0.6);padding:6px 12px;background:rgba(255,255,255,0.03);border-radius:8px">
+                    ✅ <span>Cycles/Eevee 対応</span>
+                </div>
+                <div style="display:flex;align-items:center;gap:6px;font-size:0.82rem;color:rgba(255,255,255,0.6);padding:6px 12px;background:rgba(255,255,255,0.03);border-radius:8px">
+                    ✅ <span>進捗リアルタイム表示</span>
+                </div>
+                <div style="display:flex;align-items:center;gap:6px;font-size:0.82rem;color:rgba(255,255,255,0.6);padding:6px 12px;background:rgba(255,255,255,0.03);border-radius:8px">
+                    ✅ <span>アニメーション一括レンダリング</span>
+                </div>
+                <div style="display:flex;align-items:center;gap:6px;font-size:0.82rem;color:rgba(255,255,255,0.6);padding:6px 12px;background:rgba(255,255,255,0.03);border-radius:8px">
+                    ✅ <span>GPU選択可能</span>
+                </div>
+                <div style="display:flex;align-items:center;gap:6px;font-size:0.82rem;color:rgba(255,255,255,0.6);padding:6px 12px;background:rgba(255,255,255,0.03);border-radius:8px">
+                    ✅ <span>Blender 3.6〜4.x 対応</span>
+                </div>
+            </div>
+
+            <!-- Use Case -->
+            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:1rem;margin-bottom:1.5rem">
+                <div style="background:rgba(255,255,255,0.03);border-radius:12px;padding:1rem">
+                    <div style="font-size:0.82rem;font-weight:600;margin-bottom:6px;color:#c4b5fd">🖥 こんな方におすすめ</div>
+                    <ul style="font-size:0.78rem;color:rgba(255,255,255,0.55);line-height:1.8;padding-left:1rem;margin:0">
+                        <li>MacBookなどGPUのないPCでBlenderを使っている</li>
+                        <li>レンダリングに何時間もかかってPCが使えない</li>
+                        <li>高品質なCyclesレンダリングをスピーディに仕上げたい</li>
+                        <li>RunPodのような海外サービスは英語で不安</li>
+                    </ul>
+                </div>
+                <div style="background:rgba(255,255,255,0.03);border-radius:12px;padding:1rem">
+                    <div style="font-size:0.82rem;font-weight:600;margin-bottom:6px;color:#86efac">⚡ RunPodとの違い</div>
+                    <ul style="font-size:0.78rem;color:rgba(255,255,255,0.55);line-height:1.8;padding-left:1rem;margin:0">
+                        <li>🇯🇵 完全日本語対応（UI・サポート・決済）</li>
+                        <li>🎨 Blender専用Addonで簡単操作</li>
+                        <li>💳 クレジットカード + 日本円決済</li>
+                        <li>🔰 初心者でも5分でセットアップ完了</li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- CTA -->
+            <div style="text-align:center">
+                <a href="/downloads/gpurental_addon.py" download
+                    style="display:inline-flex;align-items:center;gap:8px;padding:12px 28px;background:linear-gradient(135deg,#6c47ff,#00d4ff);border-radius:12px;color:#fff;font-weight:700;font-size:0.95rem;text-decoration:none;box-shadow:0 4px 20px rgba(108,71,255,0.4);transition:transform 0.2s,box-shadow 0.2s"
+                    onmouseover="this.style.transform='translateY(-2px)';this.style.boxShadow='0 8px 30px rgba(108,71,255,0.6)'"
+                    onmouseout="this.style.transform='';this.style.boxShadow='0 4px 20px rgba(108,71,255,0.4)'">
+                    ⬇ Blender Addon をダウンロード
+                </a>
+                <p style="font-size:0.72rem;color:rgba(255,255,255,0.35);margin-top:8px">gpurental_addon.py — Python標準ライブラリのみで動作（依存関係なし）</p>
+            </div>
+        </div>
+    </section>
+
     <!-- Legal Footer -->
     <div style="text-align:center;padding:1.5rem;font-size:0.78rem;color:#3a3a5a;border-top:1px solid rgba(120,120,200,0.1);margin-top:2rem">
         <a href="/terms/" style="color:#5a5a7a;margin:0 0.5rem">利用規約</a> ·
         <a href="/privacy/" style="color:#5a5a7a;margin:0 0.5rem">プライバシーポリシー</a> ·
         <a href="/tokushoho/" style="color:#5a5a7a;margin:0 0.5rem">特定商取引法</a> ·
+        <a href="/downloads/gpurental_addon.py" download style="color:#6c47ff;margin:0 0.5rem">🎨 Blender Addon</a> ·
         © 2026 METADATALAB.INC
     </div>
 </body>

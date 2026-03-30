@@ -860,15 +860,16 @@ function calUpdateSummary() {
     };
 
     const total = Math.round(calState.duration * gpu.price_per_hour);
+    const totalPt = Math.ceil(total / 10); // 1pt = 10円
 
     document.getElementById('sumStart').textContent = fmtDt(startDt);
     document.getElementById('sumEnd').textContent = fmtDt(endDt);
     document.getElementById('sumHours').textContent = `${calState.duration}時間`;
-    document.getElementById('sumTotal').textContent = `¥${total.toLocaleString()}`;
+    document.getElementById('sumTotal').textContent = `¥${total.toLocaleString()}（${totalPt.toLocaleString()}pt）`;
 
     const btn = document.getElementById('submitReserve');
     btn.disabled = false;
-    btn.textContent = `✅ 予約を確定する（¥${total.toLocaleString()}）`;
+    btn.textContent = `✅ 予約を確定する（${totalPt.toLocaleString()}pt）`;
 }
 
 /* ── Calendar nav ── */

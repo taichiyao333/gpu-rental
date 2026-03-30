@@ -1,4 +1,4 @@
-﻿require('dotenv').config();
+require('dotenv').config();
 const path = require('path');
 
 module.exports = {
@@ -28,7 +28,7 @@ module.exports = {
     },
 
     gpu: {
-        pollInterval: parseInt(process.env.GPU_POLL_INTERVAL) || 5000,
+        pollInterval: parseInt(process.env.GPU_POLL_INTERVAL) || 3600000, // 1 hour
         tempAlertThreshold: parseInt(process.env.TEMP_ALERT_THRESHOLD) || 85,
     },
 

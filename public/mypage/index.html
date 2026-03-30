@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="ja">
 
 <head>
@@ -1268,6 +1268,9 @@
         }
 
         // ── POINTS ──────────────────────────────────────────────────
+        // 初期表示: ポイントタブのデータを自動ロード
+        switchTab('points');
+
         async function loadPointBalance() {
             try {
                 const d = await apiGet('/points/balance');

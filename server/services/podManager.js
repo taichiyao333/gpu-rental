@@ -9,6 +9,7 @@ const { getTemplate } = require('./dockerTemplates');
 const config = require('../config');
 const { v4: uuidv4 } = require('uuid');
 const { mailSessionEnded, mailProviderPodEnded } = require('./email');
+const { POINT_RATE } = require('../config/plans');
 
 // ── Docker availability check (起動時1回) ────────────────────────────────────
 let DOCKER_AVAILABLE = false;
@@ -464,20 +465,22 @@ async function stopPodAsync(podId, reason = 'expired') {
     const finalActualCost = (durationMinutes / 60) * (costPerHour?.price_per_hour || 0);
     const finalProviderPayout = finalActualCost * rateUsed;
 
-    // デポジット = 予約時に引き落とした ceil(reservation.total_price)
-    const depositPaid = reservation ? Math.ceil(reservation.total_price || 0) : 0;
-    const refundAmount = Math.max(0, depositPaid - Math.ceil(finalActualCost));
+    // デポジット = 予約時に引き落とした ceil(total_price / POINT_RATE)
+    const depositPaid = reservation ? Math.ceil((reservation.total_price || 0) / POINT_RATE) : 0;
+    const actualCostPt = Math.ceil(finalActualCost / POINT_RATE);
+    const refundAmount = Math.max(0, depositPaid - actualCostPt);
 
     db.transaction(() => {
         // プロバイダーへ収益付与
         if (gpuNode) {
-            db.prepare('UPDATE users SET wallet_balance = wallet_balance + ? WHERE id = ?')
-                .run(finalProviderPayout, gpuNode.provider_id);
+            const providerPayoutPt = finalProviderPayout / POINT_RATE;
+            db.prepare('UPDATE users SET wallet_balance = wallet_balance + ?, point_balance = point_balance + ? WHERE id = ?')
+                .run(providerPayoutPt, providerPayoutPt, gpuNode.provider_id);
         }
         // レンタラーへ未使用分を返金
         if (refundAmount > 0) {
-            db.prepare('UPDATE users SET wallet_balance = wallet_balance + ? WHERE id = ?')
-                .run(refundAmount, pod.renter_id);
+            db.prepare('UPDATE users SET wallet_balance = wallet_balance + ?, point_balance = point_balance + ? WHERE id = ?')
+                .run(refundAmount, refundAmount, pod.renter_id);
             console.log(`💰 Pod #${podId}: Refunded ${refundAmount}pt to renter (deposit=${depositPaid}, actual=${Math.ceil(finalActualCost)})`);
         }
     })();

@@ -1,4 +1,4 @@
-﻿/**
+/**
  * Outage & Compensation API
  */
 const express = require('express');
@@ -99,8 +99,8 @@ router.post('/:id/compensate', authMiddleware, adminOnly, (req, res) => {
             const compensationPoints = Math.ceil(compensationYen / POINT_RATE);
             if (compensationPoints <= 0) continue;
 
-            db.prepare("UPDATE users SET point_balance = point_balance + ? WHERE id = ?")
-                .run(compensationPoints, res.renter_id);
+            db.prepare("UPDATE users SET point_balance = point_balance + ?, wallet_balance = wallet_balance + ? WHERE id = ?")
+                .run(compensationPoints, compensationPoints, res.renter_id);
             const desc = 'Provider outage compensation: ' + Math.round(overlapMinutes) + ' min';
             db.prepare("INSERT INTO point_logs (user_id, points, type, description, ref_id) VALUES (?, ?, 'compensation', ?, ?)")
                 .run(res.renter_id, compensationPoints, desc, report.id);

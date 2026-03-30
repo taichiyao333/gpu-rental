@@ -190,4 +190,43 @@ cloudflared tunnel run --config cloudflared-config.yml gpu-rental-platform
 
 ---
 
+## 🤖 Antigravity / AI 連携機能 (MCP Server)
+
+GPURental Blender Addon (v2.3.1以降) には、ローカル環境のBlenderを外部のAIエージェント（Antigravityなど）から直接操作するための **MCP (Message Control Protocol) 風ローカルソケットサーバー** が内蔵されています。
+
+### 使用方法
+1. Blenderの **プリファレンス > アドオン > GPURental Cloud Render** を開きます。
+2. 「開発・外部連携」セクションの **「ローカルMCPサーバー (Antigravity連携用)」** にチェックを入れます。
+3. `🟢 MCPサーバー実行中 (ポート 8123)` に変わると、ローカル (`127.0.0.1:8123`) でJSONコマンドの受信待機が始まります。
+
+### サンプルコマンド (Python / JSON 送信)
+AIエージェントや外部スクリプトから以下のように JSON 形式でコマンドを送信して Blender を操作できます。
+
+```python
+import socket, json
+
+client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+client.connect(('127.0.0.1', 8123))
+
+# コマンド送信例: 立方体を追加
+payload = {"action": "add_cube", "kwargs": {"size": 3.0, "location": [0, 0, 1]}}
+client.sendall((json.dumps(payload) + "\n").encode('utf-8'))
+
+# コマンド送信例: Pythonコードを直接実行
+payload = {
+    "action": "execute_python", 
+    "kwargs": {"code": "bpy.ops.mesh.primitive_monkey_add(location=(2,2,2))"}
+}
+client.sendall((json.dumps(payload) + "\n").encode('utf-8'))
+
+print(client.recv(4096).decode('utf-8'))
+client.close()
+```
+
+### 注意点
+- **セキュア通信ではありません**。サーバーはローカルループバック (`127.0.0.1`) に対してのみ Bind され、外部ネットワークからの直接アクセスは遮断されますが、同じPC内で動く任意のプロセスから操作可能です。
+- BlenderのAPIはメインスレッドで実行する必要があるため、JSONコマンドを受信したのち、Addonのリフレッシュタイマー（`bpy.app.timers`）を経由して安全に実行されます。
+
+---
+
 © 2026 GPU Rental Platform · RTX A4500 · 20GB VRAM

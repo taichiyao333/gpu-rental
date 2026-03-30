@@ -187,10 +187,11 @@
         .final-cta p { color: var(--text2); max-width: 500px; margin: 0 auto 2rem; }
 
         /* ── FOOTER ── */
-        footer { padding: 2.5rem 2rem; border-top: 1px solid var(--border); text-align: center; font-size: 0.78rem; color: var(--text3); }
+        footer { padding: 2.5rem 2rem 3.5rem; border-top: 1px solid var(--border); text-align: center; font-size: 0.78rem; color: var(--text3); }
         footer a { color: var(--text3); text-decoration: none; margin: 0 0.65rem; }
         footer a:hover { color: var(--text2); }
         .footer-links { margin-bottom: 0.75rem; display: flex; justify-content: center; flex-wrap: wrap; gap: 0.5rem; }
+        .footer-copy { margin-top: 0.5rem; padding-bottom: 1rem; }
 
         /* ── RESPONSIVE ── */
         @media (max-width: 768px) {
@@ -233,12 +234,12 @@
         <span class="ticker-item">💰 RTX 4090 → 月最大 ¥46,800</span>
         <span class="ticker-item">⚡ 電気代差し引いても黒字</span>
         <span class="ticker-item">🖥 RTX 3090 → 月最大 ¥36,000</span>
-        <span class="ticker-item">📡 エージェントが自動管理</span>
+        <span class="ticker-item">📡 ポート開放不要・自動接続</span>
         <span class="ticker-item">🛡 手数料20%のみ、初期費用0円</span>
         <span class="ticker-item">💰 RTX 4090 → 月最大 ¥46,800</span>
         <span class="ticker-item">⚡ 電気代差し引いても黒字</span>
         <span class="ticker-item">🖥 RTX 3090 → 月最大 ¥36,000</span>
-        <span class="ticker-item">📡 エージェントが自動管理</span>
+        <span class="ticker-item">📡 ポート開放不要・自動接続</span>
         <span class="ticker-item">🛡 手数料20%のみ、初期費用0円</span>
     </div>
 </div>
@@ -254,7 +255,7 @@
         <p class="hero-sub anim anim-d2">
             使っていない時間帯のGPUを貸し出して副収入を。<br>
             AI開発者・映像クリエイターが求める高性能GPUを、<br>
-            あなたのPCから提供するだけ。<strong>初期費用0円・手数料20%のみ。</strong>
+            あなたのPCから提供するだけ。<strong>ポート開放不要・初期費用0円・手数料20%のみ。</strong>
         </p>
 
         <!-- EARNING PREVIEW -->
@@ -380,7 +381,7 @@
     <div class="container">
         <div class="section-badge">How It Works</div>
         <h2 class="section-title">4ステップで<br>貸し出し開始</h2>
-        <p class="section-sub">複雑な設定は一切不要。エージェントをインストールするだけで自動管理されます。</p>
+        <p class="section-sub">ポート開放・ルーター設定は不要。リバーストンネル技術でエージェントが自動接続します。</p>
         <div class="how-steps">
             <div class="how-step">
                 <div class="how-num">1</div>
@@ -389,13 +390,13 @@
             </div>
             <div class="how-step">
                 <div class="how-num">2</div>
-                <div class="how-title">エージェントインストール</div>
-                <div class="how-desc">ご自身のPCにGPURentalエージェント（軽量ソフト）をインストール。GPU情報が自動検出されます。</div>
+                <div class="how-title">エージェントをダウンロード＆実行</div>
+                <div class="how-desc">setup.batをダブルクリックするだけ。GPUを自動検出し、サーバーに登録されます。</div>
             </div>
             <div class="how-step">
                 <div class="how-num">3</div>
-                <div class="how-title">貸し出し時間帯を設定</div>
-                <div class="how-desc">「平日夜間のみ」「週末のみ」など、自分のPC使用スケジュールに合わせて貸し出し可能時間を設定。</div>
+                <div class="how-title">トンネルが自動開通</div>
+                <div class="how-desc">リバーストンネルが自動で接続。ポート開放・ルーター設定・ファイアウォール変更は一切不要です。</div>
             </div>
             <div class="how-step">
                 <div class="how-num">4</div>
@@ -425,8 +426,8 @@
             </div>
             <div class="benefit-card">
                 <div class="benefit-icon">🛡️</div>
-                <div class="benefit-title">セキュリティ保護</div>
-                <div class="benefit-desc">利用者は隔離されたサンドボックス環境でのみ実行。ホストのファイル・システムには一切アクセスできません。</div>
+                <div class="benefit-title">ポート開放不要・安全</div>
+                <div class="benefit-desc">リバーストンネル技術により、ルーター設定やポート開放は一切不要。自宅回線のまま安全にGPUを提供できます。</div>
             </div>
             <div class="benefit-card">
                 <div class="benefit-icon">⏰</div>
@@ -491,15 +492,70 @@
             <div class="calc-row">
                 <label>GPUモデル</label>
                 <select id="calcGpu" onchange="updateCalc()">
-                    <option value="650">RTX 4090 (¥650/h)</option>
-                    <option value="900">RTX A6000 (¥900/h)</option>
-                    <option value="550">RTX 4080 (¥550/h)</option>
-                    <option value="500">RTX 3090 (¥500/h)</option>
-                    <option value="420">RTX 4070 Ti (¥420/h)</option>
-                    <option value="350">RTX 4070 (¥350/h)</option>
-                    <option value="280">RTX 4060 Ti (¥280/h)</option>
-                    <option value="220">RTX 3070 (¥220/h)</option>
-                    <option value="200">RTX 3060 (¥200/h)</option>
+                    <optgroup label="🏢 データセンター / HPC">
+                        <option value="3500">NVIDIA H100 SXM (¥3,500/h)</option>
+                        <option value="2800">NVIDIA H100 PCIe (¥2,800/h)</option>
+                        <option value="2200">NVIDIA A100 80GB SXM (¥2,200/h)</option>
+                        <option value="1800">NVIDIA A100 40GB PCIe (¥1,800/h)</option>
+                        <option value="1400">NVIDIA L40S (¥1,400/h)</option>
+                        <option value="1200">NVIDIA L40 (¥1,200/h)</option>
+                        <option value="800">NVIDIA A40 (¥800/h)</option>
+                        <option value="600">NVIDIA A30 (¥600/h)</option>
+                        <option value="450">NVIDIA A16 (¥450/h)</option>
+                        <option value="350">NVIDIA A10 (¥350/h)</option>
+                        <option value="250">NVIDIA A2 (¥250/h)</option>
+                        <option value="180">NVIDIA T4 (¥180/h)</option>
+                    </optgroup>
+                    <optgroup label="🎨 プロフェッショナル (Quadro/RTX)">
+                        <option value="900">RTX A6000 48GB (¥900/h)</option>
+                        <option value="700">RTX A5000 24GB (¥700/h)</option>
+                        <option value="500">RTX A4500 20GB (¥500/h)</option>
+                        <option value="400">RTX A4000 16GB (¥400/h)</option>
+                        <option value="300">RTX A2000 12GB (¥300/h)</option>
+                    </optgroup>
+                    <optgroup label="🎮 GeForce RTX 50 シリーズ">
+                        <option value="850">RTX 5090 32GB (¥850/h)</option>
+                        <option value="650">RTX 5080 16GB (¥650/h)</option>
+                        <option value="480">RTX 5070 Ti 16GB (¥480/h)</option>
+                        <option value="380">RTX 5070 12GB (¥380/h)</option>
+                        <option value="280">RTX 5060 Ti 16GB (¥280/h)</option>
+                        <option value="250">RTX 5060 Ti 8GB (¥250/h)</option>
+                        <option value="200">RTX 5060 8GB (¥200/h)</option>
+                    </optgroup>
+                    <optgroup label="🎮 GeForce RTX 40 シリーズ">
+                        <option value="650" selected>RTX 4090 24GB (¥650/h)</option>
+                        <option value="550">RTX 4080 SUPER 16GB (¥550/h)</option>
+                        <option value="520">RTX 4080 16GB (¥520/h)</option>
+                        <option value="420">RTX 4070 Ti SUPER 16GB (¥420/h)</option>
+                        <option value="400">RTX 4070 Ti 12GB (¥400/h)</option>
+                        <option value="350">RTX 4070 SUPER 12GB (¥350/h)</option>
+                        <option value="320">RTX 4070 12GB (¥320/h)</option>
+                        <option value="280">RTX 4060 Ti 16GB (¥280/h)</option>
+                        <option value="250">RTX 4060 Ti 8GB (¥250/h)</option>
+                        <option value="200">RTX 4060 8GB (¥200/h)</option>
+                    </optgroup>
+                    <optgroup label="🎮 GeForce RTX 30 シリーズ">
+                        <option value="500">RTX 3090 Ti 24GB (¥500/h)</option>
+                        <option value="480">RTX 3090 24GB (¥480/h)</option>
+                        <option value="400">RTX 3080 Ti 12GB (¥400/h)</option>
+                        <option value="350">RTX 3080 10GB (¥350/h)</option>
+                        <option value="280">RTX 3070 Ti 8GB (¥280/h)</option>
+                        <option value="250">RTX 3070 8GB (¥250/h)</option>
+                        <option value="220">RTX 3060 Ti 8GB (¥220/h)</option>
+                        <option value="200">RTX 3060 12GB (¥200/h)</option>
+                    </optgroup>
+                    <optgroup label="🎮 GeForce RTX 20 シリーズ">
+                        <option value="280">RTX 2080 Ti 11GB (¥280/h)</option>
+                        <option value="220">RTX 2080 SUPER 8GB (¥220/h)</option>
+                        <option value="200">RTX 2080 8GB (¥200/h)</option>
+                        <option value="180">RTX 2070 SUPER 8GB (¥180/h)</option>
+                        <option value="150">RTX 2060 SUPER 8GB (¥150/h)</option>
+                        <option value="120">RTX 2060 6GB (¥120/h)</option>
+                    </optgroup>
+                    <optgroup label="🕹️ GeForce GTX シリーズ">
+                        <option value="150">GTX 1080 Ti 11GB (¥150/h)</option>
+                        <option value="120">GTX 1080 8GB (¥120/h)</option>
+                    </optgroup>
                 </select>
             </div>
             <div class="calc-row">
@@ -624,14 +680,21 @@
         <a href="https://gpurental.jp/portal/">GPU一覧</a>
         <a href="mailto:info@metadatalab.net">お問い合わせ</a>
     </div>
-    <p>© 2026 METADATALAB.INC — GPURental. All rights reserved.</p>
+    <p class="footer-copy">© 2026 METADATALAB.INC — GPURental. All rights reserved.</p>
 </footer>
 
 <script>
 // ── CALCULATOR ──
+// TDP map: price_per_hour → TDP in watts (approximate)
 const GPU_TDP = {
-    650: 450, 900: 300, 550: 320, 500: 350,
-    420: 285, 350: 200, 280: 190, 220: 220, 200: 170
+    3500: 700, 2800: 350, 2200: 400, 1800: 250,    // H100 SXM/PCIe, A100 80/40
+    1400: 350, 1200: 300, 800: 300, 600: 165,       // L40S, L40, A40, A30
+    450: 250, 350: 150, 250: 60, 180: 70,           // A16, A10, A2, T4
+    900: 300, 700: 230, 500: 200, 400: 140, 300: 70,// A6000, A5000, A4500, A4000, A2000
+    850: 575, 650: 450, 480: 300, 380: 250, 280: 200,// RTX 50 series
+    550: 320, 520: 320, 420: 285, 320: 200,          // RTX 40 series
+    200: 115, 150: 160, 120: 180,                    // Low-end / GTX
+    220: 200,                                        // RTX 3060 Ti / 2080S
 };
 function updateCalc() {
     const rate = +document.getElementById('calcGpu').value;

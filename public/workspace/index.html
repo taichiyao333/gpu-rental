@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="ja">
 
 <head>
@@ -120,6 +120,37 @@
             #wsControls button { min-width: unset; }
         }
     
+        /* ── Blender Panel ── */
+        .blender-pane { padding:20px; overflow-y:auto; height:100%; }
+        .blender-layout { display:grid; grid-template-columns:1fr 1fr; gap:16px; max-width:1400px; }
+        .blender-left, .blender-right { display:flex; flex-direction:column; gap:12px; }
+        .blender-card { background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.08); border-radius:12px; padding:18px; }
+        .blender-card h3 { font-size:1rem; font-weight:600; margin:0 0 8px 0; color:#e8e8f0; }
+        .blender-card p { font-size:0.85rem; color:rgba(255,255,255,0.6); margin:0 0 8px 0; line-height:1.5; }
+        .blender-addon-card { text-align:center; background:linear-gradient(135deg,rgba(108,71,255,0.08),rgba(0,229,160,0.06)); border-color:rgba(108,71,255,0.2); }
+        .blender-addon-card .blender-card-icon { font-size:2.5rem; margin-bottom:8px; }
+        .blender-steps { display:flex; flex-direction:column; gap:8px; margin-top:14px; text-align:left; }
+        .blender-step { display:flex; align-items:center; gap:10px; font-size:0.82rem; color:rgba(255,255,255,0.7); padding:6px 10px; background:rgba(255,255,255,0.03); border-radius:8px; }
+        .step-num { background:linear-gradient(135deg,#6c47ff,#00e5a0); width:22px; height:22px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:0.72rem; font-weight:700; color:#fff; flex-shrink:0; }
+        .blender-jobs-list { display:flex; flex-direction:column; gap:8px; max-height:500px; overflow-y:auto; }
+        .bjob-card { background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.06); border-radius:8px; padding:12px; }
+        .bjob-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:6px; }
+        .bjob-name { font-weight:600; font-size:0.88rem; }
+        .bjob-status { font-size:0.75rem; padding:2px 8px; border-radius:20px; }
+        .bjob-status.queued { background:rgba(255,193,7,0.15); color:#ffc107; }
+        .bjob-status.rendering { background:rgba(108,71,255,0.15); color:#9e8cff; }
+        .bjob-status.completed { background:rgba(0,229,160,0.15); color:#00e5a0; }
+        .bjob-status.failed { background:rgba(255,71,87,0.15); color:#ff4757; }
+        .bjob-status.cancelled { background:rgba(255,255,255,0.08); color:rgba(255,255,255,0.4); }
+        .bjob-info { font-size:0.78rem; color:var(--text3); margin-bottom:6px; }
+        .bjob-progress { width:100%; height:6px; background:rgba(255,255,255,0.06); border-radius:3px; overflow:hidden; margin:6px 0; }
+        .bjob-progress-fill { height:100%; background:linear-gradient(90deg,#6c47ff,#00e5a0); border-radius:3px; transition:width 0.5s; }
+        .bjob-actions { display:flex; gap:6px; }
+        .bjob-actions .btn { font-size:0.75rem; padding:4px 10px; }
+        .docker-templates { display:grid; grid-template-columns:1fr 1fr; gap:6px; }
+        .docker-tmpl { display:flex; align-items:center; gap:8px; padding:8px 10px; background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.06); border-radius:8px; font-size:0.8rem; color:rgba(255,255,255,0.7); cursor:default; }
+        .docker-icon { font-size:1.1rem; }
+        @media (max-width:900px) { .blender-layout { grid-template-columns:1fr; } }
     </style>
 </head>
 
@@ -164,6 +195,7 @@
             <span id="wsBandwidth" class="ws-bandwidth">--</span>
             <span class="ws-cost" id="wsCost">¥0</span>
             <button class="btn btn-danger btn-sm" id="btnStopPod">⏹ セッション終了</button>
+            <a href="/workspace/guide.html" target="_blank" style="font-size:0.78rem;color:#9898b8;text-decoration:none;padding:5px 10px;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);border-radius:8px;">📖 ガイド</a>
         </div>
     </header>
 
@@ -181,6 +213,12 @@
             <div class="ws-file-tree" id="fileTree">
                 <div class="file-loading">読み込み中...</div>
             </div>
+            <!-- Upload Drop Zone -->
+            <div class="ws-upload-zone" id="uploadDropZone">
+                <div class="upload-zone-icon">📤</div>
+                <div class="upload-zone-text">ファイルをドラッグ＆ドロップ<br>またはクリックして選択</div>
+                <button class="upload-zone-btn" id="btnUploadZone">📁 ファイルを選択してアップロード</button>
+            </div>
             <input type="file" id="fileInput" multiple style="display:none" />
         </aside>
 
@@ -191,6 +229,7 @@
                     <button class="ws-tab active" id="tabTerminal">ターミナル</button>
                     <button class="ws-tab" id="tabConnect">🔌 接続情報</button>
                     <button class="ws-tab" id="tabRender">🎬 レンダリング</button>
+                    <button class="ws-tab" id="tabBlender">🎨 Blender</button>
                 </div>
                 <div class="ws-terminal-actions">
                     <button class="icon-btn" id="btnClearTerm" title="クリア">✕</button>
@@ -425,6 +464,97 @@ jupyter lab --ip=0.0.0.0 --port=8888 --no-browser --NotebookApp.token='gpurental
                         <h3 class="render-section-title">レンダリングキュー</h3>
                         <div id="renderQueue" class="queue-list">
                             <p class="queue-empty">キューは空です</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Blender Panel -->
+            <div id="blenderPane" class="blender-pane hidden">
+                <div class="blender-layout">
+                    <!-- Left: Addon & Settings -->
+                    <div class="blender-left">
+                        <!-- Addon Download -->
+                        <div class="blender-card blender-addon-card">
+                            <div class="blender-card-icon">🎨</div>
+                            <h3>Blender Addon</h3>
+                            <p>自分のPCのBlenderから直接クラウドGPUでレンダリング。<br>GPUがないMacBookでも高品質レンダリングが可能です。</p>
+                            <a href="/downloads/gpurental_addon.py" download class="btn btn-primary" style="display:inline-flex;align-items:center;gap:6px;margin-top:8px">
+                                ⬇ Addon をダウンロード (.py)
+                            </a>
+                            <div class="blender-steps">
+                                <div class="blender-step"><span class="step-num">1</span>上のボタンからAddonファイルをDL</div>
+                                <div class="blender-step"><span class="step-num">2</span>Blender → 編集 → プリファレンス → アドオン → インストール</div>
+                                <div class="blender-step"><span class="step-num">3</span>サイドバー(N) → GPURental タブからログイン</div>
+                                <div class="blender-step"><span class="step-num">4</span>GPUを選択して「☁ クラウドレンダリング開始」</div>
+                            </div>
+                        </div>
+
+                        <!-- Web Render Submit -->
+                        <div class="blender-card">
+                            <h3>🌐 ブラウザからBlenderレンダリング</h3>
+                            <p style="font-size:0.8rem;color:var(--text3);margin-bottom:12px">ワークスペース上の.blendファイルを直接レンダリング</p>
+                            <div class="rform-group">
+                                <label>.blend ファイル</label>
+                                <div class="file-select-row">
+                                    <input type="text" id="blenderFile" placeholder=".blend ファイルを選択..." readonly />
+                                    <button class="btn btn-ghost btn-sm" id="btnSelectBlend">選択</button>
+                                    <input type="file" id="blendFileInput" accept=".blend" style="display:none" />
+                                </div>
+                            </div>
+                            <div class="rform-row">
+                                <div class="rform-group"><label>エンジン</label>
+                                    <select id="blenderEngine"><option value="CYCLES">Cycles (GPU)</option><option value="EEVEE">Eevee (高速)</option></select>
+                                </div>
+                                <div class="rform-group"><label>サンプル数</label>
+                                    <input type="number" id="blenderSamples" value="128" min="1" max="4096" />
+                                </div>
+                            </div>
+                            <div class="rform-row">
+                                <div class="rform-group"><label>解像度</label>
+                                    <select id="blenderRes"><option>1280x720</option><option selected>1920x1080</option><option>2560x1440</option><option>3840x2160</option></select>
+                                </div>
+                                <div class="rform-group"><label>出力形式</label>
+                                    <select id="blenderFormat"><option value="PNG">PNG</option><option value="JPEG">JPEG</option><option value="OPEN_EXR">OpenEXR</option></select>
+                                </div>
+                            </div>
+                            <div class="rform-row">
+                                <div class="rform-group"><label>開始フレーム</label>
+                                    <input type="number" id="blenderFrameStart" value="1" min="1" />
+                                </div>
+                                <div class="rform-group"><label>終了フレーム</label>
+                                    <input type="number" id="blenderFrameEnd" value="1" min="1" />
+                                </div>
+                            </div>
+                            <button class="btn btn-primary btn-full" id="btnBlenderRender" style="margin-top:8px;font-size:1rem;padding:12px">☁ クラウドレンダリング開始</button>
+                        </div>
+                    </div>
+
+                    <!-- Right: Jobs -->
+                    <div class="blender-right">
+                        <div class="blender-card">
+                            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+                                <h3>📋 レンダリングジョブ</h3>
+                                <button class="btn btn-ghost btn-sm" id="btnRefreshBlenderJobs">↻ 更新</button>
+                            </div>
+                            <div id="blenderJobsList" class="blender-jobs-list">
+                                <p style="color:var(--text3);text-align:center;padding:2rem 0">ジョブはありません</p>
+                            </div>
+                        </div>
+
+                        <!-- Docker Environment Info -->
+                        <div class="blender-card" style="margin-top:12px">
+                            <h3>🐳 開発環境テンプレート</h3>
+                            <p style="font-size:0.8rem;color:var(--text3);margin-bottom:10px">予約時にDockerイメージを選択すると、環境構築済みの状態で開発開始できます。開発終了後は環境をそのまま保存・ダウンロード可能。</p>
+                            <div class="docker-templates">
+                                <div class="docker-tmpl"><span class="docker-icon">🤖</span><span>AI/ML (PyTorch + CUDA)</span></div>
+                                <div class="docker-tmpl"><span class="docker-icon">🎨</span><span>Blender Headless</span></div>
+                                <div class="docker-tmpl"><span class="docker-icon">🖼</span><span>ComfyUI (Stable Diffusion)</span></div>
+                                <div class="docker-tmpl"><span class="docker-icon">💬</span><span>Ollama (LLM推論)</span></div>
+                                <div class="docker-tmpl"><span class="docker-icon">📊</span><span>JupyterLab + データサイエンス</span></div>
+                                <div class="docker-tmpl"><span class="docker-icon">⚙</span><span>カスタム (自分のDockerfile)</span></div>
+                            </div>
+                            <p style="font-size:0.72rem;color:var(--text3);margin-top:8px">※ 環境保存は予約ページから設定できます。保存したイメージは次回予約時にワンクリックで復元可能。</p>
                         </div>
                     </div>
                 </div>

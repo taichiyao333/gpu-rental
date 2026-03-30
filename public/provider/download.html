@@ -156,7 +156,7 @@ header {
   margin-bottom: 48px;
   letter-spacing: -1px;
 }
-.steps-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; }
+.steps-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 24px; }
 .step-card {
   background: var(--card);
   border: 1px solid var(--border);
@@ -297,8 +297,8 @@ footer a:hover { color: #fff; }
   
   <p>
     GPURental Agentをインストールするだけ。<br>
-    難しい設定は一切不要。メールアドレスを入力するだけで<br>
-    あなたのGPUが自動的に公開されます。
+    ポート開放・ルーター設定は一切不要。<br>
+    <strong>リバーストンネル技術</strong>で安全に自動接続されます。
   </p>
   
   <div class="download-area">
@@ -321,25 +321,31 @@ footer a:hover { color: #fff; }
 <!-- How it works -->
 <section class="section">
   <div class="section-label">使い方</div>
-  <h2>3ステップで完了</h2>
+  <h2>4ステップで完了</h2>
   
   <div class="steps-grid">
     <div class="step-card">
       <div class="step-num">1</div>
       <h3>ダウンロード＆実行</h3>
-      <p>上のボタンからEXEファイルをダウンロード。ダブルクリックで起動するだけ。インストール作業は不要です。</p>
+      <p>上のボタンからZIPをダウンロード。<code>setup.bat</code> をダブルクリックで起動するだけ。</p>
     </div>
     
     <div class="step-card">
       <div class="step-num">2</div>
       <h3>メールアドレスを入力</h3>
-      <p>GPURentalのアカウントのメールアドレスを入力。まだアカウントがない場合は無料で作成できます。</p>
+      <p>GPURentalアカウントのメールアドレスを入力。GPUが自動検出され、サーバーに登録されます。</p>
     </div>
     
     <div class="step-card">
       <div class="step-num">3</div>
-      <h3>自動で公開開始！</h3>
-      <p>設定完了！あとはバックグラウンドで自動動作。予約が入るとリアルタイムで収益が積み上がります。</p>
+      <h3>トンネルが自動接続</h3>
+      <p>リバーストンネルが自動で開通。<strong>ポート開放やルーター設定は不要</strong>です。</p>
+    </div>
+    
+    <div class="step-card">
+      <div class="step-num">4</div>
+      <h3>収益スタート！</h3>
+      <p>バックグラウンドで自動待機。ユーザーの予約が入ると即座にSSH接続が中継され、収益が発生します。</p>
     </div>
   </div>
 </section>
@@ -369,8 +375,8 @@ footer a:hover { color: #fff; }
     <div class="feature-card">
       <div class="feature-icon">🔒</div>
       <div>
-        <h3>セキュアな接続</h3>
-        <p>Cloudflare Tunnelを通じて暗号化された安全な通信。外部からの不正アクセスはブロックされます。</p>
+        <h3>リバーストンネル接続</h3>
+        <p>外向きWebSocket接続でサーバーと通信。<strong>ポート開放・ファイアウォール設定は完全に不要</strong>。自宅回線でも安全に運用できます。</p>
       </div>
     </div>
     
@@ -383,18 +389,18 @@ footer a:hover { color: #fff; }
     </div>
     
     <div class="feature-card">
-      <div class="feature-icon">📊</div>
+      <div class="feature-icon">🔗</div>
       <div>
-        <h3>GPU使用率モニタリング</h3>
-        <p>GPUの温度・使用率・VRAM使用量を常時監視。過負荷時には自動的に保護します。</p>
+        <h3>SSH自動中継</h3>
+        <p>ユーザーのSSH接続をリバーストンネル経由で自動リレー。ユーザーはMac/PCから直接GPUにアクセス可能。</p>
       </div>
     </div>
     
     <div class="feature-card">
       <div class="feature-icon">🚀</div>
       <div>
-        <h3>ゼロ設定</h3>
-        <p>Node.js・Docker・ポート開放など、技術的な設定は一切不要。メールアドレス入力だけで完了。</p>
+        <h3>ワンクリック セットアップ</h3>
+        <p>setup.batをダブルクリックするだけ。GPU検出・SSH設定・サーバー登録・トンネル接続まですべて自動で完了します。</p>
       </div>
     </div>
   </div>
@@ -420,7 +426,11 @@ footer a:hover { color: #fff; }
     </div>
     <div class="req-row">
       <span class="req-label">インターネット</span>
-      <span class="req-value"><span class="req-check">✓</span>常時接続（上り10Mbps以上推奨）</span>
+      <span class="req-value"><span class="req-check">✓</span>常時接続（上り10Mbps以上推奨・ポート開放不要）</span>
+    </div>
+    <div class="req-row">
+      <span class="req-label">ポート開放</span>
+      <span class="req-value"><span class="req-check" style="color:#00e5a0">✓</span><strong>不要！</strong> リバーストンネルで自動接続</span>
     </div>
     <div class="req-row">
       <span class="req-label">GPURentalアカウント</span>

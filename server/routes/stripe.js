@@ -18,6 +18,7 @@ const { authMiddleware, adminOnly } = require('../middleware/auth');
 const { getDb } = require('../db/database');
 const config  = require('../config');
 const { mailPointPurchased, mailReservationConfirmed } = require('../services/email');
+const { getPlanById, getStripePlansMap } = require('../config/plans');
 
 // ─── Stripe instance ─────────────────────────────────────────────
 function getStripe() {
@@ -197,16 +198,8 @@ router.post('/checkout/points', authMiddleware, async (req, res) => {
     const returnPage = (return_to === 'portal') ? 'portal' : 'mypage';
     const db = getDb();
 
-    // プラン定義（points.jsと同じ）
-    const PLANS = {
-        plan_1h:   { name: '1時間チケット',   hours: 1,   amount_yen: 800,    points: 80   },
-        plan_3h:   { name: '3時間チケット',   hours: 3,   amount_yen: 2400,   points: 240  },
-        plan_10h:  { name: '10時間チケット',  hours: 10,  amount_yen: 7500,   points: 750  },
-        plan_30h:  { name: '30時間チケット',  hours: 30,  amount_yen: 21000,  points: 2100 },
-        plan_100h: { name: '100時間チケット', hours: 100, amount_yen: 65000,  points: 6500 },
-    };
-
-    const plan = PLANS[plan_id];
+    // プラン定義（共通モジュールから取得）
+    const plan = getPlanById(plan_id);
     if (!plan) return res.status(400).json({ error: 'Invalid plan_id' });
 
     let finalAmount = plan.amount_yen;
@@ -599,9 +592,9 @@ router.post('/admin/payout/:userId', authMiddleware, adminOnly, async (req, res)
             description: `GPURental payout to provider #${provider.id}`,
         });
 
-        // DB更新：wallet_balanceを減算
-        db.prepare('UPDATE users SET wallet_balance = MAX(0, wallet_balance - ?) WHERE id = ?')
-          .run(amount_yen, provider.id);
+        // DB更新：wallet_balanceとpoint_balanceを減算
+        db.prepare('UPDATE users SET wallet_balance = MAX(0, wallet_balance - ?), point_balance = MAX(0, point_balance - ?) WHERE id = ?')
+          .run(amount_yen, amount_yen, provider.id);
 
         db.prepare(`
             INSERT INTO payouts (provider_id, amount, status, period_from, period_to, notes)
@@ -615,5 +608,3 @@ router.post('/admin/payout/:userId', authMiddleware, adminOnly, async (req, res)
         res.status(500).json({ error: err.message });
     }
 });
-
-module.exports = router;

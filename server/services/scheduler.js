@@ -212,6 +212,47 @@ function scheduleAutoConfirm() {
 }
 
 /**
+ * Cleanup expired reservations that have no running pods
+ * (e.g. pod was paused/stopped but reservation stayed 'active')
+ */
+function scheduleExpiredCleanup() {
+    cron.schedule('*/5 * * * *', () => {
+        const db = getDb();
+        const now = new Date().toISOString();
+
+        // Find expired active/confirmed reservations
+        const expired = db.prepare(`
+            SELECT id, renter_id, gpu_id FROM reservations
+            WHERE status IN ('active', 'confirmed')
+            AND datetime(end_time) < datetime(?)
+        `).all(now);
+
+        for (const res of expired) {
+            // Mark reservation as completed
+            db.prepare("UPDATE reservations SET status = 'completed' WHERE id = ?").run(res.id);
+
+            // Stop any pods still lingering
+            db.prepare(`
+                UPDATE pods SET status = 'stopped' 
+                WHERE reservation_id = ? AND status IN ('running', 'paused')
+            `).run(res.id);
+
+            // Release GPU if rented
+            db.prepare(`
+                UPDATE gpu_nodes SET status = 'available'
+                WHERE id = ? AND status = 'rented'
+                AND NOT EXISTS (
+                    SELECT 1 FROM pods p 
+                    WHERE p.gpu_id = gpu_nodes.id AND p.status = 'running'
+                )
+            `).run(res.gpu_id);
+
+            console.log(`🧹 Expired reservation #${res.id} → completed (auto-cleanup)`);
+        }
+    });
+}
+
+/**
  * 旧reminder（5分前WebSocketのみ）は統合済みのため削除
 
 function scheduleReminders() { ... }
@@ -225,6 +266,7 @@ function startScheduler(socketIo) {
     scheduleReservationStart();  // 自動起動
     scheduleEndReminder();       // 終了10分前メール
     scheduleReservationEnd();    // 強制切断
+    scheduleExpiredCleanup();    // 期限切れ予約のクリーンアップ
 
     // ── RunPod 価格監視: 毎日 午前0時に実行 ──────────────────────────────
     cron.schedule('0 0 * * *', async () => {

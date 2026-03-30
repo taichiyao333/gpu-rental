@@ -205,7 +205,7 @@ router.post('/forgot-password', (req, res) => {
 router.post('/reset-password', (req, res) => {
     const { token, password } = req.body;
     if (!token || !password) return res.status(400).json({ error: 'トークンとパスワードが必要です' });
-    if (password.length < 6) return res.status(400).json({ error: 'パスワードは6文字以上にしてください' });
+    if (password.length < 8) return res.status(400).json({ error: 'パスワードは8文字以上にしてください' });
 
     const db = getDb();
 

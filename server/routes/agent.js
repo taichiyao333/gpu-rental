@@ -68,14 +68,17 @@ router.post('/register', async (req, res) => {
                     agent_version = ?,
                     agent_hostname = ?,
                     agent_last_seen = datetime('now'),
-                    agent_status = 'online',
+                    agent_status = CASE
+                        WHEN agent_status = 'online' THEN 'online'
+                        ELSE 'pending_diag'
+                    END,
                     gpu_info = COALESCE(?, gpu_info)
                 WHERE user_id = ?
             `).run(agentVersion || '1.0.0', hostname || 'unknown', gpuInfo, user.id);
         } else {
             db.prepare(`
                 INSERT INTO providers (user_id, agent_version, agent_hostname, agent_status, agent_last_seen, gpu_info, created_at)
-                VALUES (?, ?, ?, 'online', datetime('now'), ?, datetime('now'))
+                VALUES (?, ?, ?, 'pending_diag', datetime('now'), ?, datetime('now'))
             `).run(user.id, agentVersion || '1.0.0', hostname || 'unknown', gpuInfo);
         }
 

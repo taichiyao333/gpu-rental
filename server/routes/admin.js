@@ -685,6 +685,34 @@ router.post('/purchases/:id/approve', authMiddleware, adminOnly, async (req, res
     });
 });
 
+// POST /api/admin/purchases/bulk-cancel — 全pending購入を一括cancelled
+// ⚠️ :id/cancel より前に定義すること（'bulk-cancel'が:idにマッチするのを防ぐ）
+router.post('/purchases/bulk-cancel', authMiddleware, adminOnly, (req, res) => {
+    const db = getDb();
+    const { ids } = req.body; // optional: specific IDs
+    let result;
+    if (ids && Array.isArray(ids) && ids.length > 0) {
+        const placeholders = ids.map(() => '?').join(',');
+        result = db.prepare("UPDATE point_purchases SET status = 'cancelled' WHERE id IN (" + placeholders + ") AND status = 'pending'").run(...ids);
+    } else {
+        result = db.prepare("UPDATE point_purchases SET status = 'cancelled' WHERE status = 'pending'").run();
+    }
+    console.log('[Admin bulk-cancel] ' + result.changes + ' purchases cancelled by admin #' + req.user.id);
+    res.json({ ok: true, cancelled_count: result.changes });
+});
+
+// POST /api/admin/purchases/:id/cancel — pending購入をcancelledに変更（ポイント付与なし）
+router.post('/purchases/:id/cancel', authMiddleware, adminOnly, (req, res) => {
+    const db = getDb();
+    const purchase = db.prepare('SELECT * FROM point_purchases WHERE id = ?').get(parseInt(req.params.id));
+    if (!purchase) return res.status(404).json({ error: '購入レコードが見つかりません' });
+    if (purchase.status !== 'pending') return res.status(400).json({ error: '既に ' + purchase.status + ' です' });
+
+    db.prepare("UPDATE point_purchases SET status = 'cancelled' WHERE id = ?").run(purchase.id);
+    console.log('[Admin cancel] Purchase #' + purchase.id + ' cancelled by admin #' + req.user.id);
+    res.json({ ok: true, cancelled: purchase.id });
+});
+
 // GET /api/admin/security/logs - セキュリティイベントログ（管理者専用）
 router.get('/security/logs', authMiddleware, adminOnly, (req, res) => {
     const lines = parseInt(req.query.lines || '200', 10);
@@ -733,5 +761,41 @@ router.post('/health/run', authMiddleware, adminOnly, (req, res) => {
     });
 });
 
+// POST /api/admin/balance-sync — 全ユーザーの残高を再計算して同期
+router.post('/balance-sync', authMiddleware, adminOnly, (req, res) => {
+    const db = getDb();
+    const { POINT_RATE } = require('../config/plans');
+    const users = db.prepare('SELECT id, username, point_balance, wallet_balance FROM users').all();
+    const results = [];
+
+    const syncBalance = db.transaction(() => {
+        for (const u of users) {
+            // point_logs は既にポイント単位
+            const logsSum = db.prepare('SELECT COALESCE(SUM(points), 0) as total FROM point_logs WHERE user_id = ?').get(u.id);
+            // provider_payout は円単位 → ポイントに変換
+            const providerEarnings = db.prepare('SELECT COALESCE(SUM(provider_payout), 0) as total FROM usage_logs WHERE provider_id = ?').get(u.id);
+            // total_price は円単位 → ポイントに変換
+            const activeDeposits = db.prepare("SELECT COALESCE(SUM(total_price), 0) as total FROM reservations WHERE renter_id = ? AND status IN ('active', 'confirmed')").get(u.id);
+            // payouts.amount は円単位 → ポイントに変換
+            const paidOut = db.prepare("SELECT COALESCE(SUM(amount), 0) as total FROM payouts WHERE provider_id = ? AND status = 'paid'").get(u.id);
+
+            const correct = (logsSum.total || 0)
+                + (providerEarnings.total || 0) / POINT_RATE
+                - Math.ceil((activeDeposits.total || 0) / POINT_RATE)
+                - (paidOut.total || 0) / POINT_RATE;
+            const needsFix = Math.abs(u.point_balance - correct) > 0.01 || Math.abs(u.wallet_balance - correct) > 0.01;
+
+            if (needsFix) {
+                db.prepare('UPDATE users SET point_balance = ?, wallet_balance = ? WHERE id = ?').run(correct, correct, u.id);
+                results.push({ id: u.id, username: u.username, before: { pt: u.point_balance, wallet: u.wallet_balance }, after: correct });
+            }
+        }
+    });
+
+    syncBalance();
+    res.json({ success: true, fixed: results.length, details: results });
+});
+
 module.exports = router;
+
 

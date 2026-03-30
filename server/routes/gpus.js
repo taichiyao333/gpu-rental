@@ -93,20 +93,57 @@ router.patch('/:id', authMiddleware, adminOnly, (req, res) => {
 });
 
 // GET /api/gpus/:id/availability - get booked slots
+// DB内はUTC 'YYYY-MM-DD HH:MM:SS'形式で保存。
+// フロントエンドの new Date('YYYY-MM-DD HH:MM:SS') はローカル時刻(JST)として解釈するため、
+// UTC→JSTに変換した文字列 'YYYY-MM-DD HH:MM:SS' を返すことでカレンダー表示を正しくする。
 router.get('/:id/availability', (req, res) => {
     const db = getDb();
-    const { month } = req.query; // e.g. '2026-03'
+    const { month } = req.query; // e.g. '2026-03'  ← JST月
+
+    const JST_OFFSET_MS = 9 * 60 * 60 * 1000;
+
+    /** UTC SQLite文字列 → JSTローカル文字列 'YYYY-MM-DD HH:MM:SS' */
+    function utcToJstStr(utcStr) {
+        if (!utcStr) return utcStr;
+        // "YYYY-MM-DD HH:MM:SS" をUTCとして解釈
+        const d = new Date(utcStr.replace(' ', 'T') + 'Z');
+        if (isNaN(d.getTime())) return utcStr; // パース失敗はそのまま返す
+        const jst = new Date(d.getTime() + JST_OFFSET_MS);
+        const pad = n => String(n).padStart(2, '0');
+        return `${jst.getUTCFullYear()}-${pad(jst.getUTCMonth()+1)}-${pad(jst.getUTCDate())} ` +
+               `${pad(jst.getUTCHours())}:${pad(jst.getUTCMinutes())}:${pad(jst.getUTCSeconds())}`;
+    }
+
     let query = `
     SELECT start_time, end_time, status FROM reservations
     WHERE gpu_id = ? AND status NOT IN ('cancelled')
   `;
     const params = [req.params.id];
     if (month) {
-        query += ` AND strftime('%Y-%m', start_time) = ?`;
-        params.push(month);
+        // DB内はUTC保存。月フィルタはUTC月で取得し、JST変換後の月もカバーするため
+        // 前月・当月・翌月を対象に取る（UTC→JSTで日付が変わるケースがあるため）
+        const [y, m] = month.split('-').map(Number);
+        const prevMonth = m === 1  ? `${y-1}-12` : `${y}-${String(m-1).padStart(2,'0')}`;
+        const nextMonth = m === 12 ? `${y+1}-01` : `${y}-${String(m+1).padStart(2,'0')}`;
+        query += ` AND (substr(start_time,1,7) IN (?,?,?) OR substr(end_time,1,7) IN (?,?,?))`;
+        params.push(prevMonth, month, nextMonth, prevMonth, month, nextMonth);
     }
     const slots = db.prepare(query).all(...params);
-    res.json(slots);
+
+    // UTC → JST に変換して返す
+    const jstSlots = slots.map(s => ({
+        ...s,
+        start_time: utcToJstStr(s.start_time),
+        end_time:   utcToJstStr(s.end_time),
+    }));
+
+    // JST月でフィルタ（変換後に月が一致するものだけ）
+    const filtered = month
+        ? jstSlots.filter(s => s.start_time.startsWith(month) || s.end_time.startsWith(month))
+        : jstSlots;
+
+    res.json(filtered);
 });
+
 
 module.exports = router;

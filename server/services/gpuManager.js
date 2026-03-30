@@ -83,6 +83,8 @@ async function fetchGpuProcesses() {
 
 /**
  * Get all GPU nodes from DB with real-time stats merged
+ * ⚠️ nvidia-smi stats は自機（ローカル）のGPUにのみ適用する
+ *    リモートプロバイダーのGPUにはエージェント経由のstatsを使う
  */
 function getGpuNodesWithStats() {
     const db = getDb();
@@ -94,10 +96,15 @@ function getGpuNodesWithStats() {
   `).all();
 
     return nodes.map(node => {
-        const stats = gpuStatsCache.get(node.device_index);
-        return { ...node, stats: stats || null };
+        const cachedStats = gpuStatsCache.get(node.device_index);
+        // ローカルGPU判定: キャッシュにあるGPU名とDBのGPU名が一致する場合のみstatsを適用
+        // nvidia-smi は自機GPUのみ返すため、名前が不一致ならリモートGPU
+        const isLocal = cachedStats && cachedStats.name === node.name;
+        const stats = isLocal ? cachedStats : null;
+        return { ...node, stats: stats || null, is_local: !!isLocal };
     });
 }
+
 
 /**
  * Update GPU node status in DB

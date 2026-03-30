@@ -16,6 +16,7 @@ const { startGpuMonitor, getGpuNodesWithStats } = require('./services/gpuManager
 const { startScheduler } = require('./services/scheduler');
 const { attachTerminal } = require('./services/terminal');
 const { startBackupScheduler } = require('./services/backup');
+const { initTunnelRelay } = require('./services/tunnelRelay');
 
 // Routes
 const authRoutes = require('./routes/auth');
@@ -36,6 +37,7 @@ const diagnosticsRoutes = require('./routes/diagnostics');
 const renderRoutes = require('./routes/render');
 const stripeRoutes = require('./routes/stripe');
 const agentRoutes = require('./routes/agent');
+const blenderRoutes = require('./routes/blender');
 
 
 // ─── Startup Environment Validation ────────────────────────────────────────
@@ -64,7 +66,7 @@ const corsOptions = {
         return cb(new Error(`CORS policy: origin ${origin} not allowed`));
     },
     credentials: true,
-    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization'],
 };
 
@@ -271,6 +273,7 @@ app.use('/api/render', renderRoutes(io));
 app.use('/api/stripe', stripeRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/agent', agentRoutes);
+app.use('/api/blender', blenderRoutes);
 
 // ─── AI Inference Proxy ───────────────────────────────────────────────────────
 // /api/inference/* → FastAPI inference server (port 8000)
@@ -440,6 +443,10 @@ async function start() {
     // Start DB backup scheduler (daily 3am, keep 7 days)
     startBackupScheduler();
     console.log('✅ DB backup scheduler started');
+
+    // Start SSH Tunnel Relay
+    initTunnelRelay(io);
+    console.log('✅ SSH Tunnel Relay started');
 
 
     // Start server

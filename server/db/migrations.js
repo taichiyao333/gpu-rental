@@ -376,6 +376,39 @@ async function runMigrations() {
     );
   `);
 
+  // ─── Blender Render Jobs ──────────────────────────────────────────────
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS blender_jobs (
+      id            INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id       INTEGER NOT NULL,
+      pod_id        INTEGER,
+      gpu_id        INTEGER,
+      job_name      TEXT NOT NULL,
+      blend_file    TEXT NOT NULL,           -- path to uploaded .blend file
+      output_dir    TEXT,                    -- path to rendered output
+      status        TEXT DEFAULT 'queued',   -- queued | rendering | completed | failed | cancelled
+      progress      INTEGER DEFAULT 0,      -- 0-100
+      current_frame INTEGER DEFAULT 0,
+      total_frames  INTEGER DEFAULT 1,
+      render_engine TEXT DEFAULT 'CYCLES',   -- CYCLES | EEVEE
+      render_device TEXT DEFAULT 'GPU',      -- GPU | CPU
+      resolution_x  INTEGER DEFAULT 1920,
+      resolution_y  INTEGER DEFAULT 1080,
+      samples       INTEGER DEFAULT 128,
+      output_format TEXT DEFAULT 'PNG',      -- PNG | JPEG | EXR | MP4
+      frame_start   INTEGER DEFAULT 1,
+      frame_end     INTEGER DEFAULT 1,
+      render_time   INTEGER DEFAULT 0,       -- seconds
+      file_size     INTEGER DEFAULT 0,       -- bytes of blend file
+      output_size   INTEGER DEFAULT 0,       -- bytes of output
+      error_log     TEXT,
+      created_at    DATETIME DEFAULT CURRENT_TIMESTAMP,
+      started_at    DATETIME,
+      finished_at   DATETIME,
+      FOREIGN KEY (user_id) REFERENCES users(id)
+    );
+  `);
+
   console.log('✅ Database migrations complete');
 }
 

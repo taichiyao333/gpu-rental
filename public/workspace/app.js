@@ -308,16 +308,28 @@ function renderFileTree(files, currentPath) {
         tree.innerHTML = '<div class="file-loading">空のフォルダ</div>';
         return;
     }
-    tree.innerHTML = files.map(f => {
+    let html = '';
+    if (currentPath) {
+        const parentPath = currentPath.split('/').slice(0, -1).join('/');
+        html += '<div class="file-item" onclick="loadFiles(\'' + parentPath + '\')"><span class="file-icon">⬅</span><span class="file-name">..</span><span class="file-size"></span></div>';
+    }
+    html += files.map(f => {
         const icon = f.type === 'dir' ? '📁' : getFileIcon(f.name);
         const size = f.size ? formatSize(f.size) : '';
+        const escapedName = f.name.replace(/'/g, "\\'");
+        const actions = f.type !== 'dir' ? `
+          <div class="file-actions">
+            <button class="file-action-btn download-btn" onclick="event.stopPropagation();downloadFileSaveAs('${escapedName}','${currentPath}')" title="ダウンロード">⬇</button>
+          </div>` : '';
         return `
-      <div class="file-item" onclick="handleFileClick('${f.name}', '${f.type}', '${currentPath}')">
+      <div class="file-item" onclick="handleFileClick('${escapedName}', '${f.type}', '${currentPath}')">
         <span class="file-icon">${icon}</span>
         <span class="file-name">${f.name}</span>
         <span class="file-size">${size}</span>
+        ${actions}
       </div>`;
     }).join('');
+    tree.innerHTML = html;
 }
 
 function getFileIcon(name) {
@@ -335,8 +347,8 @@ function formatSize(b) {
 async function handleFileClick(name, type, currentPath) {
     const fullPath = currentPath ? `${currentPath}/${name}` : name;
     if (type === 'dir') { loadFiles(fullPath); return; }
-    // Download file
-    window.open(`/api/files/${pod.id}/download/${encodeURIComponent(fullPath)}?token=${token}`, '_blank');
+    // Download file with Save As dialog
+    downloadFileSaveAs(name, currentPath);
 }
 
 // Upload
@@ -353,6 +365,150 @@ document.getElementById('fileInput').addEventListener('change', async (e) => {
     e.target.value = '';
     loadFiles();
 });
+
+
+/* ─── Download with Save As dialog ─────────────────────────────── */
+async function downloadFileSaveAs(name, currentPath) {
+    const fullPath = currentPath ? currentPath + '/' + name : name;
+    // Use path segments encoding (don't encode the slashes)
+    const encodedPath = fullPath.split('/').map(s => encodeURIComponent(s)).join('/');
+    const url = '/api/files/' + pod.id + '/download/' + encodedPath;
+
+    showNotification('⏳ ダウンロード準備中: ' + name);
+
+    try {
+        const response = await fetch(url, {
+            headers: { 'Authorization': 'Bearer ' + token }
+        });
+
+        if (!response.ok) {
+            const errData = await response.json().catch(() => ({ error: 'サーバーエラー' }));
+            showNotification('❌ ダウンロードエラー: ' + (errData.error || response.statusText));
+            return;
+        }
+
+        const blob = await response.blob();
+
+        // Try File System Access API for "Save As" dialog (Chrome/Edge)
+        if (window.showSaveFilePicker) {
+            try {
+                const ext = name.includes('.') ? '.' + name.split('.').pop() : '';
+                const handle = await window.showSaveFilePicker({
+                    suggestedName: name,
+                    types: ext ? [{
+                        description: name,
+                        accept: { 'application/octet-stream': [ext] }
+                    }] : undefined
+                });
+                const writable = await handle.createWritable();
+                await writable.write(blob);
+                await writable.close();
+                showNotification('✅ ダウンロード完了: ' + name);
+                return;
+            } catch (pickerErr) {
+                if (pickerErr.name === 'AbortError') return; // User cancelled
+                // Fall through to anchor download
+            }
+        }
+
+        // Fallback: use anchor tag download (Firefox, Safari, etc.)
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = name;
+        a.style.display = 'none';
+        document.body.appendChild(a);
+        a.click();
+        setTimeout(() => {
+            URL.revokeObjectURL(a.href);
+            a.remove();
+        }, 1000);
+        showNotification('✅ ダウンロード完了: ' + name);
+
+    } catch (err) {
+        console.error('Download error:', err);
+        showNotification('❌ ダウンロードエラー: ' + err.message);
+    }
+}
+
+function showNotification(msg) {
+    let toast = document.getElementById('wsNotification');
+    if (!toast) {
+        toast = document.createElement('div');
+        toast.id = 'wsNotification';
+        toast.style.cssText = 'position:fixed;bottom:1rem;left:50%;transform:translateX(-50%);z-index:9999;background:#13132a;border:1px solid rgba(108,71,255,0.3);border-radius:10px;padding:0.6rem 1.2rem;font-size:0.85rem;color:#e8e8f0;box-shadow:0 8px 32px rgba(0,0,0,0.5);opacity:0;transition:opacity 0.3s;font-family:Inter,sans-serif';
+        document.body.appendChild(toast);
+    }
+    toast.textContent = msg;
+    toast.style.opacity = '1';
+    clearTimeout(toast._timer);
+    toast._timer = setTimeout(() => { toast.style.opacity = '0'; }, 3000);
+}
+
+/* ─── Upload Drop Zone handlers ────────────────────────────────── */
+(function initUploadZone() {
+    const zone = document.getElementById('uploadDropZone');
+    const btn = document.getElementById('btnUploadZone');
+    const fileInput = document.getElementById('fileInput');
+    if (!zone || !btn) return;
+
+    // Click to select files
+    btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        fileInput.click();
+    });
+    zone.addEventListener('click', () => {
+        fileInput.click();
+    });
+
+    // Drag & Drop
+    zone.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        zone.classList.add('drag-active');
+    });
+    zone.addEventListener('dragleave', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        zone.classList.remove('drag-active');
+    });
+    zone.addEventListener('drop', async (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        zone.classList.remove('drag-active');
+        const files = Array.from(e.dataTransfer.files);
+        if (!files.length) return;
+        for (const file of files) {
+            await uploadFile(file);
+        }
+        loadFiles();
+        showNotification('✅ ' + files.length + '個のファイルをアップロードしました');
+    });
+
+    // Also support drag over the entire sidebar
+    const sidebar = document.getElementById('wsSidebar');
+    if (sidebar) {
+        sidebar.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            zone.classList.add('drag-active');
+        });
+        sidebar.addEventListener('dragleave', (e) => {
+            if (!sidebar.contains(e.relatedTarget)) {
+                zone.classList.remove('drag-active');
+            }
+        });
+        sidebar.addEventListener('drop', async (e) => {
+            e.preventDefault();
+            zone.classList.remove('drag-active');
+            const files = Array.from(e.dataTransfer.files);
+            if (!files.length) return;
+            for (const file of files) {
+                await uploadFile(file);
+            }
+            loadFiles();
+            showNotification('✅ ' + files.length + '個のファイルをアップロードしました');
+        });
+    }
+})();
 
 async function uploadFile(file) {
     const toast = document.getElementById('uploadToast');
@@ -977,7 +1133,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const tabs = [
         { btn: 'tabTerminal', pane: 'terminalPane' },
         { btn: 'tabConnect', pane: 'connectPane' },
-        { btn: 'tabRender', pane: 'renderPane' },
+        { btn: 'tabRender', pane: 'renderPane' },
+        { btn: 'tabBlender', pane: 'blenderPane' },
     ];
 
     tabs.forEach(({ btn, pane }) => {
@@ -993,9 +1150,13 @@ document.addEventListener('DOMContentLoaded', () => {
             if (btn === 'tabTerminal' && term) setTimeout(() => term.focus(), 50);
             // 接続情報タブを開いた時にSSH情報をセット（async）
             if (btn === 'tabConnect') initConnectTab();
+            if (btn === 'tabBlender') refreshBlenderJobs();
         });
     });
 });
+
+    initBlenderPanel();
+
 
 
 /* ─── コピー機能 ──────────────────────────────────────────────────── */
@@ -1015,6 +1176,140 @@ function copyText(el) {
         showNotif('コピーしました ✅', 'success');
     });
 }
+
+
+/* ─── Blender Panel ─────────────────────────────────────────────── */
+var _blenderPolling = null;
+
+function initBlenderPanel() {
+    var btnSel = document.getElementById('btnSelectBlend');
+    var fileIn = document.getElementById('blendFileInput');
+    if (btnSel && fileIn) {
+        btnSel.addEventListener('click', function() { fileIn.click(); });
+        fileIn.addEventListener('change', function() {
+            var f = fileIn.files[0];
+            if (f) document.getElementById('blenderFile').value = f.name;
+        });
+    }
+    var btnRender = document.getElementById('btnBlenderRender');
+    if (btnRender) btnRender.addEventListener('click', submitBlenderRender);
+    var btnRefresh = document.getElementById('btnRefreshBlenderJobs');
+    if (btnRefresh) btnRefresh.addEventListener('click', refreshBlenderJobs);
+}
+
+async function submitBlenderRender() {
+    var fileIn = document.getElementById('blendFileInput');
+    if (!fileIn || !fileIn.files[0]) {
+        showNotif('.blend ファイルを選択してください', 'error');
+        return;
+    }
+    var file = fileIn.files[0];
+    var resVal = (document.getElementById('blenderRes') || {}).value || '1920x1080';
+    var parts = resVal.split('x');
+    var resX = parseInt(parts[0]) || 1920;
+    var resY = parseInt(parts[1]) || 1080;
+    var settings = {
+        job_name: file.name.replace('.blend', ''),
+        engine: (document.getElementById('blenderEngine') || {}).value || 'CYCLES',
+        device: 'GPU',
+        resolution_x: resX, resolution_y: resY,
+        samples: parseInt((document.getElementById('blenderSamples') || {}).value) || 128,
+        output_format: (document.getElementById('blenderFormat') || {}).value || 'PNG',
+        frame_start: parseInt((document.getElementById('blenderFrameStart') || {}).value) || 1,
+        frame_end: parseInt((document.getElementById('blenderFrameEnd') || {}).value) || 1,
+    };
+    var formData = new FormData();
+    formData.append('file', file);
+    formData.append('settings', JSON.stringify(settings));
+    var btn = document.getElementById('btnBlenderRender');
+    if (btn) { btn.disabled = true; btn.textContent = '⏳ アップロード中...'; }
+    try {
+        var res = await fetch(API + '/api/blender/render', {
+            method: 'POST',
+            headers: { 'Authorization': 'Bearer ' + token },
+            body: formData,
+        });
+        var data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'レンダリング送信に失敗');
+        showNotif('✅ ジョブ #' + (data.job ? data.job.id : '') + ' を送信しました', 'success');
+        refreshBlenderJobs();
+        startBlenderPolling();
+    } catch (e) {
+        showNotif('❌ ' + e.message, 'error');
+    } finally {
+        if (btn) { btn.disabled = false; btn.textContent = '☁ クラウドレンダリング開始'; }
+    }
+}
+
+async function refreshBlenderJobs() {
+    var container = document.getElementById('blenderJobsList');
+    if (!container) return;
+    try {
+        var res = await fetch(API + '/api/blender/jobs', {
+            headers: { 'Authorization': 'Bearer ' + token },
+        });
+        var jobs = await res.json();
+        if (!Array.isArray(jobs) || jobs.length === 0) {
+            container.innerHTML = '<p style="color:var(--text3);text-align:center;padding:2rem 0">ジョブはありません</p>';
+            return;
+        }
+        var sl = { queued: '⏳ 待機中', rendering: '🔄 レンダリング中', completed: '✅ 完了', failed: '❌ 失敗', cancelled: '🚫 キャンセル' };
+        container.innerHTML = jobs.slice(0, 20).map(function(j) {
+            var ts = j.render_time ? (Math.floor(j.render_time/60) + '分' + (j.render_time%60) + '秒') : '';
+            var html = '<div class="bjob-card">';
+            html += '<div class="bjob-header"><span class="bjob-name">#' + j.id + ' ' + (j.job_name||'?') + '</span>';
+            html += '<span class="bjob-status ' + j.status + '">' + (sl[j.status]||j.status) + '</span></div>';
+            html += '<div class="bjob-info">' + (j.render_engine||'') + ' | ' + (j.resolution_x||0) + 'x' + (j.resolution_y||0) + ' | ' + (j.output_format||'PNG') + (ts ? ' | ' + ts : '') + '</div>';
+            if (j.status === 'rendering') {
+                html += '<div class="bjob-progress"><div class="bjob-progress-fill" style="width:' + (j.progress||0) + '%"></div></div>';
+                html += '<div style="font-size:0.75rem;color:var(--text3)">フレーム ' + (j.current_frame||0) + '/' + (j.total_frames||1) + ' — ' + (j.progress||0) + '%</div>';
+            }
+            html += '<div class="bjob-actions">';
+            if (j.status === 'completed') html += '<button class="btn btn-primary btn-sm" onclick="downloadBlenderJob(' + j.id + ')">⬇ ダウンロード</button>';
+            if (j.status === 'queued' || j.status === 'rendering') html += '<button class="btn btn-danger btn-sm" onclick="cancelBlenderJob(' + j.id + ')">✕ キャンセル</button>';
+            if (j.status === 'failed' && j.error_log) html += '<span style="font-size:0.72rem;color:#ff4757">エラー: ' + (j.error_log||'').substring(0,80) + '</span>';
+            html += '</div></div>';
+            return html;
+        }).join('');
+        var hasActive = jobs.some(function(j) { return j.status === 'queued' || j.status === 'rendering'; });
+        if (hasActive) startBlenderPolling(); else stopBlenderPolling();
+    } catch (e) {
+        container.innerHTML = '<p style="color:#ff4757;text-align:center;padding:1rem">読込エラー: ' + e.message + '</p>';
+    }
+}
+
+async function downloadBlenderJob(jobId) {
+    try {
+        var res = await fetch(API + '/api/blender/jobs/' + jobId + '/download', {
+            headers: { 'Authorization': 'Bearer ' + token },
+        });
+        if (!res.ok) { var d = await res.json(); throw new Error(d.error || 'ダウンロード失敗'); }
+        var blob = await res.blob();
+        var url = URL.createObjectURL(blob);
+        var a = document.createElement('a');
+        a.href = url; a.download = 'blender_render_' + jobId + '.zip';
+        document.body.appendChild(a); a.click(); document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        showNotif('✅ ダウンロード完了', 'success');
+    } catch (e) { showNotif('❌ ' + e.message, 'error'); }
+}
+
+async function cancelBlenderJob(jobId) {
+    try {
+        await apiFetch('/blender/jobs/' + jobId + '/cancel', { method: 'POST' });
+        showNotif('✅ ジョブをキャンセルしました', 'success');
+        refreshBlenderJobs();
+    } catch (e) { showNotif('❌ ' + e.message, 'error'); }
+}
+
+function startBlenderPolling() {
+    if (_blenderPolling) return;
+    _blenderPolling = setInterval(refreshBlenderJobs, 4000);
+}
+function stopBlenderPolling() {
+    if (_blenderPolling) { clearInterval(_blenderPolling); _blenderPolling = null; }
+}
+
 
 init();
 

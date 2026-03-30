@@ -939,3 +939,63 @@ a {
     .ws-tabs .ws-tab { padding: 4px 8px; font-size: 0.72rem; }
     .ws-cost { display: none; }
 }
+
+/* ─── Upload Drop Zone ───────────────────────────────────────────── */
+.ws-upload-zone {
+    flex-shrink: 0;
+    border-top: 1px solid var(--border);
+    padding: 0.75rem;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.4rem;
+    transition: all 0.25s;
+    cursor: pointer;
+    background: rgba(108, 71, 255, 0.03);
+}
+.ws-upload-zone:hover,
+.ws-upload-zone.drag-active {
+    background: rgba(108, 71, 255, 0.1);
+    border-top-color: rgba(108, 71, 255, 0.4);
+}
+.ws-upload-zone.drag-active {
+    background: rgba(108, 71, 255, 0.18);
+    outline: 2px dashed rgba(108, 71, 255, 0.6);
+    outline-offset: -4px;
+}
+.upload-zone-icon { font-size: 1.5rem; opacity: 0.7; }
+.upload-zone-text { font-size: 0.7rem; color: var(--text3); text-align: center; line-height: 1.4; }
+.upload-zone-btn {
+    margin-top: 0.3rem;
+    padding: 6px 14px;
+    background: linear-gradient(135deg, var(--primary), #8b5cf6);
+    border: none;
+    border-radius: 8px;
+    color: #fff;
+    font-size: 0.75rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: opacity 0.2s, transform 0.15s;
+    font-family: 'Inter', sans-serif;
+}
+.upload-zone-btn:hover { opacity: 0.9; transform: translateY(-1px); }
+
+/* ─── File Item Actions (download/delete) ────────────────────────── */
+.file-actions {
+    display: none;
+    gap: 2px;
+    margin-left: auto;
+    flex-shrink: 0;
+}
+.file-item:hover .file-actions { display: flex; }
+.file-action-btn {
+    width: 22px; height: 22px;
+    border: none; border-radius: 4px;
+    background: transparent; color: var(--text3);
+    cursor: pointer; font-size: 0.72rem;
+    display: flex; align-items: center; justify-content: center;
+    transition: all 0.15s;
+}
+.file-action-btn:hover { background: rgba(255,255,255,0.1); color: var(--text); }
+.file-action-btn.download-btn:hover { background: rgba(0,229,160,0.15); color: #00e5a0; }
+.file-action-btn.delete-btn:hover { background: rgba(255,71,87,0.15); color: #ff4757; }

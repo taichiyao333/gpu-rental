@@ -130,15 +130,29 @@ router.post('/register', authMiddleware, (req, res) => {
 
     const db = getDb();
 
+    // ── 重複チェック: 同じユーザーが同じGPU名で既に登録していないか ──
+    const existing = db.prepare(`
+        SELECT id, name, status FROM gpu_nodes
+        WHERE provider_id = ? AND (name = ? OR (device_index = ? AND name = ?))
+    `).get(req.user.id, gpu_name, device_index ?? 0, gpu_name);
+
+    if (existing) {
+        return res.status(409).json({
+            error: `このGPU「${gpu_name}」は既に登録済みです (ID: ${existing.id})。同じGPUを二重に登録することはできません。`,
+            existing_gpu: existing,
+            suggestion: 'プロバイダーポータルから既存のGPU設定を変更できます。'
+        });
+    }
+
     // Upgrade user role to provider if not already admin/provider
     if (req.user.role === 'user') {
         db.prepare("UPDATE users SET role = 'provider' WHERE id = ?").run(req.user.id);
     }
 
-    // Register GPU
+    // Register GPU (default status: pending_diag → 診断完了後にオンラインにする)
     const result = db.prepare(`
     INSERT INTO gpu_nodes (provider_id, device_index, name, vram_total, driver_version, price_per_hour, location, status)
-    VALUES (?, ?, ?, ?, ?, ?, ?, 'offline')
+    VALUES (?, ?, ?, ?, ?, ?, ?, 'pending_diag')
   `).run(
         req.user.id,
         device_index ?? 0,
@@ -150,7 +164,7 @@ router.post('/register', authMiddleware, (req, res) => {
     );
 
     const gpu = db.prepare('SELECT * FROM gpu_nodes WHERE id = ?').get(result.lastInsertRowid);
-    res.status(201).json({ success: true, gpu, message: 'GPUが登録されました。オンラインになると自動で利用可能になります。' });
+    res.status(201).json({ success: true, gpu, message: 'GPUが登録されました。接続診断を行って、オンラインにしてください。' });
 });
 
 /**
@@ -184,6 +198,16 @@ router.patch('/gpus/:id', authMiddleware, (req, res) => {
     if (!gpu) return res.status(404).json({ error: 'GPU not found or not yours' });
 
     const { price_per_hour, status, location, temp_threshold } = req.body;
+
+    // ── ステータスを「available」にする場合は診断完了が必要 ──
+    if (status === 'available' && !gpu.diag_passed) {
+        return res.status(400).json({
+            error: 'GPUの接続診断がまだ完了していません。先に「接続診断」を実行してください。',
+            action: 'diagnose',
+            gpuId: gpu.id,
+        });
+    }
+
     const updates = []; const params = [];
     if (price_per_hour !== undefined) { updates.push('price_per_hour = ?'); params.push(price_per_hour); }
     if (status) { updates.push('status = ?'); params.push(status); }
@@ -195,6 +219,104 @@ router.patch('/gpus/:id', authMiddleware, (req, res) => {
         db.prepare(`UPDATE gpu_nodes SET ${updates.join(', ')} WHERE id = ?`).run(...params);
     }
     res.json({ success: true });
+});
+
+/**
+ * POST /api/providers/gpus/:id/diagnose - GPU接続診断
+ * nvidia-smiを実行してGPUが正しくアクセスできるか確認
+ */
+router.post('/gpus/:id/diagnose', authMiddleware, async (req, res) => {
+    const db = getDb();
+
+    // diag_passed列がなければ追加
+    try { db.exec('ALTER TABLE gpu_nodes ADD COLUMN diag_passed INTEGER DEFAULT 0'); } catch (_) {}
+    try { db.exec('ALTER TABLE gpu_nodes ADD COLUMN diag_at TEXT'); } catch (_) {}
+
+    const gpu = db.prepare('SELECT * FROM gpu_nodes WHERE id = ? AND provider_id = ?')
+        .get(req.params.id, req.user.id);
+    if (!gpu) return res.status(404).json({ error: 'GPU not found or not yours' });
+
+    const diagResults = { steps: [], passed: true };
+
+    // Step 1: nvidia-smiの確認
+    diagResults.steps.push({ name: 'NVIDIAドライバー検出', status: 'running' });
+    try {
+        const gpuStats = await fetchGpuStats();
+        if (!gpuStats || gpuStats.length === 0) {
+            diagResults.steps[0].status = 'failed';
+            diagResults.steps[0].detail = 'nvidia-smi でGPUが検出されませんでした。NVIDIAドライバーが正しくインストールされているか確認してください。';
+            diagResults.passed = false;
+        } else {
+            diagResults.steps[0].status = 'passed';
+            diagResults.steps[0].detail = `${gpuStats.length}個のGPUを検出`;
+            diagResults.gpuStats = gpuStats;
+        }
+    } catch (err) {
+        diagResults.steps[0].status = 'failed';
+        diagResults.steps[0].detail = `nvidia-smi実行エラー: ${err.message}`;
+        diagResults.passed = false;
+    }
+
+    // Step 2: 対象GPUの一致確認
+    if (diagResults.passed) {
+        diagResults.steps.push({ name: '登録GPU一致確認', status: 'running' });
+        const matchedGpu = diagResults.gpuStats.find(g =>
+            g.name && g.name.toLowerCase().includes(gpu.name.toLowerCase().replace('nvidia ', '').replace('geforce ', ''))
+            || gpu.name.toLowerCase().includes(g.name.toLowerCase().replace('nvidia ', '').replace('geforce ', ''))
+        );
+        if (matchedGpu) {
+            diagResults.steps[1].status = 'passed';
+            diagResults.steps[1].detail = `${matchedGpu.name} (VRAM: ${matchedGpu.vramTotal}MB, ${matchedGpu.temperature}°C)`;
+        } else {
+            diagResults.steps[1].status = 'warning';
+            diagResults.steps[1].detail = `登録名「${gpu.name}」に一致するGPUが見つかりませんが、別のGPUが検出されています。`;
+        }
+    }
+
+    // Step 3: 温度チェック
+    if (diagResults.passed && diagResults.gpuStats) {
+        diagResults.steps.push({ name: 'GPU温度チェック', status: 'running' });
+        const maxTemp = Math.max(...diagResults.gpuStats.map(g => g.temperature || 0));
+        if (maxTemp > 90) {
+            diagResults.steps[2].status = 'failed';
+            diagResults.steps[2].detail = `GPU温度が ${maxTemp}°C と高すぎます。冷却を確認してください。`;
+            diagResults.passed = false;
+        } else if (maxTemp > 75) {
+            diagResults.steps[2].status = 'warning';
+            diagResults.steps[2].detail = `GPU温度 ${maxTemp}°C（やや高め）。冷却状態を確認することを推奨します。`;
+        } else {
+            diagResults.steps[2].status = 'passed';
+            diagResults.steps[2].detail = `GPU温度 ${maxTemp}°C — 正常範囲`;
+        }
+    }
+
+    // Step 4: VRAMチェック
+    if (diagResults.passed && diagResults.gpuStats) {
+        diagResults.steps.push({ name: 'VRAM使用状況', status: 'running' });
+        const targetGpu = diagResults.gpuStats[0];
+        const vramFree = (targetGpu.vramTotal || 0) - (targetGpu.vramUsed || 0);
+        if (vramFree < 500) {
+            diagResults.steps[3].status = 'warning';
+            diagResults.steps[3].detail = `空きVRAMが ${vramFree}MB と少ないです。他のアプリを閉じると改善する場合があります。`;
+        } else {
+            diagResults.steps[3].status = 'passed';
+            diagResults.steps[3].detail = `空きVRAM: ${vramFree}MB / ${targetGpu.vramTotal}MB`;
+        }
+    }
+
+    // 診断結果をDBに保存
+    if (diagResults.passed) {
+        db.prepare(`UPDATE gpu_nodes SET diag_passed = 1, diag_at = datetime('now') WHERE id = ?`).run(gpu.id);
+    }
+
+    res.json({
+        success: true,
+        passed: diagResults.passed,
+        steps: diagResults.steps,
+        message: diagResults.passed
+            ? '✅ 診断完了！ GPUをオンラインにできます。'
+            : '❌ 診断に失敗しました。上記の問題を解決してから再度実行してください。',
+    });
 });
 
 /**

@@ -16,8 +16,7 @@ const couponRouter = require('./coupons');
 const validateCoupon = couponRouter.validateCoupon;
 const { mailPointPurchased } = require('../services/email');
 
-// 1 point = 10 yen
-const POINT_RATE = 10;
+const { POINT_RATE, TICKET_PLANS, calcPlan, getPlanById } = require('../config/plans');
 
 // GMO Epsilon settings (from .env)
 const EPSILON_CONTRACT_CODE = process.env.EPSILON_CONTRACT_CODE || 'TEST_CONTRACT';
@@ -26,20 +25,6 @@ const _BASE = process.env.BASE_URL || process.env.EPSILON_CALLBACK?.replace('/ap
 const EPSILON_CALLBACK = process.env.EPSILON_CALLBACK || `${_BASE}/api/points/epsilon/callback`;
 const EPSILON_RETURN = process.env.EPSILON_RETURN || `${_BASE}/portal/`;
 
-// ─── Ticket Plans ────────────────────────────────────────────────────────────
-const TICKET_PLANS = [
-    { id: 'plan_1h', name: '1時間チケット', hours: 1, price_per_hour: 800, discount: 0, badge: '' },
-    { id: 'plan_3h', name: '3時間チケット', hours: 3, price_per_hour: 800, discount: 0, badge: '' },
-    { id: 'plan_10h', name: '10時間チケット', hours: 10, price_per_hour: 750, discount: 6, badge: '💡 おすすめ' },
-    { id: 'plan_30h', name: '30時間チケット', hours: 30, price_per_hour: 700, discount: 12, badge: '🔥 人気' },
-    { id: 'plan_100h', name: '100時間チケット', hours: 100, price_per_hour: 650, discount: 18, badge: '👑 ベスト' },
-];
-
-function calcPlan(plan) {
-    const amountYen = Math.round(plan.hours * plan.price_per_hour);
-    const points = amountYen / POINT_RATE;
-    return { ...plan, amount_yen: amountYen, points };
-}
 
 // ─── GET /api/points/balance ─────────────────────────────────────────────────
 router.get('/balance', authMiddleware, (req, res) => {
