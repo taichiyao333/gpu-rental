@@ -490,6 +490,7 @@
         <button class="tab-btn" data-series="4000">4000番台</button>
         <button class="tab-btn" data-series="5000">5000番台</button>
         <button class="tab-btn" data-series="rtxa">RTX Aシリーズ</button>
+        <button class="tab-btn" data-series="laptop">Laptop GPU</button>
         <button class="tab-btn" data-series="datacenter">データセンター</button>
     </div>
 
@@ -564,6 +565,22 @@
         </div>
 
         <!-- データセンター -->
+        <div class="series-block" id="block-laptop">
+            <div class="series-title">Laptop GPUs <span class="series-badge" style="background:var(--accent);color:#0a0a0f">モバイル用</span></div>
+            <table id="table-laptop">
+                <thead>
+                    <tr>
+                        <th>GPU名</th>
+                        <th>VRAM</th>
+                        <th>主な用途</th>
+                        <th>GPURental価格</th>
+                        <th>プロバイダー収益</th>
+                        <th>クラス</th>
+                    </tr>
+                </thead>
+                <tbody></tbody>
+            </table>
+        </div>
         <div class="series-block visible" id="block-datacenter">
             <div class="series-title">NVIDIA データセンター / HPC <span class="series-badge">エンタープライズ</span></div>
             <table id="table-datacenter">
@@ -710,7 +727,18 @@
   {series:'rtxa', model:'RTX A5000',        vram:'24 GB', use:'大規模AI・映像制作',             price:500,  tier:'mid',   runpod:'~$0.45/h'},
   {series:'rtxa', model:'RTX A6000',        vram:'48 GB', use:'超大規模モデル・研究',            price:900,  tier:'pro',   runpod:'~$0.76/h'},
   {series:'rtxa', model:'RTX A6000 Ada',    vram:'48 GB', use:'最高峰プロAI・CGI',              price:1100, tier:'hpc',   runpod:'~$0.80/h'},
-  // ─── Datacenter / HPC ──────────────────────────────────────
+  
+    // ── Laptop GPUs ──
+    {series:'laptop', model:'RTX 4090 Laptop', vram:'16 GB', price:500, tier:'pro', runpod:'N/A', use:'モバイル最高峰AI・映像制作'},
+    {series:'laptop', model:'RTX 4080 Laptop', vram:'12 GB', price:350, tier:'mid', runpod:'N/A', use:'LLM・モバイル映像プロ'},
+    {series:'laptop', model:'RTX 4070 Laptop', vram:'8 GB',  price:250, tier:'mid', runpod:'N/A', use:'出先での推論・映像編集'},
+    {series:'laptop', model:'RTX 4060 Laptop', vram:'8 GB',  price:180, tier:'entry', runpod:'N/A', use:'軽量推論・学生向けAI'},
+    {series:'laptop', model:'RTX 3080 Ti Laptop', vram:'16 GB', price:280, tier:'mid', runpod:'N/A', use:'中規模推論・4Kレンダリング'},
+    {series:'laptop', model:'RTX 3080 Laptop', vram:'16 GB', price:280, tier:'mid', runpod:'N/A', use:'中規模推論・4Kレンダリング'},
+    {series:'laptop', model:'RTX 3070 Ti Laptop', vram:'8 GB', price:200, tier:'entry', runpod:'N/A', use:'中規模推論'},
+    {series:'laptop', model:'RTX 3070 Laptop', vram:'8 GB', price:200, tier:'entry', runpod:'N/A', use:'中規模推論'},
+    {series:'laptop', model:'RTX 3060 Laptop', vram:'6 GB',  price:150, tier:'entry', runpod:'N/A', use:'入門AI向け'},
+    // ─── Datacenter / HPC ──────────────────────────────────────
   {series:'datacenter', model:'Tesla T4',   vram:'16 GB', use:'推論・エッジAI',                 price:300,  tier:'mid',   runpod:'~$0.22/h'},
   {series:'datacenter', model:'A30',        vram:'24 GB', use:'推論・小規模学習',               price:500,  tier:'mid',   runpod:'~$0.39/h'},
   {series:'datacenter', model:'L4',         vram:'24 GB', use:'推論・エッジ展開',               price:550,  tier:'mid',   runpod:'~$0.44/h'},
@@ -757,7 +785,7 @@
         }
 
         function renderTables() {
-            ['3000', '4000', '5000', 'rtxa', 'datacenter'].forEach(s => {
+            ['3000', '4000', '5000', 'rtxa', 'laptop', 'datacenter'].forEach(s => {
                 const items = GPU_CATALOG.filter(g => g.series === s);
                 const tbody = document.querySelector(`#table-${s} tbody`);
                 if (tbody) tbody.innerHTML = items.map(buildRow).join('');

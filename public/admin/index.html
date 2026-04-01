@@ -2268,8 +2268,8 @@ function toggleAdminSidebar(){
         });
     })();
     </script>
-    <script src="//translate.google.com/translate_a/element.js?cb=googleTranslateElementInit" async>
-
+    <script src="//translate.google.com/translate_a/element.js?cb=googleTranslateElementInit" async></script>
+    <script>
     // ─── Stripe Connect 管理 ─────────────────────────────────────────
     async function loadStripeAccounts() {
         var token = localStorage.getItem('token');
@@ -2302,7 +2302,7 @@ function toggleAdminSidebar(){
                     '<div style="flex:1;background:rgba(0,229,160,0.06);border-radius:8px;padding:0.5rem;text-align:center">' +
                     '<div style="font-size:0.68rem;color:var(--text3)">ウォレット</div>' +
                     '<div style="font-weight:700;color:var(--success)">¥' + Math.round(a.wallet_balance || 0).toLocaleString() + '</div></div>' +
-                    '<button class="btn btn-ghost btn-sm" onclick="adminStripePayout(' + a.id + ', '' + a.username + '')" style="align-self:center">💸 送金</button>' +
+                    '<button class="btn btn-ghost btn-sm" onclick="adminStripePayout(' + a.id + ', \'' + a.username + '\')" style="align-self:center">💸 送金</button>' +
                     '</div></div>';
             }).join('');
         } catch(e) {

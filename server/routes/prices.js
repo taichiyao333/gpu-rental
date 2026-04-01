@@ -44,6 +44,14 @@ const DEFAULT_CATALOG = [
     { model: 'RTX A5000', series: 'rtxa', vram_gb: 24, default_price: 500, tier: 'mid', runpod_ref: '~$0.45/h', use: '大規模AI・映像制作' },
     { model: 'RTX A6000', series: 'rtxa', vram_gb: 48, default_price: 900, tier: 'pro', runpod_ref: '~$0.76/h', use: '超大規模モデル・研究' },
     { model: 'RTX A6000 Ada', series: 'rtxa', vram_gb: 48, default_price: 1100, tier: 'hpc', runpod_ref: '~$0.80/h', use: '最高峰プロAI・CGI' },
+    // ─── Laptop / Mobile GPUs ──────────────────────────────────────────
+    { model: 'RTX 4090 Laptop', series: 'laptop', vram_gb: 16, default_price: 500, tier: 'pro', runpod_ref: 'N/A', use: 'モバイル最高峰AI・映像制作' },
+    { model: 'RTX 4080 Laptop', series: 'laptop', vram_gb: 12, default_price: 350, tier: 'mid', runpod_ref: 'N/A', use: 'LLM・モバイル映像プロ' },
+    { model: 'RTX 4070 Laptop', series: 'laptop', vram_gb: 8, default_price: 250, tier: 'mid', runpod_ref: 'N/A', use: '出先での推論・映像編集' },
+    { model: 'RTX 4060 Laptop', series: 'laptop', vram_gb: 8, default_price: 180, tier: 'entry', runpod_ref: 'N/A', use: '軽量推論・学生向けAI' },
+    { model: 'RTX 3080/Ti Laptop', series: 'laptop', vram_gb: 16, default_price: 280, tier: 'mid', runpod_ref: 'N/A', use: '中規模推論・4Kレンダリング' },
+    { model: 'RTX 3070/Ti Laptop', series: 'laptop', vram_gb: 8, default_price: 200, tier: 'entry', runpod_ref: 'N/A', use: '中規模推論' },
+    { model: 'RTX 3060 Laptop', series: 'laptop', vram_gb: 6, default_price: 150, tier: 'entry', runpod_ref: 'N/A', use: '入門AI向け' },
     // ─── Datacenter / HPC ──────────────────────────────────────────────
     { model: 'Tesla T4', series: 'datacenter', vram_gb: 16, default_price: 300, tier: 'mid', runpod_ref: '~$0.22/h', use: '推論・エッジAI' },
     { model: 'A30', series: 'datacenter', vram_gb: 24, default_price: 500, tier: 'mid', runpod_ref: '~$0.39/h', use: '推論・小規模学習' },
