@@ -3,9 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>GPURental — 高性能GPUクラウドを時間単位でレンタル | AI・機械学習・3DCG向け</title>
-    <meta name="description" content="RTX 4090・A100・H100などのハイエンドGPUを時間単位でレンタル。AI開発・機械学習・動画レンダリングに。初期費用0円、¥200/時間から。設定不要でブラウザからすぐ開始。">
-    <meta name="keywords" content="GPUレンタル,クラウドGPU,機械学習,AI開発,RTX 4090,A100,時間貸し,GPU計算,動画レンダリング">
+    <title>GPURental — 高性能GPUクラウドを時間単位でレンタル | AI・LLM・画像生成・3DCG向け</title>
+    <meta name="description" content="RTX 4090・H100・RTX 5090などのハイエンドGPUを時間単位でレンタル。LLM・画像生成・Blenderレンダリングに。初期費用0円、¥200/時間から。設定不要でブラウザからすぐ開始。">
+    <meta name="keywords" content="GPUレンタル,クラウドGPU,機械学習,AI開発,RTX 4090,H100,RTX 5090,LLM,画像生成AI,ComfyUI,時間貸し,GPU計算,動画レンダリング">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
@@ -131,7 +131,7 @@
         .gpu-price-unit { font-size: 0.8rem; color: var(--text2); }
         .gpu-use-tags { display: flex; gap: 0.5rem; flex-wrap: wrap; }
         .gpu-use-tag { font-size: 0.68rem; padding: 2px 8px; border-radius: 100px; background: rgba(255,255,255,0.05); color: var(--text2); }
-        .btn-book { width: 100%; margin-top: 1.25rem; padding: 0.65rem; font-size: 0.9rem; border-radius: 10px; background: linear-gradient(135deg, var(--primary), var(--primary-light)); color: #fff; border: none; cursor: pointer; font-weight: 700; transition: all .2s; font-family: inherit; }
+        .btn-book { display: block; width: 100%; margin-top: 1.25rem; padding: 0.65rem; font-size: 0.9rem; border-radius: 10px; background: linear-gradient(135deg, var(--primary), var(--primary-light)); color: #fff; border: none; cursor: pointer; font-weight: 700; transition: all .2s; font-family: inherit; text-align: center; text-decoration: none; position: relative; z-index: 2; }
         .btn-book:hover { opacity: 0.9; transform: translateY(-1px); }
 
         /* ── BENEFITS ── */
@@ -247,19 +247,19 @@
 <section class="hero">
     <div class="hero-badge anim">
         <div class="hero-badge-dot"></div>
-        高性能GPUクラウドレンタルサービス
+        高性能GPUクラウドレンタルサービス — 2026年最新GPUも対応
     </div>
     <h1 class="anim" style="animation-delay:.1s">
         <span class="line1">必要な時だけ、</span>
         <span class="line2">最高峰の計算パワーを。</span>
     </h1>
     <p class="hero-sub anim" style="animation-delay:.2s">
-        RTX 4090・A100・H100などのハイエンドGPUを<strong>時間単位</strong>でレンタル。<br>
-        AI開発・機械学習・動画レンダリングに。初期費用0円、<strong>¥200/時間</strong>から。
+        H100・RTX 5090・RTX 4090などのハイエンドGPUを<strong>時間単位</strong>でレンタル。<br>
+        LLM学習・画像生成AI・Blenderレンダリングに最適。初期費用0円、<strong>¥200/時間</strong>から。
     </p>
     <div class="hero-cta anim" style="animation-delay:.3s">
-        <a href="/portal/" class="btn btn-primary btn-xl">🖥 今すぐGPUを借りる</a>
-        <a href="#marketplace" class="btn btn-outline btn-xl">📋 料金・在庫を確認する</a>
+        <a href="/portal/" class="btn btn-primary btn-xl">&#128187; 今すぐGPUを借りる</a>
+        <a href="#marketplace" class="btn btn-outline btn-xl">&#128203; 料金・在庫を確認する</a>
     </div>
     <div class="hero-stats anim" style="animation-delay:.4s">
         <div class="hero-stat">
@@ -267,7 +267,7 @@
             <div class="hero-stat-label">最低レンタル料金/時間</div>
         </div>
         <div class="hero-stat">
-            <div class="hero-stat-val">35+</div>
+            <div class="hero-stat-val">50+</div>
             <div class="hero-stat-label">対応GPUモデル</div>
         </div>
         <div class="hero-stat">
@@ -286,7 +286,7 @@
     <div class="container">
         <div class="section-label">GPU Marketplace</div>
         <h2 class="section-title">借りられるGPU一覧</h2>
-        <p class="section-sub">最新GPUから高コスパモデルまで。用途・予算に合わせて選択できます。</p>
+        <p class="section-sub">現在登録されているGPUをポータルでリアルタイム確認できます。用途・予算に合わせて選択してください。</p>
         <div class="gpu-cards">
             <!-- RTX 4090 -->
             <div class="gpu-card">
@@ -307,36 +307,11 @@
                     <span class="gpu-price-unit">/ 時間</span>
                 </div>
                 <div class="gpu-use-tags">
-                    <span class="gpu-use-tag">画像生成AI</span>
-                    <span class="gpu-use-tag">LLM</span>
+                    <span class="gpu-use-tag">ComfyUI</span>
+                    <span class="gpu-use-tag">LLM推論</span>
                     <span class="gpu-use-tag">3DCGレンダリング</span>
                 </div>
-                <button class="btn-book" onclick="location.href='/portal/'">今すぐ予約する →</button>
-            </div>
-            <!-- RTX A6000 -->
-            <div class="gpu-card">
-                <div class="gpu-card-header">
-                    <div>
-                        <div class="gpu-name">NVIDIA RTX A6000</div>
-                        <div class="gpu-memory">48GB GDDR6</div>
-                    </div>
-                    <span class="gpu-tag tag-best">大容量VRAM</span>
-                </div>
-                <div class="gpu-specs">
-                    <span class="gpu-spec">⚡ 38.7 TFLOPS</span>
-                    <span class="gpu-spec">💾 48 GB VRAM</span>
-                    <span class="gpu-spec">🔌 300W</span>
-                </div>
-                <div class="gpu-price-row">
-                    <span class="gpu-price">¥900</span>
-                    <span class="gpu-price-unit">/ 時間</span>
-                </div>
-                <div class="gpu-use-tags">
-                    <span class="gpu-use-tag">大規模LLM</span>
-                    <span class="gpu-use-tag">研究・解析</span>
-                    <span class="gpu-use-tag">VFX</span>
-                </div>
-                <button class="btn-book" onclick="location.href='/portal/'">今すぐ予約する →</button>
+                <a href="https://gpurental.jp/portal/" class="btn-book">ポータルでGPU一覧を見る →</a>
             </div>
             <!-- RTX 4080 -->
             <div class="gpu-card">
@@ -359,34 +334,9 @@
                 <div class="gpu-use-tags">
                     <span class="gpu-use-tag">Stable Diffusion</span>
                     <span class="gpu-use-tag">動画生成</span>
-                    <span class="gpu-use-tag">ゲームAI</span>
+                    <span class="gpu-use-tag">LLMファインチューニング</span>
                 </div>
-                <button class="btn-book" onclick="location.href='/portal/'">今すぐ予約する →</button>
-            </div>
-            <!-- RTX 3090 -->
-            <div class="gpu-card">
-                <div class="gpu-card-header">
-                    <div>
-                        <div class="gpu-name">NVIDIA RTX 3090</div>
-                        <div class="gpu-memory">24GB GDDR6X</div>
-                    </div>
-                    <span class="gpu-tag tag-best">コスパ優秀</span>
-                </div>
-                <div class="gpu-specs">
-                    <span class="gpu-spec">⚡ 35.6 TFLOPS</span>
-                    <span class="gpu-spec">💾 24 GB VRAM</span>
-                    <span class="gpu-spec">🔌 350W</span>
-                </div>
-                <div class="gpu-price-row">
-                    <span class="gpu-price">¥500</span>
-                    <span class="gpu-price-unit">/ 時間</span>
-                </div>
-                <div class="gpu-use-tags">
-                    <span class="gpu-use-tag">機械学習</span>
-                    <span class="gpu-use-tag">画像生成</span>
-                    <span class="gpu-use-tag">Blender</span>
-                </div>
-                <button class="btn-book" onclick="location.href='/portal/'">今すぐ予約する →</button>
+                <a href="https://gpurental.jp/portal/" class="btn-book">ポータルでGPU一覧を見る →</a>
             </div>
             <!-- RTX A4500 -->
             <div class="gpu-card">
@@ -407,11 +357,11 @@
                     <span class="gpu-price-unit">/ 時間</span>
                 </div>
                 <div class="gpu-use-tags">
-                    <span class="gpu-use-tag">CAD</span>
+                    <span class="gpu-use-tag">AI学習</span>
+                    <span class="gpu-use-tag">プロレンダリング</span>
                     <span class="gpu-use-tag">科学計算</span>
-                    <span class="gpu-use-tag">映像制作</span>
                 </div>
-                <button class="btn-book" onclick="location.href='/portal/'">今すぐ予約する →</button>
+                <a href="https://gpurental.jp/portal/" class="btn-book">ポータルでGPU一覧を見る →</a>
             </div>
             <!-- RTX 3060 -->
             <div class="gpu-card">
@@ -432,16 +382,16 @@
                     <span class="gpu-price-unit">/ 時間</span>
                 </div>
                 <div class="gpu-use-tags">
-                    <span class="gpu-use-tag">推論</span>
+                    <span class="gpu-use-tag">Ollama推論</span>
                     <span class="gpu-use-tag">学習入門</span>
                     <span class="gpu-use-tag">ComfyUI</span>
                 </div>
-                <button class="btn-book" onclick="location.href='/portal/'">今すぐ予約する →</button>
+                <a href="https://gpurental.jp/portal/" class="btn-book">ポータルでGPU一覧を見る →</a>
             </div>
         </div>
         <div class="pricing-note" style="margin-top:2rem">
             <strong>💡 ご利用の流れ：</strong> アカウント登録 → ポイント購入（クレジットカード決済）→ GPU選択・予約 → すぐに利用開始。
-            最短1時間から、複数時間の予約も可能です。<a href="/portal/" style="color:var(--accent);text-decoration:none"> → GPU一覧を見る</a>
+            最短1時間から、複数時間の予約も可能です。<a href="https://gpurental.jp/portal/" style="color:var(--accent);text-decoration:none"> → ポータルでGPU一覧を見る</a>
         </div>
     </div>
 </section>
@@ -479,7 +429,7 @@
                 <div class="benefit-desc">1台から複数台まで、プロジェクトの規模に合わせてリソースを増減。繁忙期だけ増やす、短期プロジェクトに集中投下など柔軟に対応。</div>
             </div>
             <div class="benefit-card">
-                <div class="benefit-icon">🇯🇵</div>
+                <div class="benefit-icon">&#127471;&#127477;</div>
                 <div class="benefit-title">日本国内のGPUリソース</div>
                 <div class="benefit-desc">海外クラウドと比べ、データ転送の遅延が少なく、日本語サポートで安心。日本円でのシンプルな料金体系です。</div>
             </div>
@@ -492,39 +442,52 @@
     <div class="container">
         <div class="section-label">Use Cases</div>
         <h2 class="section-title">こんな方に使われています</h2>
-        <p class="section-sub">AI・映像・研究など様々な分野のプロフェッショナルが活用しています。</p>
+        <p class="section-sub">生成AI・機械学習・映像制作・研究など、急速に拡大するGPU需要に対応しています。</p>
         <div class="usecase-grid">
             <div class="usecase-card">
-                <div class="usecase-icon-wrap" style="background:rgba(108,71,255,0.15)">🤖</div>
+                <div class="usecase-icon-wrap" style="background:rgba(108,71,255,0.15)">&#129504;</div>
                 <div>
-                    <div class="usecase-title">AI・機械学習エンジニア</div>
-                    <div class="usecase-desc">大規模言語モデル（LLM）のファインチューニング、Stable Diffusionの学習、PyTorchを使った推論サーバーの構築など。自社GPU購入を待たずにすぐ開発を開始できます。</div>
+                    <div class="usecase-title">LLM・生成AI開発者</div>
+                    <div class="usecase-desc">Llama・Mistral・Qwenなど大規模言語モデルのファインチューニング（LoRA・QLoRA）、RLHF、量子化推論。H100・A100で本格的なLLM開発を即日スタート。</div>
                     <div class="usecase-tags">
-                        <span class="usecase-tag">PyTorch</span>
-                        <span class="usecase-tag">LLM学習</span>
-                        <span class="usecase-tag">ComfyUI</span>
+                        <span class="usecase-tag">PyTorch / Transformers</span>
+                        <span class="usecase-tag">LoRA / QLoRA</span>
+                        <span class="usecase-tag">vLLM</span>
                         <span class="usecase-tag">Ollama</span>
                     </div>
                 </div>
             </div>
             <div class="usecase-card">
-                <div class="usecase-icon-wrap" style="background:rgba(255,179,0,0.15)">🎬</div>
+                <div class="usecase-icon-wrap" style="background:rgba(255,71,87,0.15)">&#127912;</div>
+                <div>
+                    <div class="usecase-title">画像・動画生成AIクリエイター</div>
+                    <div class="usecase-desc">Stable Diffusion・FLUX・Wan2.1などの画像・動画生成、ComfyUIワークフロー、ControlNet・LoRA学習。RTX 4090・5090で最高品質の生成AIコンテンツ制作。</div>
+                    <div class="usecase-tags">
+                        <span class="usecase-tag">ComfyUI</span>
+                        <span class="usecase-tag">FLUX / SDXL</span>
+                        <span class="usecase-tag">Wan 2.1</span>
+                        <span class="usecase-tag">ControlNet</span>
+                    </div>
+                </div>
+            </div>
+            <div class="usecase-card">
+                <div class="usecase-icon-wrap" style="background:rgba(255,179,0,0.15)">&#127909;</div>
                 <div>
                     <div class="usecase-title">3DCG・映像クリエイター</div>
-                    <div class="usecase-desc">BlenderやCinema 4DのGPUレンダリング、After Effectsのパワーレンダリング、高解像度動画の高速書き出しに。納期前の一時的な計算能力強化に最適です。</div>
+                    <div class="usecase-desc">BlenderのCycles/EeveeによるGPUレンダリング、Cinema 4D・After Effects高速書き出し。RTX 4090でローカルの10倍以上高速に。Blender Addonで直接クラウドレンダリング可能。</div>
                     <div class="usecase-tags">
                         <span class="usecase-tag">Blender</span>
                         <span class="usecase-tag">NVENC</span>
-                        <span class="usecase-tag">動画書き出し</span>
+                        <span class="usecase-tag">アニメーション</span>
                         <span class="usecase-tag">VFX</span>
                     </div>
                 </div>
             </div>
             <div class="usecase-card">
-                <div class="usecase-icon-wrap" style="background:rgba(0,229,160,0.15)">🔬</div>
+                <div class="usecase-icon-wrap" style="background:rgba(0,229,160,0.15)">&#128300;</div>
                 <div>
                     <div class="usecase-title">研究・解析機関</div>
-                    <div class="usecase-desc">分子動力学シミュレーション、気象データ解析、創薬研究など、一時的に大規模計算が必要な研究に。大学や研究所でのスポットでの計算リソース確保に。</div>
+                    <div class="usecase-desc">分子動力学シミュレーション、気象データ解析、創薬研究など大規模計算が必要な研究に。H100で大学・研究所のスポット計算リソースとして活用。</div>
                     <div class="usecase-tags">
                         <span class="usecase-tag">CUDA</span>
                         <span class="usecase-tag">科学計算</span>
@@ -533,10 +496,10 @@
                 </div>
             </div>
             <div class="usecase-card">
-                <div class="usecase-icon-wrap" style="background:rgba(0,212,255,0.12)">🚀</div>
+                <div class="usecase-icon-wrap" style="background:rgba(0,212,255,0.12)">&#128640;</div>
                 <div>
-                    <div class="usecase-title">スタートアップ・開発チーム</div>
-                    <div class="usecase-desc">AIプロダクト開発の初期フェーズでインフラコストを最小化。PoC（概念実証）から本番移行まで、必要な時だけ高性能GPUを利用してコストを最適化できます。</div>
+                    <div class="usecase-title">AIスタートアップ・開発チーム</div>
+                    <div class="usecase-desc">AIプロダクトのPoC〜本番移行まで、インフラコストを最小化。自社GPU購入前に市場検証・プロトタイプ開発を高速化。スケールアップも自在。</div>
                     <div class="usecase-tags">
                         <span class="usecase-tag">PoC開発</span>
                         <span class="usecase-tag">プロトタイプ</span>
@@ -545,25 +508,13 @@
                 </div>
             </div>
             <div class="usecase-card">
-                <div class="usecase-icon-wrap" style="background:rgba(255,71,87,0.12)">🎮</div>
-                <div>
-                    <div class="usecase-title">ゲーム開発者</div>
-                    <div class="usecase-desc">Unreal Engine・Unityのシェーダーコンパイル、AIキャラクターの学習、物理シミュレーションなど。開発環境を汚さずクラウドで重い処理を分離できます。</div>
-                    <div class="usecase-tags">
-                        <span class="usecase-tag">Unreal Engine</span>
-                        <span class="usecase-tag">物理演算</span>
-                        <span class="usecase-tag">シェーダー</span>
-                    </div>
-                </div>
-            </div>
-            <div class="usecase-card">
-                <div class="usecase-icon-wrap" style="background:rgba(108,71,255,0.12)">📊</div>
+                <div class="usecase-icon-wrap" style="background:rgba(108,71,255,0.12)">&#128202;</div>
                 <div>
                     <div class="usecase-title">データサイエンティスト</div>
-                    <div class="usecase-desc">大規模データセットの前処理、XGBoost・LightGBMのGPU高速化、JupyterLabでのインタラクティブ分析。ローカルPCでは時間がかかる処理を高速化。</div>
+                    <div class="usecase-desc">大規模データセットの前処理、XGBoost・LightGBMのGPU高速化、JupyterLabでのインタラクティブ分析。RAPIDS CUDFでPandas処理を100倍高速化。</div>
                     <div class="usecase-tags">
                         <span class="usecase-tag">JupyterLab</span>
-                        <span class="usecase-tag">RAPIDS</span>
+                        <span class="usecase-tag">RAPIDS / cuDF</span>
                         <span class="usecase-tag">データ処理</span>
                     </div>
                 </div>
