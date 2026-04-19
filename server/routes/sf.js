@@ -1073,5 +1073,3 @@ return router;
 
 // 後方互換: io なしでも動作するようにデフォルトエクスポート
 module.exports.createSfRouter = module.exports;
-module.exports.MATCH_MODES = MATCH_MODES;
-module.exports.calcScore = calcScore;

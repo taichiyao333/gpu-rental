@@ -1,4 +1,4 @@
-﻿const express = require('express');
+const express = require('express');
 const router = express.Router();
 const { getDb } = require('../db/database');
 const { authMiddleware } = require('../middleware/auth');
@@ -6,9 +6,9 @@ const { POINT_RATE } = require('../config/plans');
 const { mailReservationConfirmed, mailProviderPodStarted } = require('../services/email');
 
 /**
- * ISO8601譁・ｭ怜・・医ち繧､繝繧ｾ繝ｼ繝ｳ莉倥″繝ｻ縺ｪ縺嶺ｸ｡蟇ｾ蠢懶ｼ峨ｒSQLite莠呈鋤縺ｮUTC譁・ｭ怜・縺ｫ螟画鋤
- * 萓・ '2026-03-30T19:00:00+09:00' 竊・'2026-03-30 10:00:00'
- *     '2026-03-30T10:00:00' (UTC) 竊・'2026-03-30 10:00:00'
+ * ISO8601文字列(タイムゾーン付き・なし両対応)をSQLiteのUTC文字列に変換
+ * 例: '2026-03-30T19:00:00+09:00' → '2026-03-30 10:00:00'
+ *     '2026-03-30T10:00:00' (UTC) → '2026-03-30 10:00:00'
  */
 function toUtcSqlite(isoStr) {
   const d = new Date(isoStr);
@@ -19,10 +19,8 @@ function toUtcSqlite(isoStr) {
 }
 
 /**
- * DB縺ｫ菫晏ｭ倥＆繧後◆UTC譁・ｭ怜・ 'YYYY-MM-DD HH:MM:SS' 繧・
- * JST縺ｮ繝ｭ繝ｼ繧ｫ繝ｫ譁・ｭ怜・ 'YYYY-MM-DD HH:MM:SS' 縺ｫ螟画鋤縺励※霑斐☆縲・
- * 繝輔Ο繝ｳ繝医お繝ｳ繝峨・ new Date('YYYY-MM-DD HH:MM:SS') 縺ｯ繝ｭ繝ｼ繧ｫ繝ｫ譎ょ綾縺ｨ縺励※隗｣驥医☆繧九◆繧√・
- * 縺薙・螟画鋤縺ｧJST譎ょ綾繧呈ｭ｣縺励￥陦ｨ遉ｺ繝ｻ蛻ｩ逕ｨ縺ｧ縺阪ｋ繧医≧縺ｫ縺吶ｋ縲・
+ * DBに保存されたUTC文字列 'YYYY-MM-DD HH:MM:SS' を
+ * JSTのローカル文字列 'YYYY-MM-DD HH:MM:SS' に変換して返す。
  */
 const JST_OFFSET_MS = 9 * 60 * 60 * 1000;
 function utcToJstStr(utcStr) {
@@ -35,7 +33,7 @@ function utcToJstStr(utcStr) {
          `${pad(jst.getUTCHours())}:${pad(jst.getUTCMinutes())}:${pad(jst.getUTCSeconds())}`;
 }
 
-/** 莠育ｴ・が繝悶ず繧ｧ繧ｯ繝医・start_time/end_time繧旦TC竊谷ST縺ｫ螟画鋤 */
+/** 予約オブジェクトのstart_time/end_timeをUTC→JSTに変換 */
 function toJstReservation(r) {
   return { ...r, start_time: utcToJstStr(r.start_time), end_time: utcToJstStr(r.end_time) };
 }
@@ -65,7 +63,6 @@ router.get('/', authMiddleware, (req, res) => {
       ORDER BY r.created_at DESC
     `).all(req.user.id);
   }
-  // UTC竊谷ST縺ｫ螟画鋤縺励※繝輔Ο繝ｳ繝医′豁｣縺励￥陦ｨ遉ｺ縺ｧ縺阪ｋ繧医≧縺ｫ縺吶ｋ
   res.json(reservations.map(toJstReservation));
 });
 
@@ -83,20 +80,20 @@ router.post('/', authMiddleware, (req, res) => {
 
   const db = getDb();
 
-  // 繧ｿ繧､繝繧ｾ繝ｼ繝ｳ莉倥″譁・ｭ怜・繧旦TC SQLite蠖｢蠑上↓豁｣隕丞喧・・QLite縺ｮdatetime()縺ｯTZ offset繧呈ｭ｣縺励￥謇ｱ縺医↑縺・ｼ・
+  // タイムゾーン付き文字列をUTC SQLite形式に正規化
   let startUtc, endUtc;
   try {
     startUtc = toUtcSqlite(start_time);
     endUtc   = toUtcSqlite(end_time);
   } catch (e) {
-    return res.status(400).json({ error: '譌･譎ゅ・蠖｢蠑上′荳肴ｭ｣縺ｧ縺・ ' + e.message });
+    return res.status(400).json({ error: '日時の形式が不正です: ' + e.message });
   }
 
   // Check GPU exists
   const gpu = db.prepare('SELECT * FROM gpu_nodes WHERE id = ? AND status != ?').get(gpu_id, 'maintenance');
   if (!gpu) return res.status(404).json({ error: 'GPU not available' });
 
-  // Check for overlapping reservations・・TC譁・ｭ怜・縺ｧ豈碑ｼ・ｼ・
+  // Check for overlapping reservations (UTC文字列で比較)
   const overlap = db.prepare(`
     SELECT id FROM reservations
     WHERE gpu_id = ?
@@ -104,7 +101,7 @@ router.post('/', authMiddleware, (req, res) => {
     AND NOT (end_time <= ? OR start_time >= ?)
   `).get(gpu_id, startUtc, endUtc);
 
-  if (overlap) return res.status(409).json({ error: '縺薙・譎る俣蟶ｯ縺ｯ縺吶〒縺ｫ莠育ｴ・＆繧後※縺・∪縺・ });
+  if (overlap) return res.status(409).json({ error: 'この時間帯はすでに予約されています' });
 
   // Calculate total price
   const durationHours = (end - start) / 3600000;
@@ -114,22 +111,22 @@ router.post('/', authMiddleware, (req, res) => {
   const { TEMPLATES } = require('../services/dockerTemplates');
   const templateId = (docker_template && TEMPLATES[docker_template]) ? docker_template : 'pytorch';
 
-  // 笏笏 繧ｦ繧ｩ繝ｬ繝・ヨ谿矩ｫ倥メ繧ｧ繝・け & 繝・・繧ｸ繝・ヨ蠑輔″關ｽ縺ｨ縺暦ｼ医ヨ繝ｩ繝ｳ繧ｶ繧ｯ繧ｷ繝ｧ繝ｳ蜀・ｼ俄楳笏笏笏笏
+  // ウォレット残高チェック & デポジット差し引き (トランザクション内)
   const renter = db.prepare('SELECT * FROM users WHERE id = ?').get(req.user.id);
-  if (!renter) return res.status(404).json({ error: '繝ｦ繝ｼ繧ｶ繝ｼ縺瑚ｦ九▽縺九ｊ縺ｾ縺帙ｓ' });
+  if (!renter) return res.status(404).json({ error: 'ユーザーが見つかりません' });
 
-  // 繝・・繧ｸ繝・ヨ = 莠育ｴ・ｷ城｡・蜀・繧偵・繧､繝ｳ繝医↓螟画鋤・・pt = POINT_RATE蜀・ｼ・
-  const depositAmount = Math.ceil(total_price / POINT_RATE); // 蜀・・繝昴う繝ｳ繝亥､画鋤
+  // デポジット = 予約料金全額をポイントに変換 (pt = POINT_RATE内)
+  const depositAmount = Math.ceil(total_price / POINT_RATE);
 
   if (renter.wallet_balance < depositAmount) {
     return res.status(400).json({
-      error: `繝昴う繝ｳ繝域ｮ矩ｫ倥′荳崎ｶｳ縺励※縺・∪縺吶ょｿ・ｦ・ ${depositAmount}pt / 迴ｾ蝨ｨ: ${Math.floor(renter.wallet_balance)}pt`,
+      error: `ポイント残高が不足しています。必要: ${depositAmount}pt / 現在: ${Math.floor(renter.wallet_balance)}pt`,
       required: depositAmount,
       balance: Math.floor(renter.wallet_balance),
     });
   }
 
-  // 繝医Λ繝ｳ繧ｶ繧ｯ繧ｷ繝ｧ繝ｳ: 莠育ｴ・ｽ懈・ + 繝・・繧ｸ繝・ヨ蠑輔″關ｽ縺ｨ縺・
+  // トランザクション: 予約作成 + デポジット差し引き
   const insertReservation = db.transaction(() => {
     const result = db.prepare(`
       INSERT INTO reservations (renter_id, gpu_id, start_time, end_time, status, total_price, notes, docker_template, sf_raid_job_id, sf_match_id)
@@ -137,7 +134,7 @@ router.post('/', authMiddleware, (req, res) => {
     `).run(req.user.id, gpu_id, startUtc, endUtc, total_price, notes || '', templateId,
            sf_raid_job_id || null, sf_match_id || null);
 
-    // 繧ｦ繧ｩ繝ｬ繝・ヨ縺ｨ繝昴う繝ｳ繝域ｮ矩ｫ倥・荳｡譁ｹ縺九ｉ繝・・繧ｸ繝・ヨ蟾ｮ縺怜ｼ輔″
+    // ウォレットとポイント残高の両方からデポジット差し引き
     db.prepare('UPDATE users SET wallet_balance = wallet_balance - ?, point_balance = point_balance - ? WHERE id = ?').run(depositAmount, depositAmount, req.user.id);
 
     return result;
@@ -148,7 +145,7 @@ router.post('/', authMiddleware, (req, res) => {
   const reservation = db.prepare('SELECT * FROM reservations WHERE id = ?').get(result.lastInsertRowid);
   const resWithGpu = { ...reservation, gpu_name: gpu.name };
 
-  // 莠育ｴ・｢ｺ螳壹Γ繝ｼ繝ｫ繧帝撼蜷梧悄騾∽ｿ｡
+  // 予約確認メールを非同期送信
   const user = db.prepare('SELECT username, email FROM users WHERE id = ?').get(req.user.id);
   if (user?.email) {
     mailReservationConfirmed({ to: user.email, username: user.username, reservation: resWithGpu })
@@ -172,11 +169,11 @@ router.delete('/:id', authMiddleware, (req, res) => {
   if (reservation.status === 'cancelled')
     return res.status(400).json({ error: 'Already cancelled' });
 
-  // 繧ｭ繝｣繝ｳ繧ｻ繝ｫ譎ゅ・霑秘≡蜃ｦ逅・ｼ・onfirmed縺ｮ縺ｿ霑秘≡・・
+  // キャンセル時の返金処理 (confirmedのみ返金)
   let refundAmount = 0;
   const refundableStatuses = ['confirmed', 'pending'];
   if (refundableStatuses.includes(reservation.status)) {
-    // 繝・・繧ｸ繝・ヨ・亥・竊偵・繧､繝ｳ繝亥､画鋤貂医∩・峨ｒ霑秘≡
+    // デポジット (料金→ポイント変換済み) を返金
     refundAmount = Math.ceil((reservation.total_price || 0) / POINT_RATE);
   }
 
@@ -190,8 +187,8 @@ router.delete('/:id', authMiddleware, (req, res) => {
   cancelReservation();
 
   const msg = refundAmount > 0
-    ? `莠育ｴ・ｒ繧ｭ繝｣繝ｳ繧ｻ繝ｫ縺励∪縺励◆縲・{refundAmount}pt 繧定ｿ秘≡縺励∪縺励◆縲Ａ
-    : '莠育ｴ・ｒ繧ｭ繝｣繝ｳ繧ｻ繝ｫ縺励∪縺励◆縲・;
+    ? `予約をキャンセルしました。${refundAmount}pt を返金しました。`
+    : '予約をキャンセルしました。';
 
   res.json({ success: true, refunded: refundAmount, message: msg });
 });
@@ -212,17 +209,17 @@ router.get('/my/active-pod', authMiddleware, (req, res) => {
   res.json(pod || null);
 });
 
-// POST /api/reservations/:id/start - 謇句虚縺ｧPod繧貞叉譎りｵｷ蜍・
+// POST /api/reservations/:id/start - 手動でPodを即時起動
 router.post('/:id/start', authMiddleware, (req, res) => {
   const db = getDb();
   const reservation = db.prepare('SELECT * FROM reservations WHERE id = ?').get(req.params.id);
-  if (!reservation) return res.status(404).json({ error: '莠育ｴ・′隕九▽縺九ｊ縺ｾ縺帙ｓ' });
+  if (!reservation) return res.status(404).json({ error: '予約が見つかりません' });
   if (reservation.renter_id !== req.user.id && req.user.role !== 'admin')
     return res.status(403).json({ error: 'Forbidden' });
   if (!['confirmed', 'pending'].includes(reservation.status))
-    return res.status(400).json({ error: `縺薙・莠育ｴ・・縺吶〒縺ｫ ${reservation.status} 迥ｶ諷九〒縺兪 });
+    return res.status(400).json({ error: `この予約はすでに ${reservation.status} 状態です` });
 
-  // 譌｢蟄倥・遞ｼ蜒堺ｸｭPod縺後≠繧後・縺昴ｌ繧定ｿ斐☆
+  // 既存の稼働中Podがあればそれを返す
   const existingPod = db.prepare(
     "SELECT * FROM pods WHERE reservation_id = ? AND status = 'running'"
   ).get(reservation.id);
@@ -234,7 +231,7 @@ router.post('/:id/start', authMiddleware, (req, res) => {
     const { createPod } = require('../services/podManager');
     const pod = createPod(reservation.id);
 
-    // 笨会ｸ・繝励Ο繝舌う繝繝ｼ縺ｸ蛻ｩ逕ｨ髢句ｧ九Γ繝ｼ繝ｫ
+    // プロバイダーへ利用開始メール
     try {
       const gpuInfo = db.prepare(`
         SELECT gn.name as gpu_name, gn.price_per_hour, u.email as provider_email, u.username as provider_name
@@ -248,7 +245,7 @@ router.post('/:id/start', authMiddleware, (req, res) => {
         mailProviderPodStarted({
           to:           gpuInfo.provider_email,
           providerName: gpuInfo.provider_name,
-          renterName:   renter?.username || '繝ｦ繝ｼ繧ｶ繝ｼ',
+          renterName:   renter?.username || 'ユーザー',
           gpuName:      gpuInfo.gpu_name,
           startTime:    reservation.start_time,
           endTime:      reservation.end_time,
@@ -257,7 +254,7 @@ router.post('/:id/start', authMiddleware, (req, res) => {
       }
     } catch(mailErr) { console.error('Provider mail lookup error:', mailErr.message); }
 
-    // Socket.IO騾夂衍・・o 縺御ｽｿ縺医ｌ縺ｰ・・
+    // Socket.IO通知
     try {
       const { io } = require('../index');
       const { getWorkspaceUrl } = require('../services/podManager');
@@ -266,14 +263,14 @@ router.post('/:id/start', authMiddleware, (req, res) => {
         io.to(`user_${pod.renter_id}`).emit('pod:started', {
           podId:         pod.id,
           workspace_url: wsUrl,
-          message: '噫 GPU縺悟茜逕ｨ蜿ｯ閭ｽ縺ｫ縺ｪ繧翫∪縺励◆・√Ρ繝ｼ繧ｯ繧ｹ繝壹・繧ｹ縺ｫ謗･邯壹＠縺ｦ縺上□縺輔＞縲・,
+          message: 'GPU が利用可能になりました。ワークスペースに接続してください。',
         });
       }
-    } catch (_) { /* io縺悟叙繧後↑縺上※繧らｶ咏ｶ・*/ }
+    } catch (_) { /* io が取れなくても続行 */ }
 
     res.json({ success: true, pod });
   } catch (err) {
-    res.status(500).json({ error: 'Pod襍ｷ蜍輔↓螟ｱ謨励＠縺ｾ縺励◆: ' + err.message });
+    res.status(500).json({ error: 'Pod起動に失敗しました: ' + err.message });
   }
 });
 
@@ -349,5 +346,3 @@ router.post('/sf-confirm', authMiddleware, async (req, res) => {
 });
 
 module.exports = router;
-
-
