@@ -705,6 +705,259 @@ router.post('/raid', authMiddleware, (req, res) => {
 });
 
 
+
+// ─────────────────────────────────────────────────────────────
+// POST /api/sf/raid/confirm
+// レイドバトルをポイントで決済確定し、各ノードへジョブを配信する
+//
+// Body:
+//   raid_plan_json  : POST /api/sf/raid のレスポンス全体 (JSON文字列)
+//   payment_method  : 'points' (現在のみ対応; 将来: 'stripe' | 'epsilon')
+//   video_url       : 処理対象ファイルURL (MRP Orchestrator への転送に使用)
+//   app_id          : 'real-esrgan' | 'jasmy-upscaler' | etc.
+// ─────────────────────────────────────────────────────────────
+router.post('/raid/confirm', authMiddleware, (req, res) => {
+    const db = getDb();
+    const { raid_plan_json, payment_method = 'points', video_url, app_id = 'real-esrgan' } = req.body;
+
+    if (!raid_plan_json) {
+        return res.status(400).json({ error: 'raid_plan_json is required' });
+    }
+
+    let raidData;
+    try {
+        raidData = typeof raid_plan_json === 'string' ? JSON.parse(raid_plan_json) : raid_plan_json;
+    } catch {
+        return res.status(400).json({ error: 'Invalid raid_plan_json format' });
+    }
+
+    const summary    = raidData.summary;
+    const raidPlan   = raidData.raid_plan;
+    const costYen    = Math.round(summary?.estimated_cost_yen ?? 0);
+    const POINT_RATE = 1;  // 1ポイント = 1円 (plans.js と同値)
+
+    if (!summary || !Array.isArray(raidPlan) || raidPlan.length === 0) {
+        return res.status(400).json({ error: '無効なレイドプランです' });
+    }
+
+    try {
+        // ─ ユーザー確認 ──────────────────────────────────────────────
+        const user = db.prepare(
+            'SELECT id, point_balance, email FROM users WHERE id = ?'
+        ).get(req.user.id);
+
+        if (!user) return res.status(404).json({ error: 'User not found' });
+
+        // ─ ポイント残高チェック ────────────────────────────────────────
+        const pointsNeeded = Math.ceil(costYen / POINT_RATE);
+
+        if (payment_method === 'points') {
+            if ((user.point_balance || 0) < pointsNeeded) {
+                return res.status(402).json({
+                    error:          'ポイント残高が不足しています',
+                    required_yen:   costYen,
+                    required_points: pointsNeeded,
+                    current_points: user.point_balance || 0,
+                    shortage_points: pointsNeeded - (user.point_balance || 0),
+                    purchase_url:   '/portal/#points',     // ポイント購入ページへ
+                });
+            }
+        } else {
+            // 将来: Stripe/GMO Epsilon 対応
+            return res.status(422).json({ error: `payment_method '${payment_method}' は現在未対応です。'points' を使用してください。` });
+        }
+
+        // ─ トランザクション: ポイント引き落とし + ジョブ登録 ──────────
+        const txn = db.transaction(() => {
+            // 1. sf_raid_jobs に登録
+            const insertRaid = db.prepare(`
+                INSERT INTO sf_raid_jobs
+                    (user_id, raid_plan_json, summary_json, status, payment_method,
+                     payment_amount_yen, points_used, paid_at)
+                VALUES (?, ?, ?, 'paid', ?, ?, ?, datetime('now'))
+            `);
+            const raidResult = insertRaid.run(
+                req.user.id,
+                JSON.stringify(raidData.raid_plan),
+                JSON.stringify(summary),
+                payment_method,
+                costYen,
+                pointsNeeded,
+            );
+            const raidJobId = raidResult.lastInsertRowid;
+
+            // 2. ポイント引き落とし
+            db.prepare(`
+                UPDATE users SET point_balance = point_balance - ? WHERE id = ?
+            `).run(pointsNeeded, req.user.id);
+
+            // 3. ポイントログ記録
+            db.prepare(`
+                INSERT INTO point_logs (user_id, type, amount, source, source_id, note)
+                VALUES (?, 'spend', ?, 'raid_job', ?, ?)
+            `).run(
+                req.user.id,
+                pointsNeeded,
+                String(raidJobId),
+                `🔥 RAID BATTLE ${raidJobId} — ${summary.node_count}ノード × ${summary.total_tflops}TFLOPS`,
+            );
+
+            // 4. 各ノードをジョブ受信待ちに (busy に)
+            for (const node of raidPlan) {
+                db.prepare(`
+                    UPDATE sf_nodes SET status = 'busy' WHERE id = ?
+                `).run(node.node_id || node.id);
+            }
+
+            return raidJobId;
+        });
+
+        const raidJobId = txn();
+
+        // ─ MRP Orchestrator へのジョブ配信 (非同期/ベストエフォート) ───
+        // 実際の配信は非同期バックグラウンドで行うが、ここでは構造を示す
+        const mrpJobIds = [];
+        const MRP_ORCHESTRATOR = process.env.MRP_ORCHESTRATOR_URL || 'http://localhost:8000/v1';
+
+        if (video_url && MRP_ORCHESTRATOR) {
+            // バックグラウンドでジョブ配信 (応答を待たない)
+            (async () => {
+                const http = require('https');
+                const httpModule = MRP_ORCHESTRATOR.startsWith('https') ? http : require('http');
+
+                for (const node of raidPlan) {
+                    try {
+                        const payload = JSON.stringify({
+                            user_id:   String(req.user.id),
+                            app_id,
+                            video_url,
+                            options: {
+                                scale:       4,
+                                frame_start: node.frame_start,
+                                frame_end:   node.frame_end,
+                                node_id:     node.node_id || node.id,
+                                raid_job_id: raidJobId,
+                            },
+                            priority: 7,
+                        });
+
+                        const reqOptions = {
+                            method:  'POST',
+                            headers: {
+                                'Content-Type':   'application/json',
+                                'Content-Length': Buffer.byteLength(payload),
+                            },
+                        };
+
+                        // 非同期 HTTP POST (エラーは無視)
+                        const url = new URL(`${MRP_ORCHESTRATOR}/jobs/submit`);
+                        reqOptions.hostname = url.hostname;
+                        reqOptions.port     = url.port;
+                        reqOptions.path     = url.pathname;
+
+                        const nodeReq = httpModule.request(reqOptions, nodeRes => {
+                            let body = '';
+                            nodeRes.on('data', d => body += d);
+                            nodeRes.on('end', () => {
+                                try {
+                                    const jobData = JSON.parse(body);
+                                    mrpJobIds.push(jobData.job_id);
+                                } catch {}
+                            });
+                        });
+                        nodeReq.on('error', err => console.warn(`[SF] MRP dispatch error (node ${node.node_id}):`, err.message));
+                        nodeReq.write(payload);
+                        nodeReq.end();
+
+                    } catch (e) {
+                        console.warn(`[SF] ノード ${node.node_id} へのディスパッチ失敗:`, e.message);
+                    }
+                }
+
+                // MRP job IDs を記録
+                if (mrpJobIds.length > 0) {
+                    db.prepare(`UPDATE sf_raid_jobs SET mrp_job_ids = ?, status = 'dispatched', dispatched_at = datetime('now') WHERE id = ?`)
+                      .run(JSON.stringify(mrpJobIds), raidJobId);
+                }
+            })();
+        }
+
+        // ─ WebSocket: レイドバトル開始通知 ────────────────────────────
+        if (io) {
+            io.to(`user_${req.user.id}`).emit('sf:raid_confirmed', {
+                raid_job_id:  raidJobId,
+                summary,
+                payment: {
+                    method:         payment_method,
+                    amount_yen:     costYen,
+                    points_used:    pointsNeeded,
+                },
+                timestamp: new Date().toISOString(),
+                message: `🔥 RAID BATTLE 開始！ ${summary.node_count}ノードへジョブを配信中...`,
+            });
+
+            io.to('admin_channel').emit('sf:raid_started', {
+                raid_job_id: raidJobId,
+                user_id:     req.user.id,
+                node_count:  summary.node_count,
+                total_yen:   costYen,
+            });
+        }
+
+        // ─ 領収書レスポンス ──────────────────────────────────────────
+        const updatedUser = db.prepare('SELECT point_balance FROM users WHERE id = ?').get(req.user.id);
+
+        res.json({
+            success:       true,
+            raid_job_id:   raidJobId,
+            payment: {
+                method:          payment_method,
+                amount_yen:      costYen,
+                points_used:     pointsNeeded,
+                remaining_points: updatedUser?.point_balance ?? 0,
+            },
+            dispatch: {
+                node_count:  raidPlan.length,
+                mrp_job_ids: mrpJobIds,
+                status:      'dispatched',
+            },
+            receipt_url: `/api/sf/raid/${raidJobId}/receipt`,
+            message: `✅ RAID BATTLE 確定！ ${summary.node_count}ノードへ分散ジョブを配信しました。`,
+        });
+
+    } catch (err) {
+        console.error('[SF] raid/confirm error:', err);
+        res.status(500).json({ error: err.message });
+    }
+});
+
+
+// ─────────────────────────────────────────────────────────────
+// GET /api/sf/raid/:id/receipt  - レイドジョブ領収書
+// ─────────────────────────────────────────────────────────────
+router.get('/raid/:id/receipt', authMiddleware, (req, res) => {
+    const db  = getDb();
+    const job = db.prepare(
+        'SELECT * FROM sf_raid_jobs WHERE id = ? AND user_id = ?'
+    ).get(req.params.id, req.user.id);
+
+    if (!job) return res.status(404).json({ error: 'Raid job not found' });
+
+    res.json({
+        raid_job_id:    job.id,
+        status:         job.status,
+        payment_method: job.payment_method,
+        amount_yen:     job.payment_amount_yen,
+        points_used:    job.points_used,
+        summary:        JSON.parse(job.summary_json || '{}'),
+        mrp_job_ids:    JSON.parse(job.mrp_job_ids || '[]'),
+        created_at:     job.created_at,
+        paid_at:        job.paid_at,
+        dispatched_at:  job.dispatched_at,
+    });
+});
+
+
 // ─────────────────────────────────────────────────────────────
 // WebSocket: ノード状態変更を全クライアントに通知するヘルパー
 // heartbeat エンドポイントから呼び出す

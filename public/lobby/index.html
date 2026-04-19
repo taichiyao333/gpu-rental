@@ -249,6 +249,41 @@ body::before {
 .btn-raid-confirm.visible { display: block; }
 .btn-raid-confirm:hover { transform: translateY(-3px); box-shadow: 0 12px 40px rgba(245,158,11,0.5); }
 
+/* ── 決済確認モーダル ── */
+.payment-modal-overlay {
+    position: fixed; inset: 0; z-index: 1000;
+    background: rgba(0,0,0,0.7); backdrop-filter: blur(8px);
+    display: flex; align-items: flex-end; justify-content: center;
+    opacity: 0; pointer-events: none; transition: opacity 0.3s;
+}
+.payment-modal-overlay.active { opacity: 1; pointer-events: auto; }
+.payment-modal {
+    width: 100%; max-width: 480px;
+    background: var(--bg-card-alt);
+    border: 1px solid rgba(245,158,11,0.4);
+    border-bottom: none;
+    border-radius: 16px 16px 0 0;
+    padding: 1.5rem;
+    transform: translateY(100%); transition: transform 0.35s cubic-bezier(0.25,0.8,0.25,1);
+}
+.payment-modal-overlay.active .payment-modal { transform: translateY(0); }
+.modal-title { font-family: var(--font-hud); font-size: 1.2rem; font-weight: 700; color: var(--raid); letter-spacing: 3px; margin-bottom: 1.25rem; display: flex; align-items: center; gap: 0.5rem; }
+.modal-row { display: flex; justify-content: space-between; align-items: center; padding: 0.6rem 0; border-bottom: 1px solid rgba(255,255,255,0.05); font-size: 0.88rem; }
+.modal-row:last-of-type { border-bottom: none; }
+.modal-key { color: var(--text-dim); }
+.modal-val { font-family: var(--font-hud); font-weight: 600; }
+.modal-val.cost { color: var(--gold); font-size: 1.2rem; }
+.modal-val.ok  { color: #4ade80; }
+.modal-val.err { color: #f87171; }
+.modal-actions { display: flex; gap: 0.75rem; margin-top: 1.25rem; }
+.modal-cancel { flex: 1; padding: 0.75rem; border: 1px solid rgba(255,255,255,0.1); background: transparent; border-radius: 8px; color: var(--text-dim); font-family: var(--font-hud); font-size: 0.95rem; letter-spacing: 1px; cursor: pointer; transition: all 0.2s; }
+.modal-cancel:hover { color: var(--text-primary); border-color: rgba(255,255,255,0.25); }
+.modal-submit { flex: 2; padding: 0.75rem; background: linear-gradient(135deg, #d97706, #b45309); border: 1px solid var(--raid); border-radius: 8px; color: #fff; font-family: var(--font-hud); font-size: 1rem; font-weight: 700; letter-spacing: 2px; cursor: pointer; transition: all 0.2s; }
+.modal-submit:hover:not(:disabled) { box-shadow: 0 6px 24px rgba(245,158,11,0.5); }
+.modal-submit:disabled { opacity: 0.5; cursor: not-allowed; }
+.modal-shortage { margin-top: 0.75rem; padding: 0.75rem; border-radius: 8px; background: rgba(239,68,68,0.1); border: 1px solid rgba(239,68,68,0.3); font-size: 0.82rem; color: #f87171; }
+.modal-shortage a { color: var(--raid); text-decoration: underline; }
+
 /* ── Toast ── */
 .toast { position: fixed; bottom: 2rem; left: 50%; transform: translateX(-50%) translateY(8px); background: var(--bg-card-alt, #111a28); border: 1px solid var(--border-glow); border-radius: 8px; padding: 0.75rem 1.5rem; font-size: 0.88rem; color: var(--text-primary); opacity: 0; transition: all 0.3s; z-index: 9999; pointer-events: none; max-width: 400px; text-align: center; }
 .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
@@ -468,6 +503,18 @@ body::before {
 </main>
 
 <div class="toast" id="toast"></div>
+
+<!-- 決済確認モーダル (bottom sheet) -->
+<div class="payment-modal-overlay" id="paymentModalOverlay" onclick="closePaymentModal(event)">
+    <div class="payment-modal">
+        <div class="modal-title">🔥 RAID BATTLE 決済確認</div>
+        <div id="modalContent"></div>
+        <div class="modal-actions">
+            <button class="modal-cancel" onclick="closePaymentModal()">キャンセル</button>
+            <button class="modal-submit" id="modalSubmitBtn" onclick="executeRaidPayment()">⚡ FIGHT START</button>
+        </div>
+    </div>
+</div>
 
 <script>
 // ─────────────────────────────────────────────
@@ -800,14 +847,115 @@ async function startRaid() {
 }
 
 async function confirmRaid() {
+    const token = getToken();
+    if (!token) { showToast('ログインが必要です', 'error'); return; }
     if (!currentRaidPlan) return;
-    const btn = document.getElementById('btnRaidConfirm');
-    btn.disabled = true; btn.textContent = '⚡ RAID STARTING...';
-    // 現時点では確認UI表示のみ（ジョブ実行は将来フェーズで実装）
-    showToast(`✅ ${currentRaidPlan.summary.node_count}ノードへのレイドジョブをキューに追加しました！`, 'success', 5000);
-    setTimeout(() => {
-        btn.disabled = false; btn.textContent = '⚡ RAID START';
-    }, 2000);
+
+    const summary  = currentRaidPlan.summary;
+    const costYen  = summary.estimated_cost_yen || 0;
+
+    // ポイント残高を取得
+    let balance = 0;
+    try {
+        const r = await fetch('/api/points/balance', { headers: { 'Authorization': `Bearer ${token}` } });
+        const d = await r.json();
+        balance = d.point_balance || 0;
+    } catch {}
+
+    const canPay = balance >= Math.ceil(costYen);
+
+    // 決済モーダルを表示
+    document.getElementById('modalContent').innerHTML = `
+        <div class="modal-row">
+            <span class="modal-key">ノード数</span>
+            <span class="modal-val">${summary.node_count}ノード</span>
+        </div>
+        <div class="modal-row">
+            <span class="modal-key">総計算出力</span>
+            <span class="modal-val">${summary.total_tflops} TFLOPS</span>
+        </div>
+        <div class="modal-row">
+            <span class="modal-key">推定完了時間</span>
+            <span class="modal-val">${summary.est_completion_min}分</span>
+        </div>
+        <div class="modal-row">
+            <span class="modal-key">決済金額</span>
+            <span class="modal-val cost">¥${costYen.toLocaleString()}</span>
+        </div>
+        <div class="modal-row">
+            <span class="modal-key">現在のポイント残高</span>
+            <span class="modal-val ${canPay ? 'ok' : 'err'}">${balance.toLocaleString()} pt</span>
+        </div>
+        <div class="modal-row">
+            <span class="modal-key">決済方法</span>
+            <span class="modal-val">ポイント消費</span>
+        </div>
+        ${!canPay ? `
+        <div class="modal-shortage">
+            ⚠ ポイントが不足しています (${ Math.ceil(costYen) - balance } pt足りない)。
+            <a href="/portal/#points" target="_blank">ポイントを購入↗</a>
+        </div>` : ''}
+    `;
+
+    const submitBtn = document.getElementById('modalSubmitBtn');
+    submitBtn.disabled   = !canPay;
+    submitBtn.textContent = canPay ? '⚡ FIGHT START' : 'ポイント不足';
+
+    document.getElementById('paymentModalOverlay').classList.add('active');
+}
+
+function closePaymentModal(e) {
+    if (e && e.target !== document.getElementById('paymentModalOverlay')) return;
+    document.getElementById('paymentModalOverlay').classList.remove('active');
+}
+
+async function executeRaidPayment() {
+    const token = getToken();
+    if (!token || !currentRaidPlan) return;
+
+    const btn = document.getElementById('modalSubmitBtn');
+    btn.disabled = true; btn.textContent = '⚡ 配信中...';
+
+    try {
+        const resp = await fetch('/api/sf/raid/confirm', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+            body: JSON.stringify({
+                raid_plan_json: currentRaidPlan,
+                payment_method: 'points',
+                video_url:   '',   // 将来: フロントから動画 URL を受け取る
+                app_id:      'real-esrgan',
+            }),
+        });
+        const data = await resp.json();
+
+        if (!resp.ok || !data.success) {
+            const errMsg = data.error || '決済失敗';
+            showToast('⚠ ' + errMsg, 'error');
+            btn.disabled = false; btn.textContent = '⚡ FIGHT START';
+            if (resp.status === 402) {
+                // ポイント不足→購入ページへ
+                setTimeout(() => window.open('/portal/#points', '_blank'), 800);
+            }
+            return;
+        }
+
+        // 成功
+        document.getElementById('paymentModalOverlay').classList.remove('active');
+        showToast(
+            `✅ RAID確定! ${data.payment.points_used}pt消費 — 残高: ${data.payment.remaining_points}pt`,
+            'success', 6000
+        );
+
+        // ジョブ履歴ページへ
+        setTimeout(() => {
+            location.href = `/workspace/?raid_job=${data.raid_job_id}`;
+        }, 2500);
+
+    } catch (err) {
+        showToast('ネットワークエラー: ' + err.message, 'error');
+        btn.disabled = false; btn.textContent = '⚡ FIGHT START';
+    }
 }
 
 // ──── Keyboard Shortcuts ──────────────────────
@@ -837,6 +985,16 @@ document.addEventListener('keydown', e => {
     });
 
     // ── マッチング確定通知 (confirm エンドポイントせ 発火) ──
+    // ── レイドバトル確定通知 (raid/confirm エンドポイントから発火) ──
+    socket.on('sf:raid_confirmed', (data) => {
+        console.log('[SF] RAID引き起こし確定:', data);
+        document.getElementById('paymentModalOverlay')?.classList.remove('active');
+        showToast(
+            `🔥 RAID BATTLE 開始！ ${data.summary?.node_count}ノードへ配信中...`,
+            'success', 5000
+        );
+    });
+
     socket.on('sf:match_confirmed', (data) => {
         console.log('[SF] マッチング確定:', data);
 

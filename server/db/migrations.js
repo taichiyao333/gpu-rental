@@ -469,6 +469,43 @@ async function runMigrations() {
     );
   `);
 
+  // ── GPU SF: レイドバトルジョブ (決済連携) ───────────────────────────────
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS sf_raid_jobs (
+      id                  INTEGER  PRIMARY KEY AUTOINCREMENT,
+      user_id             INTEGER  NOT NULL,
+      raid_plan_json      TEXT     NOT NULL,             -- buildRaidPlan() の結果 JSON
+      summary_json        TEXT     NOT NULL,             -- { node_count, total_tflops, est_completion_min, estimated_cost_yen }
+      status              TEXT     DEFAULT 'payment_pending',
+        -- 'payment_pending' | 'paid' | 'dispatched' | 'running' | 'completed' | 'failed' | 'cancelled'
+      payment_method      TEXT,                          -- 'points' | 'stripe' | 'epsilon'
+      payment_amount_yen  INTEGER  DEFAULT 0,
+      points_used         INTEGER  DEFAULT 0,
+      stripe_payment_id   TEXT,
+      mrp_job_ids         TEXT,                          -- JSON array of dispatched MRP job IDs
+      created_at          DATETIME DEFAULT CURRENT_TIMESTAMP,
+      paid_at             DATETIME,
+      dispatched_at       DATETIME,
+      completed_at        DATETIME,
+      FOREIGN KEY (user_id) REFERENCES users(id)
+    );
+  `);
+
+  // ── point_logs がなければ作成 (ポイント消費ログ) ─────────────────────────
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS point_logs (
+      id          INTEGER  PRIMARY KEY AUTOINCREMENT,
+      user_id     INTEGER  NOT NULL,
+      type        TEXT     NOT NULL,   -- 'earn' | 'spend'
+      amount      INTEGER  NOT NULL,   -- 消費/付与ポイント数
+      source      TEXT,                -- 'raid_job' | 'purchase' | 'bonus' etc.
+      source_id   TEXT,                -- 関連レコードID
+      note        TEXT,
+      created_at  DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (user_id) REFERENCES users(id)
+    );
+  `);
+
   console.log('✅ Database migrations complete');
 }
 
