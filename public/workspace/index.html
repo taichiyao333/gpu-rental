@@ -815,7 +815,7 @@ jupyter lab --ip=0.0.0.0 --port=8888 --no-browser --NotebookApp.token='gpurental
                   }).join('')
                 : '<div style="font-size:0.78rem;color:rgba(255,255,255,0.25);padding:6px 0">ノード情報を取得中...</div>';
             var dlBtn = (isDone && data.output_url)
-                ? '<a href="' + data.output_url + '" download class="sf-dl-btn">⬇ 完成ファイルをダウンロード</a>' : '';
+                ? '<a href="' + data.output_url + '" download class="sf-download-btn">⬇ 完成ファイルをダウンロード</a>' : '';
             cards.innerHTML = '<div class="sf-job-card">' +
                 '<div class="sf-job-header"><span class="sf-job-mode raid">🔥 RAID BATTLE</span><span class="sf-job-id">#' + data.raid_job_id + '</span></div>' +
                 '<div class="sf-progress-wrap"><div class="sf-progress-head"><span>' + nodeCount + 'ノード並列処理</span><span>' + status + '</span></div>' +
@@ -844,10 +844,13 @@ jupyter lab --ip=0.0.0.0 --port=8888 --no-browser --NotebookApp.token='gpurental
             if (!cards) return;
             var fillClass = isDone ? 'complete' : isFail ? 'failed' : '';
             var shimmer = (!isDone && !isFail) ? '<div class="sf-progress-shimmer"></div>' : '';
+            var dlBtn2 = (isDone && data.output_url)
+                ? '<a href="' + data.output_url + '" download class="sf-download-btn" style="margin-top:10px;display:block;text-align:center">⬇ 処理済みファイルをダウンロード</a>' : '';
             cards.innerHTML = '<div class="sf-job-card">' +
                 '<div class="sf-job-header"><span class="sf-job-mode match">⚔ 1on1 MATCH</span><span class="sf-job-id">#' + data.id.slice(0,8) + '</span></div>' +
                 '<div class="sf-progress-wrap"><div class="sf-progress-head"><span>モード: ' + (data.selected_mode || '—') + '</span><span>' + status + '</span></div>' +
-                '<div class="sf-progress-bar"><div class="sf-progress-fill ' + fillClass + '" style="width:' + (isDone ? 100 : 50) + '%">' + shimmer + '</div></div></div></div>';
+                '<div class="sf-progress-bar"><div class="sf-progress-fill ' + fillClass + '" style="width:' + (isDone ? 100 : 50) + '%">' + shimmer + '</div></div></div>' +
+                dlBtn2 + '</div>';
             if (isDone || isFail) { if (sfPoller) { clearInterval(sfPoller); sfPoller = null; } }
         }
 
