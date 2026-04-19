@@ -448,11 +448,80 @@ Phase 5: 外部公開        ██████                              6.7
 | check_status.js refund / agentToken 統計 | `check_status.js` |
 | start_comfyui.bat 統合ランチャー | `f:/antigravity/start_comfyui.bat` |
 
-### 🔄 残作業
+| タスク | 優先度 | 概要 |
+|--------|--------|------|
+| MRP Orchestrator 本番接続 | Medium | `MRP_ORCHESTRATOR_URL` を `.env` に設定するだけで有効化 |
+| PostgreSQL 移行 | Low | `migrate_to_postgres.py` 本番実行 (本番スケール時) |
+
+---
+
+### Phase SF-6: 決済 UI + クーポン統合 ✅ (2026-04-19完了)
+
+| タスク | 実績工数 | 内容 |
+|--------|---------|------|
+| LOBBY 決済モーダル拡張 (クーポン入力) | 6h | coupon_input / applyCoupon() / pricePreview |
+| 決済方法 toggle (ポイント / Stripe) | 4h | radio button + executeRaidPayment() 分岐 |
+| payments.js pay-with-points クーポン対応 | 4h | validateCoupon + finalCost + point_logs note |
+| payments.js Stripe session クーポン対応 | 3h | amount after discount + coupon metadata |
+| Stripe Webhook クーポン記録 | 2h | coupon_uses INSERT |
+| 1on1 マッチ confirmMatch 決済モーダル化 | 6h | _matchCostYen + applyMatchCoupon() + executeMatchPayment() |
+| sf.js match confirm ポイント決済追加 | 4h | costYen / validateCoupon / 402 返却 + point_logs |
+| Stripe 決済完了帰還検出 | 2h | ?sf_payment=success URL パラメータ処理 |
+| **小計** | **31h** | **約 4営業日** |
+
+### Phase SF-7: Admin THE DOJO + Workspace UI ✅ (2026-04-19完了)
+
+| タスク | 実績工数 | 内容 |
+|--------|---------|------|
+| admin.js SF Nodes API 5本 | 6h | GET list / GET :id / PATCH status / DELETE / POST bulk-offline |
+| admin app.js loadSfNodes 強化 | 4h | GPU列・IDLE/MAINT バッジ・アクションボタン |
+| admin index.html SF Nodes テーブル更新 | 2h | GPU列・操作列・一括オフラインボタン |
+| setSfNodeStatus / deleteSfNode / bulkOfflineSfNodes | 3h | admin UI アクション関数 |
+| workspace updateSfPanel 強化 | 3h | running時詳細 / output_url download / failed再試行リンク |
+| docs/04 セクション 6.5 / 6.6 追加 | 2h | 1on1決済フロー / admin Nodes管理フロー |
+| tokushoho 特定商取引法 SF 追記 | 1h | サービス内容・クーポン注釈・返金ポリシー |
+| **小計** | **21h** | **約 2.5営業日** |
+
+### SF 統合 最終総工数サマリー (全フェーズ)
+
+| フェーズ | 工数 | 営業日 |
+|---------|------|-------|
+| SF-1: THE REFEREE バックエンド | 58h | 7.5 日 |
+| SF-2: THE LOBBY フロントエンド | 54h | 7.0 日 |
+| SF-3: THE DOJO プロバイダー | 30h | 4.0 日 |
+| SF-4: エンドツーエンド統合 | 42h | 5.5 日 |
+| SF-5: 診断・ドキュメント | 24h | 3.0 日 |
+| SF-6: 決済 UI + クーポン統合 | 31h | 4.0 日 |
+| SF-7: Admin THE DOJO + Workspace | 21h | 2.5 日 |
+| **SF 合計** | **260h** | **33.5 営業日 (約1.7人月)** |
+
+### 通常プラットフォーム + SF 統合 最終全体工数
+
+| カテゴリー | 工数 | 人月 |
+|-----------|------|------|
+| 通常プラットフォーム (Phase 0-5) | 600h | 3.75 |
+| GPU Street Fighter 統合 (SF-1〜SF-7) | 260h | 1.63 |
+| **TOTAL** | **860h** | **5.38人月** |
+
+> ⚡ **Note**: AI エージェント (Antigravity) によるペアプログラミング補助により、
+> 推定工数の **約 40〜50% を削減** して実現しています。
+> 人間エンジニア 1名 + AI エージェントによる実質的な 2名体制。
+
+### ✅ 全完了タスク (2026-04-19現在)
+
+| フェーズ | 主要タスク | 状態 |
+|---------|-----------|------|
+| SF-1 | THE REFEREE API (sf.js 全エンドポイント) | ✅ |
+| SF-2 | THE LOBBY 発注 UI | ✅ |
+| SF-3 | THE DOJO provider/agent.js + portal UI | ✅ |
+| SF-4 | workspace SF パネル + URL連携 | ✅ |
+| SF-5 | check_status.js / check_api.ps1 / docs | ✅ |
+| SF-6 | LOBBY 決済モーダル (ポイント/Stripe/クーポン) + 1on1 マッチ決済 | ✅ |
+| SF-7 | Admin THE DOJO Nodes 管理 + workspace ダウンロード UI | ✅ |
+
+### 🔄 残作業 (Phase 8)
 
 | タスク | 優先度 | 概要 |
 |--------|--------|------|
-| MRP Orchestrator 連携 | High | `sf_raid_jobs.status='dispatched'` 後の実ノード配信ロジック |
-| クーポン × SF 対応 | Medium | レイド料金へのクーポン割引適用 |
-| PostgreSQL 移行 | Low | `migrate_to_postgres.py` 本番実行 |
-| THE LOBBY payment フロー UI | Medium | `lobby/app.js` の決済確定 UI (ポイント / Stripe 切り替え) |
+| MRP Orchestrator 本番接続 | Medium | `MRP_ORCHESTRATOR_URL` を設定するだけで実ノード配信に切替 |
+| PostgreSQL 移行 | Low | `migrate_to_postgres.py` 本番スケール時に実行 |
