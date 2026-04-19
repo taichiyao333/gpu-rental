@@ -253,9 +253,12 @@ router.post('/:id/start', authMiddleware, (req, res) => {
     // Socket.IO通知（io が使えれば）
     try {
       const { io } = require('../index');
+      const { getWorkspaceUrl } = require('../services/podManager');
       if (io) {
+        const wsUrl = getWorkspaceUrl(pod.id);
         io.to(`user_${pod.renter_id}`).emit('pod:started', {
-          podId: pod.id,
+          podId:         pod.id,
+          workspace_url: wsUrl,
           message: '🚀 GPUが利用可能になりました！ワークスペースに接続してください。',
         });
       }

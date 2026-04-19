@@ -230,6 +230,18 @@ async function createPodAsync(reservationId) {
     );
     const podId = result.lastInsertRowid;
 
+    // SF連携: reservationにsf_raid_job_idまたはsf_match_idが含まれる場合はPodsテーブルに保存
+    try {
+        if (reservation.sf_raid_job_id) {
+            db.prepare('UPDATE pods SET sf_raid_job_id = ? WHERE id = ?')
+              .run(reservation.sf_raid_job_id, podId);
+        }
+        if (reservation.sf_match_id) {
+            db.prepare('UPDATE pods SET sf_match_id = ? WHERE id = ?')
+              .run(reservation.sf_match_id, podId);
+        }
+    } catch (_) { /* カラムが未追加の環境は無視 */ }
+
     // Update reservation/GPU status immediately
     db.prepare("UPDATE reservations SET status = 'active' WHERE id = ?").run(reservationId);
     db.prepare("UPDATE gpu_nodes SET status = 'rented' WHERE id = ?").run(reservation.gpu_id);
@@ -634,10 +646,47 @@ function buildServiceUrls(pod, tpl) {
     return services;
 }
 
+/**
+ * Build workspace URL with optional GPU SF URL params
+ * ワークスペースURLにSFジョブパラメータを付加する
+ *
+ * @param {number|string} podId
+ * @param {object} [opts] - { host, protocol }
+ * @returns {string} workspace URL (e.g. /workspace/?pod=1&raid_job=42)
+ */
+function getWorkspaceUrl(podId, opts = {}) {
+    const db = getDb();
+    const pod = db.prepare(`
+        SELECT p.id, p.sf_raid_job_id, p.sf_match_id,
+               r.sf_raid_job_id AS res_raid_job_id,
+               r.sf_match_id   AS res_match_id
+        FROM pods p
+        LEFT JOIN reservations r ON p.reservation_id = r.id
+        WHERE p.id = ?
+    `).get(podId);
+
+    if (!pod) return `/workspace/?pod=${podId}`;
+
+    const raidId  = pod.sf_raid_job_id  || pod.res_raid_job_id  || null;
+    const matchId = pod.sf_match_id     || pod.res_match_id     || null;
+
+    const params = new URLSearchParams();
+    params.set('pod', String(podId));
+    if (raidId)  params.set('raid_job', String(raidId));
+    if (matchId) params.set('match',    String(matchId));
+
+    const base = opts.host
+        ? `${opts.protocol || 'https'}://${opts.host}/workspace/`
+        : '/workspace/';
+
+    return `${base}?${params.toString()}`;
+}
+
 module.exports = {
     createPod,
     stopPod,
     getActivePods,
     createWorkspace,
     getPodContainerInfo,
+    getWorkspaceUrl,
 };

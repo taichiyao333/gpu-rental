@@ -254,7 +254,114 @@
   └─────┬─────┘
         │ 保持期間経過
         ▼
-  ┌───────────┐
-  │  deleted  │ ── データ削除
-  └───────────┘
+   ┌───────────┐
+   │  deleted  │ ── データ削除
+   └───────────┘
+```
+
+---
+
+## 5. GPU Street Fighter 統合フロー
+
+### 5.1 レイドバトル (RAID BATTLE) フロー
+
+```
+ユーザー         THE LOBBY           Backend (sf.js)     MRP Orchestrator
+  │                  │                     │                    │
+  │ /lobby/          │                     │                    │
+  ├────────────────► │                     │                    │
+  │                  │                     │                    │
+  │ レイドプラン選択  │                     │                    │
+  │ POST /api/sf/raid│                     │                    │
+  ├────────────────► │────────────────────►│                    │
+  │                  │ ポイント残高チェック │                    │
+  │                  │ sf_raid_jobs 作成   │                    │
+  │ ◄────────────────┤ { raid_job_id, ... }│                    │
+  │                  │                     │                    │
+  │ 決済モーダル確認  │                     │                    │
+  │ POST /api/sf/raid/confirm              │                    │
+  ├────────────────► │────────────────────►│                    │
+  │                  │ ポイント引き落とし   │                    │
+  │                  │ MRP へジョブ配信 ──────────────────────► │
+  │                  │ WS: sf:raid_confirmed                    │
+  │ ◄────────────────┤                     │                    │
+  │                  │                     │                    │
+  │ /workspace/?raid_job={id}              │                    │
+  ├────────────────────────────────────────►                    │
+  │ ⚡ GPU SF タブ (自動表示)              │                    │
+  │                  │     10秒ポーリング   GET /api/sf/raid/:id/receipt
+  │ ◄─────────────────────────────────────── 進捗更新 ──────────┤
+  │ 完了 → ダウンロードボタン表示          │                    │
+```
+
+### 5.2 1on1 マッチフロー
+
+```
+ユーザー         THE LOBBY           Backend (sf.js)     GPU Node (Agent)
+  │                  │                     │                    │
+  │ POST /api/sf/match                     │                    │
+  ├────────────────► │────────────────────►│                    │
+  │                  │ スコアリング → ノード選定                 │
+  │ ◄────────────────┤ { match_id, ... }   │                    │
+  │                  │                     │                    │
+  │ POST /api/sf/match/:id/confirm         │                    │
+  ├────────────────► │────────────────────►│                    │
+  │                  │ ポイント引き落とし   │                    │
+  │                  │ ジョブ送信 ──────────────────────────── ►│
+  │ WS: sf:match_confirmed                 │                    │
+  │ ◄────────────────┤                     │                    │
+  │                  │                     │                    │
+  │ /workspace/?match={id}                 │                    │
+  ├──────────────────────────────────────► │                    │
+  │ ⚡ GPU SF タブ (自動表示)              │                    │
+  │                  │     10秒ポーリング   GET /api/sf/match/:id
+  │ ◄──────────────────────────────────── 進捗更新              │
+```
+
+### 5.3 Pod 起動 → ワークスペース URL 生成フロー
+
+```
+Scheduler / User
+  │
+  │ POST /api/reservations/:id/start
+  │        ↓
+  │   createPod(reservationId)
+  │        ↓
+  │   pods.sf_raid_job_id / sf_match_id を DB に保存
+  │        ↓
+  │   getWorkspaceUrl(podId)
+  │        → /workspace/?pod=1&raid_job=42  (レイドあり)
+  │        → /workspace/?pod=1&match=abc123 (マッチあり)
+  │        → /workspace/?pod=1             (通常)
+  │        ↓
+  │   WebSocket: pod:started { workspace_url }
+  │        ↓
+  │   ポータルの「接続」ボタンが workspace_url に変更
+  │        ↓
+  │   ワークスペース: URLパラメータを検出 → SF タブ自動表示
+```
+
+### 5.4 全体アーキテクチャ (統合後)
+
+```
+[ポータル /portal/]
+  ├── GPU一覧・予約
+  ├── ⚡ SF ウィジェット (オンラインノード/レイド状況) ← loadSfWidget()
+  └── THE LOBBY ボタン
+
+[THE LOBBY /lobby/]
+  ├── 1on1 マッチタブ → /api/sf/match → /workspace/?match=
+  └── レイドバトルタブ → /api/sf/raid → /workspace/?raid_job=
+
+[ワークスペース /workspace/]
+  ├── ターミナル / 接続情報 / レンダリング / Blender
+  └── ⚡ GPU SF タブ (URLパラメータで自動アクティブ)
+       ├── 10秒ポーリング: GET /api/sf/raid/:id/receipt
+       └── 完了時: ダウンロードボタン表示
+
+[プロバイダー /provider/]
+  └── THE DOJO セクション (エージェント起動手順)
+
+[管理画面 /admin/]
+  └── SF Raid Jobs タブ: GET /api/admin/sf/raid-jobs/stats
 ```
