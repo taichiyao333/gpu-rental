@@ -1019,35 +1019,36 @@
                     <!-- ステップ -->
                     <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;margin-bottom:1.5rem">
                         <div style="background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.07);border-radius:12px;padding:14px">
-                            <div style="font-size:1.3rem;margin-bottom:6px">📦</div>
-                            <div style="font-size:0.8rem;font-weight:700;margin-bottom:4px">1. Docker インストール</div>
-                            <div style="font-size:0.74rem;color:rgba(255,255,255,0.4)">NVIDIA Container Toolkit が必要。GPU対応Dockerを準備してください</div>
+                            <div style="font-size:1.3rem;margin-bottom:6px">⚡</div>
+                            <div style="font-size:0.8rem;font-weight:700;margin-bottom:4px">1. エージェントトークンを取得</div>
+                            <div style="font-size:0.74rem;color:rgba(255,255,255,0.4)">ポータルでログインし、「THE DOJO」セクションでトークンをコピー</div>
                         </div>
                         <div style="background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.07);border-radius:12px;padding:14px">
-                            <div style="font-size:1.3rem;margin-bottom:6px">🐍</div>
-                            <div style="font-size:0.8rem;font-weight:700;margin-bottom:4px">2. エージェントを起動</div>
-                            <div style="font-size:0.74rem;color:rgba(255,255,255,0.4)">Python スクリプトを実行するだけ。自動でオーケストレーターに登録されます</div>
+                            <div style="font-size:1.3rem;margin-bottom:6px">🟢</div>
+                            <div style="font-size:0.8rem;font-weight:700;margin-bottom:4px">2. Node.js エージェントを起動</div>
+                            <div style="font-size:0.74rem;color:rgba(255,255,255,0.4)">1行コマンドで起動。30秒ごとに GPU 統計をクラウドへ送信します</div>
                         </div>
                         <div style="background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.07);border-radius:12px;padding:14px">
                             <div style="font-size:1.3rem;margin-bottom:6px">💰</div>
                             <div style="font-size:0.8rem;font-weight:700;margin-bottom:4px">3. ジョブを受けて報酬</div>
-                            <div style="font-size:0.74rem;color:rgba(255,255,255,0.4)">AIジョブが自動でキューに届きます。完了後に報酬が自動積立</div>
+                            <div style="font-size:0.74rem;color:rgba(255,255,255,0.4)">SF レイドジョブが自動で届きます。完了後に報酬が自動積立</div>
                         </div>
                     </div>
 
                     <!-- インストールコマンド -->
                     <div style="background:rgba(0,0,0,0.4);border:1px solid rgba(245,158,11,0.2);border-radius:10px;padding:12px 16px;font-family:'JetBrains Mono',monospace;font-size:0.8rem;color:#fbbf24;margin-bottom:1.25rem;position:relative">
-                        <div style="font-size:0.68rem;color:rgba(255,255,255,0.3);margin-bottom:6px"># エージェント起動コマンド</div>
-                        <span id="dojoCmd">pip install -r agent/requirements.txt &amp;&amp; python agent/agent.py</span>
+                        <div style="font-size:0.68rem;color:rgba(255,255,255,0.3);margin-bottom:6px"># GPU サーバーで実行 (Node.js 18+ 必須)</div>
+                        <span id="dojoCmd">node provider/agent.js</span>
                         <button onclick="copyDojoCmd()" style="position:absolute;top:10px;right:12px;background:rgba(245,158,11,0.15);border:1px solid rgba(245,158,11,0.3);color:#fbbf24;border-radius:6px;padding:3px 10px;font-size:0.72rem;cursor:pointer;font-family:inherit">コピー</button>
                     </div>
 
                     <!-- 環境変数ヒント -->
                     <div style="background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.06);border-radius:8px;padding:10px 14px;font-size:0.74rem;color:rgba(255,255,255,0.4);margin-bottom:1.25rem;line-height:1.8">
                         <strong style="color:rgba(255,255,255,0.6)">必要な環境変数:</strong><br>
-                        <code style="color:#a5b4fc">ORCHESTRATOR_URL</code>=http://your-server:8000/v1 &nbsp;
-                        <code style="color:#a5b4fc">NODE_ID</code>=your-node-id &nbsp;
-                        <code style="color:#a5b4fc">STORAGE_PROVIDER</code>=r2|s3|local
+                        <code style="color:#a5b4fc">GPURENTAL_SERVER</code>=https://gpurental.jp &nbsp;
+                        <code style="color:#a5b4fc">AGENT_TOKEN</code>=&lt;ポータルで取得&gt; &nbsp;
+                        <code style="color:#a5b4fc">NODE_ENV</code>=production<br>
+                        <span style="font-size:0.7rem;opacity:0.7">または <code>npm run agent</code> で起動 (package.json に設定済み)</span>
                     </div>
 
                     <div style="display:flex;gap:0.75rem;flex-wrap:wrap;align-items:center">
