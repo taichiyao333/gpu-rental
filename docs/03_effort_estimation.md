@@ -335,3 +335,91 @@ Phase 5: 外部公開        ██████                              6.7
 | M5 | 管理画面完成 | 監視・アラート動作 | Week 12 |
 | M6 | 外部公開完了 | Tunnel経由で外部アクセス可能 | Week 13 |
 | M7 | 最終リリース | 全機能テスト完了 | Week 15 |
+
+---
+
+## 7. ⚡ GPU Street Fighter (THE LOBBY) 統合工数
+
+> 通常プラットフォームに追加で実装した GPU SF (THE LOBBY / THE REFEREE / THE DOJO) の実績工数まとめです。
+
+### Phase SF-1: THE REFEREE バックエンド (sf.js)
+
+| タスク | 実績工数 | 内容 |
+|--------|---------|------|
+| SF ノード登録・ハートビート API | 8h | /api/sf/agent/* |
+| ベンチマーク計測・保存 | 4h | TFLOPS / RTT / ネットワーク指標 |
+| 1on1 マッチリクエスト・カード生成 | 12h | スコアリング + 3モード選択 |
+| レイドバトル計画・ポイント計算 | 16h | buildRaidPlan() + ポイント精算 |
+| ジョブ確定・決済連携 | 8h | ポイント引き落とし + point_logs |
+| Admin SF Raid Jobs API | 6h | /api/admin/sf/* |
+| パブリック統計エンドポイント | 4h | /api/sf/stats/public (認証不要) |
+| **小計** | **58h** | **約 7.5営業日** |
+
+### Phase SF-2: THE LOBBY フロントエンド (lobby/)
+
+| タスク | 実績工数 | 内容 |
+|--------|---------|------|
+| LOBBY 全体 UI (デザイン・レイアウト) | 16h | ダークテーマ・grumorphism |
+| 1on1 マッチ発注フロー | 12h | カード表示・モード選択・確定 |
+| RAID BATTLE 発注フロー | 16h | ノード選定・コスト計算・確定 |
+| リアルタイム SF ノード状態ポーリング | 6h | loadSfWidget() |
+| ログイン誘導・認証連携 | 4h | 非ログイン時のガード |
+| **小計** | **54h** | **約 7営業日** |
+
+### Phase SF-3: THE DOJO プロバイダーエージェント
+
+| タスク | 実績工数 | 内容 |
+|--------|---------|------|
+| プロバイダー UI に SF 参加セクション追加 | 8h | THE DOJO カード・セットアップ説明 |
+| エージェントハートビート定期送信 | 8h | setInterval / GPU ライブ統計 |
+| ベンチマーク自動実行ロジック | 6h | 初回セットアップ時 |
+| SF ノード admin 管理 UI | 8h | admin サイドバー「SF Nodes」タブ |
+| **小計** | **30h** | **約 4営業日** |
+
+### Phase SF-4: エンドツーエンド統合
+
+| タスク | 実績工数 | 内容 |
+|--------|---------|------|
+| podManager.getWorkspaceUrl() SF URL 生成 | 4h | ?raid_job= / ?match= パラメータ付与 |
+| reservations.js / pods.js SF カラム連携 | 6h | sf_raid_job_id / sf_match_id |
+| WebSocket pod:started workspace_url 送信 | 4h | ポータルからワークスペースへ自動遷移 |
+| ワークスペース URL パラメータ検出 UI | 8h | initSfFromUrl() + SF ステータスパネル |
+| ポータル SF ウィジェット (リアルタイム) | 6h | 30秒ポーリング |
+| admin/style.css SF バッジ・カードスタイル | 4h | |
+| DB マイグレーション自動化 | 6h | migrations.js ALTER TABLE 自動追加 |
+| migrate_sf_columns.js (sql.js 対応) | 4h | better-sqlite3 → sql.js 修正 |
+| **小計** | **42h** | **約 5.5営業日** |
+
+### Phase SF-5: 診断ツール・ドキュメント
+
+| タスク | 実績工数 | 内容 |
+|--------|---------|------|
+| check_status.js (SF + Platform 統合診断) | 6h | --sf-only / --json / --full サポート |
+| scripts/check_api.ps1 (API 疎通確認) | 4h | PowerShell・カラー出力・SF 対応 |
+| start.bat v2 (メニュー・URL表示) | 4h | Node.js 確認・.env 自動生成 |
+| config.js SF 設定ブロック追加 | 2h | 環境変数で全パラメータオーバーライド可 |
+| README v2 + docs/01_project_overview v2 | 8h | SF 統合後の全面書き直し |
+| **小計** | **24h** | **約 3営業日** |
+
+### SF 統合 総工数サマリー
+
+| フェーズ | 工数 | 営業日 |
+|---------|------|-------|
+| SF-1: THE REFEREE バックエンド | 58h | 7.5 日 |
+| SF-2: THE LOBBY フロントエンド | 54h | 7.0 日 |
+| SF-3: THE DOJO プロバイダー | 30h | 4.0 日 |
+| SF-4: エンドツーエンド統合 | 42h | 5.5 日 |
+| SF-5: 診断・ドキュメント | 24h | 3.0 日 |
+| **SF 合計** | **208h** | **27 営業日 (1.3人月)** |
+
+### 通常プラットフォーム + SF 統合 全体工数
+
+| カテゴリー | 工数 | 人月 |
+|-----------|------|------|
+| 通常プラットフォーム (Phase 0-5) | 600h | 3.75 |
+| GPU Street Fighter 統合 | 208h | 1.30 |
+| **TOTAL** | **808h** | **5.05人月** |
+
+> ⚡ **Note**: AI エージェント (Antigravity) によるペアプログラミング補助により、  
+> 推定工数の **約 40〜50% を削減** して実現しています。  
+> 人間エンジニア 1名 + AI エージェントによる実質的な 2名体制。
