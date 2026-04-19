@@ -193,13 +193,14 @@ function selectSfNodesForRaid(requestedCount = 1) {
     const timeout = config.sf?.nodeHeartbeatTimeout ?? 120000;
     const thresholdSec = Math.floor(timeout / 1000);
 
-    // オンライン・アイドル状態のノードを RTT 昇順、fp32_tflops 降順で選択
+    // sf_benchmarks JOIN で rtt_ms / fp32_tflops を取得し RTT 昇順・TFLOPS 降順で選択
     const nodes = db.prepare(`
-        SELECT *
-        FROM sf_nodes
-        WHERE status = 'idle'
-          AND last_seen > datetime('now', '-${thresholdSec} seconds')
-        ORDER BY rtt_ms ASC, fp32_tflops DESC
+        SELECT n.*, b.rtt_ms, b.fp32_tflops, b.upload_mbps
+        FROM sf_nodes n
+        LEFT JOIN sf_benchmarks b ON b.node_id = n.id
+        WHERE n.status IN ('idle', 'online')
+          AND datetime(n.last_seen) > datetime('now', '-${thresholdSec} seconds')
+        ORDER BY COALESCE(b.rtt_ms, 9999) ASC, COALESCE(b.fp32_tflops, 0) DESC
         LIMIT ?
     `).all(Math.min(requestedCount, config.sf?.maxRaidNodes ?? 50));
 
@@ -238,7 +239,7 @@ async function dispatchSfRaidJob(raidJobId) {
     db.prepare(`
         UPDATE sf_raid_jobs
         SET status = 'running', node_count = ?, mrp_job_ids = ?,
-            dispatched_at = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP
+            dispatched_at = CURRENT_TIMESTAMP
         WHERE id = ?
     `).run(selectedNodes.length, JSON.stringify(selectedNodes.map(n => n.id)), raidJobId);
 
@@ -274,10 +275,15 @@ async function dispatchSfRaidJob(raidJobId) {
             try {
                 db.prepare(`
                     UPDATE sf_raid_jobs
-                    SET status = 'completed', completed_at = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP
+                    SET status = 'completed', completed_at = CURRENT_TIMESTAMP
                     WHERE id = ? AND status = 'running'
                 `).run(raidJobId);
                 nodeIds.forEach(id => db.prepare("UPDATE sf_nodes SET status = 'idle' WHERE id = ?").run(id));
+                // WebSocket で完了通知
+                const job2 = db.prepare('SELECT user_id FROM sf_raid_jobs WHERE id = ?').get(raidJobId);
+                if (job2 && global.io) {
+                    global.io.to(`user_${job2.user_id}`).emit('sf:raid_completed', { job_id: raidJobId });
+                }
                 console.log(`[SF Simulate] Job #${raidJobId} completed (dev mode, ${simDelay / 1000}s)`);
             } catch (_) {}
         }, Math.min(simDelay, 30000)); // 開発環境では最大30秒でシミュレート完了
