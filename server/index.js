@@ -177,6 +177,55 @@ app.get('/privacy', (req, res) => res.sendFile(path.join(__dirname, '../public/l
 app.get('/pricing', (req, res) => res.sendFile(path.join(__dirname, '../public/landing/pricing.html')));
 app.get('/pricing.html', (req, res) => res.sendFile(path.join(__dirname, '../public/landing/pricing.html')));
 
+// ─── Dynamic Password Gate ───────────────────────────────────────────────────
+// /password-gate.js → SITE_BETA_PASSWORD を .env から動的注入して配信
+app.get('/password-gate.js', (req, res) => {
+    const betaPass = process.env.SITE_BETA_PASSWORD || '';
+    res.setHeader('Content-Type', 'application/javascript; charset=utf-8');
+    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+
+    if (!betaPass) {
+        return res.send('/* GPURental Beta Gate: disabled */');
+    }
+
+    const gateFile = path.join(__dirname, '../public/password-gate.js');
+    try {
+        let src = fs.readFileSync(gateFile, 'utf8');
+        src = src.replace("'__BETA_PASSWORD__'", JSON.stringify(betaPass));
+        res.send(src);
+    } catch (e) {
+        res.send(`/* password-gate.js not found: ${e.message} */`);
+    }
+});
+
+// ─── Beta Gate HTML Injector ──────────────────────────────────────────────────
+// HTML レスポンスに <script src="/password-gate.js"> を自動注入
+// デプロイスクリプトなしで全ページに適用される
+if (process.env.SITE_BETA_PASSWORD) {
+    const pgScript = '<script src="/password-gate.js"></script>';
+    const GATE_SKIP = ['/admin', '/maintenance', '/epsilon_mock'];
+
+    app.use((req, res, next) => {
+        // HTML ページ以外はスキップ
+        if (!req.path.match(/\.(html|\/|)$/) || req.path === '/password-gate.js') return next();
+        // スキップパス
+        if (GATE_SKIP.some(p => req.path.startsWith(p))) return next();
+
+        const origSend = res.send.bind(res);
+        res.send = function (body) {
+            if (typeof body === 'string' && body.includes('</body>') && !body.includes('password-gate.js')) {
+                body = body.replace('</body>', `${pgScript}\n</body>`);
+            }
+            return origSend(body);
+        };
+        next();
+    });
+
+    console.log('🔐 Beta password gate: ACTIVE');
+} else {
+    console.log('⚠️  Beta password gate: DISABLED (SITE_BETA_PASSWORD not set)');
+}
+
 // Static files - serve each UI as a subdirectory
 // キャッシュ設定: CSS/JS/画像は7日間ブラウザキャッシュ, HTMLは毎回確認
 const staticOpts = {
@@ -479,8 +528,30 @@ async function start() {
         console.log(`🏭 Provider:   http://localhost:${config.port}/provider/`);
         console.log(`⚡ THE LOBBY:  http://localhost:${config.port}/lobby/`);
         console.log(`🌐 SF Stats:   http://localhost:${config.port}/api/sf/stats/public`);
+        console.log(`📊 API Docs:   http://localhost:${config.port}/api/docs`);
         console.log('\n─────────────────────────────────────────────');
         console.log(`📧 Admin: ${process.env.ADMIN_EMAIL || 'taichi.yao@gmail.com'} / [see .env ADMIN_PASSWORD]`);
+
+        // ── セキュリティ設定チェック ──
+        const warnings = [];
+        if (!process.env.RECAPTCHA_SECRET_KEY) {
+            warnings.push('⚠️  RECAPTCHA_SECRET_KEY not set → Bot guard DISABLED');
+            warnings.push('   → Get keys: https://www.google.com/recaptcha/admin/create');
+            warnings.push('   → Set in .env: RECAPTCHA_SITE_KEY=... RECAPTCHA_SECRET_KEY=...');
+        }
+        if (!process.env.SITE_BETA_PASSWORD) {
+            warnings.push('⚠️  SITE_BETA_PASSWORD not set → Beta password gate DISABLED');
+        }
+        if (process.env.NODE_ENV !== 'production') {
+            warnings.push('ℹ️  NODE_ENV is not "production" — some security features may be relaxed');
+        }
+
+        if (warnings.length) {
+            console.log('\n⚠️  Security Warnings:');
+            warnings.forEach(w => console.log('   ' + w));
+        } else {
+            console.log('✅ All security settings OK');
+        }
         console.log('─────────────────────────────────────────────\n');
     });
 }
