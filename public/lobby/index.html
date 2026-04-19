@@ -846,25 +846,46 @@ async function startRaid() {
     }
 }
 
+// ── ポイント残高とクーポン情報を持って決済モーダルを表示 ───────────────────
+let _raidBalance = 0;
+let _raidCostYen = 0;
+let _raidJobId   = null; // POST /api/sf/raid で取得したジョブID
+
 async function confirmRaid() {
     const token = getToken();
     if (!token) { showToast('ログインが必要です', 'error'); return; }
     if (!currentRaidPlan) return;
 
-    const summary  = currentRaidPlan.summary;
-    const costYen  = summary.estimated_cost_yen || 0;
+    const summary = currentRaidPlan.summary;
+    _raidCostYen  = summary.estimated_cost_yen || 0;
 
-    // ポイント残高を取得
-    let balance = 0;
+    // 1. レイドジョブを作成 (payment_pending 状態で登録)
+    let raidJobId = currentRaidPlan.raid_job_id;
+    if (!raidJobId) {
+        try {
+            const r = await fetch('/api/sf/raid/confirm', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                body: JSON.stringify({
+                    raid_plan_json: currentRaidPlan,
+                    payment_method: 'pending',
+                }),
+            });
+            const d = await r.json();
+            raidJobId = d.raid_job_id;
+        } catch {}
+    }
+    _raidJobId = raidJobId;
+
+    // 2. ポイント残高を取得
     try {
         const r = await fetch('/api/points/balance', { headers: { 'Authorization': `Bearer ${token}` } });
         const d = await r.json();
-        balance = d.point_balance || 0;
+        _raidBalance = d.point_balance || 0;
     } catch {}
 
-    const canPay = balance >= Math.ceil(costYen);
+    const canPayByPoints = _raidBalance >= Math.ceil(_raidCostYen);
 
-    // 決済モーダルを表示
     document.getElementById('modalContent').innerHTML = `
         <div class="modal-row">
             <span class="modal-key">ノード数</span>
@@ -880,28 +901,80 @@ async function confirmRaid() {
         </div>
         <div class="modal-row">
             <span class="modal-key">決済金額</span>
-            <span class="modal-val cost">¥${costYen.toLocaleString()}</span>
+            <span class="modal-val cost" id="modalCostDisplay">¥${_raidCostYen.toLocaleString()}</span>
         </div>
         <div class="modal-row">
-            <span class="modal-key">現在のポイント残高</span>
-            <span class="modal-val ${canPay ? 'ok' : 'err'}">${balance.toLocaleString()} pt</span>
+            <span class="modal-key">ポイント残高</span>
+            <span class="modal-val ${canPayByPoints ? 'ok' : 'err'}">${_raidBalance.toLocaleString()} pt</span>
         </div>
-        <div class="modal-row">
+
+        <!-- クーポンコード入力 -->
+        <div class="modal-row" style="flex-direction:column;align-items:flex-start;gap:0.4rem">
+            <span class="modal-key">クーポンコード (任意)</span>
+            <div style="display:flex;gap:0.4rem;width:100%">
+                <input id="couponInput" type="text" placeholder="例: GPUSF20"
+                    style="flex:1;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.12);
+                    border-radius:6px;padding:0.5rem 0.75rem;color:#fff;font-size:0.83rem;font-family:var(--font-hud);
+                    letter-spacing:1px;outline:none">
+                <button onclick="applyCoupon()" style="background:rgba(245,158,11,0.15);border:1px solid rgba(245,158,11,0.3);
+                    border-radius:6px;color:#f59e0b;padding:0.5rem 0.9rem;font-size:0.78rem;cursor:pointer">適用</button>
+            </div>
+            <div id="couponMsg" style="font-size:0.75rem;color:#4ade80;min-height:1em"></div>
+        </div>
+
+        <!-- 決済方法選択 -->
+        <div class="modal-row" style="flex-direction:column;align-items:flex-start;gap:0.4rem">
             <span class="modal-key">決済方法</span>
-            <span class="modal-val">ポイント消費</span>
+            <div style="display:flex;gap:0.5rem;width:100%">
+                <label style="flex:1;text-align:center;padding:0.5rem;border-radius:6px;cursor:pointer;
+                    border:1px solid ${canPayByPoints ? 'rgba(245,158,11,0.5)' : 'rgba(255,255,255,0.08)'};
+                    background:${canPayByPoints ? 'rgba(245,158,11,0.12)' : 'rgba(255,255,255,0.03)'};
+                    font-size:0.78rem">
+                    <input type="radio" name="payMethod" value="points" ${canPayByPoints ? 'checked' : 'disabled'}
+                        style="margin-right:4px">⚡ ポイント
+                </label>
+                <label style="flex:1;text-align:center;padding:0.5rem;border-radius:6px;cursor:pointer;
+                    border:1px solid rgba(99,102,241,0.4);background:rgba(99,102,241,0.1);font-size:0.78rem">
+                    <input type="radio" name="payMethod" value="stripe" ${!canPayByPoints ? 'checked' : ''}
+                        style="margin-right:4px">💳 カード
+                </label>
+            </div>
         </div>
-        ${!canPay ? `
-        <div class="modal-shortage">
-            ⚠ ポイントが不足しています (${ Math.ceil(costYen) - balance } pt足りない)。
+
+        ${!canPayByPoints ? `<div class="modal-shortage">
+            ポイントが不足 (${Math.ceil(_raidCostYen) - _raidBalance}pt 足りない)。
             <a href="/portal/#points" target="_blank">ポイントを購入↗</a>
         </div>` : ''}
     `;
 
-    const submitBtn = document.getElementById('modalSubmitBtn');
-    submitBtn.disabled   = !canPay;
-    submitBtn.textContent = canPay ? '⚡ FIGHT START' : 'ポイント不足';
-
+    document.getElementById('modalSubmitBtn').disabled   = false;
+    document.getElementById('modalSubmitBtn').textContent = '⚡ FIGHT START';
     document.getElementById('paymentModalOverlay').classList.add('active');
+}
+
+// クーポン適用プレビュー (金額を画面上で更新するのみ, 実際の適用は決済時)
+async function applyCoupon() {
+    const token = getToken();
+    const code  = (document.getElementById('couponInput')?.value || '').trim();
+    const msg   = document.getElementById('couponMsg');
+    if (!code) return;
+    try {
+        const r = await fetch('/api/coupons/validate', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+            body: JSON.stringify({ code, amount_yen: _raidCostYen }),
+        });
+        const d = await r.json();
+        if (d.ok && d.final_yen !== undefined) {
+            const display = document.getElementById('modalCostDisplay');
+            if (display) display.textContent = `¥${d.final_yen.toLocaleString()} (${d.label}適用)`;
+            if (msg) { msg.style.color='#4ade80'; msg.textContent = `✅ クーポン適用: ${d.label} 割引`; }
+        } else {
+            if (msg) { msg.style.color='#f87171'; msg.textContent = `❌ ${d.error || '無効なコード'}`; }
+        }
+    } catch {
+        if (msg) { msg.style.color='#f87171'; msg.textContent = '⚠ 通信エラー'; }
+    }
 }
 
 function closePaymentModal(e) {
@@ -911,52 +984,109 @@ function closePaymentModal(e) {
 
 async function executeRaidPayment() {
     const token = getToken();
-    if (!token || !currentRaidPlan) return;
+    if (!token) return;
 
-    const btn = document.getElementById('modalSubmitBtn');
-    btn.disabled = true; btn.textContent = '⚡ 配信中...';
+    const btn        = document.getElementById('modalSubmitBtn');
+    const payMethod  = document.querySelector('input[name="payMethod"]:checked')?.value || 'points';
+    const couponCode = (document.getElementById('couponInput')?.value || '').trim() || undefined;
 
-    try {
-        const resp = await fetch('/api/sf/raid/confirm', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-            body: JSON.stringify({
-                raid_plan_json: currentRaidPlan,
-                payment_method: 'points',
-                video_url:   '',   // 将来: フロントから動画 URL を受け取る
-                app_id:      'real-esrgan',
-            }),
-        });
-        const data = await resp.json();
+    btn.disabled = true; btn.textContent = '⚡ 処理中...';
 
-        if (!resp.ok || !data.success) {
-            const errMsg = data.error || '決済失敗';
-            showToast('⚠ ' + errMsg, 'error');
+    // ── ポイント払い ──────────────────────────────────────────────────────────
+    if (payMethod === 'points') {
+        // ジョブ未作成の場合は先に作成
+        let raidJobId = _raidJobId;
+        if (!raidJobId) {
+            try {
+                const r = await fetch('/api/sf/raid/confirm', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                    body: JSON.stringify({ raid_plan_json: currentRaidPlan, payment_method: 'pending' }),
+                });
+                const d = await r.json();
+                raidJobId = d.raid_job_id;
+            } catch {}
+        }
+
+        if (!raidJobId) {
+            showToast('レイドジョブ作成失敗', 'error');
             btn.disabled = false; btn.textContent = '⚡ FIGHT START';
-            if (resp.status === 402) {
-                // ポイント不足→購入ページへ
-                setTimeout(() => window.open('/portal/#points', '_blank'), 800);
-            }
             return;
         }
 
-        // 成功
-        document.getElementById('paymentModalOverlay').classList.remove('active');
-        showToast(
-            `✅ RAID確定! ${data.payment.points_used}pt消費 — 残高: ${data.payment.remaining_points}pt`,
-            'success', 6000
-        );
+        try {
+            const r = await fetch('/api/payments/sf-raid/pay-with-points', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                body: JSON.stringify({ sf_raid_job_id: raidJobId, coupon_code: couponCode }),
+            });
+            const d = await r.json();
+            if (!r.ok || !d.success) {
+                showToast('⚠ ' + (d.error || '決済失敗'), 'error');
+                if (r.status === 400 && d.required) window.open('/portal/#points', '_blank');
+                btn.disabled = false; btn.textContent = '⚡ FIGHT START';
+                return;
+            }
 
-        // ジョブ履歴ページへ
-        setTimeout(() => {
-            location.href = `/workspace/?raid_job=${data.raid_job_id}`;
-        }, 2500);
+            document.getElementById('paymentModalOverlay').classList.remove('active');
+            const couponNote = d.coupon ? ` (${d.coupon.discount} 適用)` : '';
+            showToast(`✅ RAID確定! ${d.points_used}pt消費${couponNote}`, 'success', 5000);
+            setTimeout(() => location.href = `/workspace/?raid_job=${raidJobId}`, 2000);
+        } catch (err) {
+            showToast('ネットワークエラー: ' + err.message, 'error');
+            btn.disabled = false; btn.textContent = '⚡ FIGHT START';
+        }
 
-    } catch (err) {
-        showToast('ネットワークエラー: ' + err.message, 'error');
-        btn.disabled = false; btn.textContent = '⚡ FIGHT START';
+    // ── Stripe カード払い ─────────────────────────────────────────────────────
+    } else {
+        let raidJobId = _raidJobId;
+        if (!raidJobId) {
+            try {
+                const r = await fetch('/api/sf/raid/confirm', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                    body: JSON.stringify({ raid_plan_json: currentRaidPlan, payment_method: 'pending' }),
+                });
+                const d = await r.json();
+                raidJobId = d.raid_job_id;
+            } catch {}
+        }
+
+        try {
+            const r = await fetch('/api/payments/sf-raid/create-stripe-session', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                body: JSON.stringify({ sf_raid_job_id: raidJobId, coupon_code: couponCode }),
+            });
+            const d = await r.json();
+            if (d.url) {
+                location.href = d.url;   // Stripe Checkout にリダイレクト
+            } else if (d.mode === 'mock') {
+                showToast('✅ RAID確定 (テストモード)', 'success', 4000);
+                setTimeout(() => location.href = `/workspace/?raid_job=${raidJobId}`, 1800);
+            } else {
+                showToast('⚠ ' + (d.error || 'Stripe セッション作成失敗'), 'error');
+                btn.disabled = false; btn.textContent = '⚡ FIGHT START';
+            }
+        } catch (err) {
+            showToast('ネットワークエラー: ' + err.message, 'error');
+            btn.disabled = false; btn.textContent = '⚡ FIGHT START';
+        }
     }
 }
+
+// ── Stripe 決済完了後のリダイレクト処理 ─────────────────────────────────────
+(function checkSfPaymentReturn() {
+    const p = new URLSearchParams(location.search);
+    if (p.get('sf_payment') === 'success') {
+        const jobId = p.get('raid_job');
+        showToast('✅ 決済完了！ワークスペースに移動します...', 'success', 4000);
+        setTimeout(() => location.href = `/workspace/?raid_job=${jobId}`, 2000);
+    } else if (p.get('sf_payment') === 'cancelled') {
+        showToast('決済をキャンセルしました', 'error', 3000);
+    }
+})();
+
 
 // ──── Keyboard Shortcuts ──────────────────────
 document.addEventListener('keydown', e => {
