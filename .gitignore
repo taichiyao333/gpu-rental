@@ -73,3 +73,7 @@ agent/logs/
 data/backups/
 backups/
 
+
+# THE DOJO Agent
+provider/agent_state.json
+
