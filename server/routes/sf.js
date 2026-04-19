@@ -156,7 +156,7 @@ router.post('/nodes/register', authMiddleware, (req, res) => {
                     gpu_specs       = ?,
                     location        = ?,
                     network_region  = ?,
-                    status          = 'online',
+                    status          = 'idle',
                     last_seen       = datetime('now')
                 WHERE user_id = ?
             `).run(
@@ -275,7 +275,7 @@ router.post('/nodes/heartbeat', authOrAgent, (req, res) => {
         db.prepare(`
             UPDATE sf_nodes SET
                 gpu_live_stats = ?,
-                status         = 'online',
+                status         = 'idle',
                 last_seen      = datetime('now')
             WHERE id = ?
         `).run(JSON.stringify(gpu_stats || []), node.id);
@@ -325,7 +325,7 @@ router.post('/match', authMiddleware, (req, res) => {
             JOIN users u ON u.id = n.user_id
             LEFT JOIN gpu_nodes gn ON gn.provider_id = n.user_id AND gn.status = 'available'
             LEFT JOIN sf_benchmarks b ON b.node_id = n.id
-            WHERE n.status = 'online'
+            WHERE n.status IN ('online', 'idle')
               AND datetime(n.last_seen) > datetime('now', '-5 minutes')
             ORDER BY b.fp32_tflops DESC
         `).all();
@@ -667,7 +667,7 @@ router.post('/raid', authMiddleware, (req, res) => {
             JOIN users u ON u.id = n.user_id
             LEFT JOIN gpu_nodes gn ON gn.provider_id = n.user_id AND gn.status = 'available'
             LEFT JOIN sf_benchmarks b ON b.node_id = n.id
-            WHERE n.status = 'online'
+            WHERE n.status IN ('online', 'idle')
               AND datetime(n.last_seen) > datetime('now', '-5 minutes')
             ORDER BY b.fp32_tflops DESC
             LIMIT ?
