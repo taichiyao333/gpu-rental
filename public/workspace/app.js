@@ -160,6 +160,14 @@ function initSocket() {
     socket.on('pod:warning', (d) => {
         showNotif(d.message, 'warning');
     });
+
+    // ⚡ SF リアルタイム更新
+    socket.on('sf:raid_completed', ({ job_id }) => {
+        if (typeof window._sfFetchNow === 'function') window._sfFetchNow();
+    });
+    socket.on('sf:raid_paid', ({ job_id }) => {
+        if (typeof window._sfFetchNow === 'function') window._sfFetchNow();
+    });
 }
 
 /* ─── Terminal ──────────────────────────────────────────────────── */
@@ -1405,6 +1413,14 @@ function injectSfStatusPanel(raidJobId, matchId) {
 
     fetchSfStatus();
     window._sfPollingTimer = setInterval(fetchSfStatus, 10000);
+    window._sfFetchNow    = fetchSfStatus; // WSイベントから即時引き出し可能
+    
+    // ソケットイベントリスナー
+    if (window.socket) {
+        window.socket.on('sf_update', (data) => {
+            if (data.job_id == jobId) fetchSfStatus();
+        });
+    }
 }
 
 function updateSfPanel(data, jobType) {
