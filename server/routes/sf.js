@@ -15,7 +15,7 @@
  */
 
 const express = require('express');
-const { authMiddleware, adminOnly } = require('../middleware/auth');
+const { authMiddleware, adminOnly, authOrAgent } = require('../middleware/auth');
 const { getDb } = require('../db/database');
 
 /**
@@ -261,7 +261,7 @@ router.post('/nodes/register', authMiddleware, (req, res) => {
 // POST /api/sf/nodes/heartbeat
 // 10秒〜60秒ごとのGPU状態 + RTT更新
 // ─────────────────────────────────────────────────────────────
-router.post('/nodes/heartbeat', authMiddleware, (req, res) => {
+router.post('/nodes/heartbeat', authOrAgent, (req, res) => {
     const db = getDb();
     const { gpu_stats, rtt_ms } = req.body;
     // gpu_stats: [{ index, temperature, utilization, vram_used, vram_total, power_draw }]
