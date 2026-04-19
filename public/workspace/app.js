@@ -1414,12 +1414,12 @@ function updateSfPanel(data, jobType) {
     if (!statusEl) return;
 
     const STATUS_LABEL = {
-        payment_pending: { icon: '⏳', text: '決済待ち',     pct: 5 },
-        paid:            { icon: '💳', text: '決済完了',     pct: 15 },
+        payment_pending: { icon: '⏳', text: '決済待ち',       pct: 5 },
+        paid:            { icon: '💳', text: '決済完了',       pct: 15 },
         dispatched:      { icon: '📡', text: 'ノードへ配信中', pct: 35 },
-        running:         { icon: '🔥', text: '処理中...',    pct: 65 },
+        running:         { icon: '🔥', text: '処理中...',      pct: 65 },
         completed:       { icon: '✅', text: '完了しました！', pct: 100 },
-        failed:          { icon: '❌', text: '失敗',         pct: 0 },
+        failed:          { icon: '❌', text: '失敗',           pct: 0 },
         cancelled:       { icon: '🚫', text: 'キャンセル済み', pct: 0 },
     };
 
@@ -1427,20 +1427,65 @@ function updateSfPanel(data, jobType) {
     statusEl.innerHTML = `<span style="font-size:1.2rem">${s.icon}</span> <strong style="color:#e8e8f0">${s.text}</strong>`;
     if (progressEl) progressEl.style.width = s.pct + '%';
 
-    // 完了時: ダウンロードボタン表示
-    if (data.status === 'completed' && actionsEl) {
-        actionsEl.innerHTML = data.output_url
-            ? `<a href="${data.output_url}" target="_blank"
-                style="display:block;text-align:center;padding:0.55rem;background:linear-gradient(135deg,#6c47ff,#00d4ff);
-                       border-radius:9px;color:#fff;font-weight:700;font-size:0.82rem;text-decoration:none">
-                ⬇ 成果物をダウンロード</a>`
-            : `<p style="font-size:0.78rem;color:#00e5a0;text-align:center">✅ 完了 — ファイルタブを確認してください</p>`;
+    if (!actionsEl) return;
 
-        // 完了したらポーリング停止
+    // ── 処理中: ノード数・コスト情報表示 ─────────────────────────────
+    if (data.status === 'running') {
+        const nodeCount   = data.node_count || '?';
+        const pointsUsed  = data.points_used || 0;
+        const dispAt      = data.dispatched_at ? new Date(data.dispatched_at).toLocaleTimeString('ja-JP', { hour:'2-digit', minute:'2-digit' }) : '–';
+        actionsEl.innerHTML = `
+            <div style="font-size:0.75rem;color:#8888aa;border-top:1px solid rgba(255,255,255,0.06);padding-top:0.6rem">
+                <div style="display:flex;justify-content:space-between;margin-bottom:0.25rem">
+                    <span>参加ノード</span>
+                    <span style="color:#e8e8f0">${nodeCount} 台</span>
+                </div>
+                ${pointsUsed ? `<div style="display:flex;justify-content:space-between;margin-bottom:0.25rem">
+                    <span>消費ポイント</span>
+                    <span style="color:#e8e8f0">${pointsUsed}pt</span>
+                </div>` : ''}
+                <div style="display:flex;justify-content:space-between">
+                    <span>配信開始</span>
+                    <span style="color:#e8e8f0">${dispAt}</span>
+                </div>
+            </div>`;
+
+    // ── 完了: ダウンロードボタン ────────────────────────────────────
+    } else if (data.status === 'completed') {
+        if (data.output_url) {
+            actionsEl.innerHTML = `
+                <a href="${data.output_url}" target="_blank" download class="sf-download-btn">
+                    ⬇ 成果物をダウンロード
+                </a>
+                <p style="font-size:0.7rem;color:#6666aa;margin-top:0.4rem;text-align:center">
+                    ダウンロードリンクは7日間有効です
+                </p>`;
+        } else {
+            actionsEl.innerHTML = `
+                <p style="font-size:0.78rem;color:#00e5a0;text-align:center;padding:0.4rem 0">
+                    ✅ 成果物をファイルタブで確認してください
+                </p>
+                <button onclick="document.querySelector('[data-tab=files]')?.click()"
+                    style="width:100%;padding:0.5rem;border-radius:8px;border:1px solid rgba(0,229,160,0.3);
+                    background:rgba(0,229,160,0.08);color:#00e5a0;font-size:0.82rem;cursor:pointer;margin-top:0.2rem">
+                    📁 ファイルタブを開く
+                </button>`;
+        }
         clearInterval(window._sfPollingTimer);
+
+    // ── 失敗 / キャンセル ─────────────────────────────────────────
     } else if (['failed', 'cancelled'].includes(data.status)) {
+        const reason = data.status === 'failed' ? '処理中にエラーが発生しました。' : 'ジョブがキャンセルされました。';
+        actionsEl.innerHTML = `
+            <p style="font-size:0.78rem;color:#f87171;text-align:center;padding:0.3rem 0">${reason}</p>
+            <a href="/lobby/" style="display:block;text-align:center;padding:0.45rem;margin-top:0.3rem;
+                border-radius:8px;border:1px solid rgba(255,107,53,0.3);background:rgba(255,107,53,0.07);
+                color:#ff6b35;font-size:0.8rem;text-decoration:none">
+                ⚔ THE LOBBY で再試行
+            </a>`;
         clearInterval(window._sfPollingTimer);
     }
 }
+
 
 init();
