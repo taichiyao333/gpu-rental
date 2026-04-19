@@ -945,6 +945,58 @@ router.get('/sf/point-logs', authMiddleware, adminOnly, (req, res) => {
     res.json(logs);
 });
 
+// ─── POST /api/admin/sf/raid-jobs/:id/cancel ─────────────────────────────────
+// 管理者がレイドジョブを強制キャンセル（ポイント返金付き）
+router.post('/sf/raid-jobs/:id/cancel', authMiddleware, adminOnly, (req, res) => {
+    const db = getDb();
+    const job = db.prepare('SELECT * FROM sf_raid_jobs WHERE id = ?').get(req.params.id);
+    if (!job) return res.status(404).json({ error: 'ジョブが見つかりません' });
+
+    const cancelable = ['payment_pending', 'paid', 'dispatched', 'running'];
+    if (!cancelable.includes(job.status)) {
+        return res.status(400).json({ error: `ステータス ${job.status} のジョブはキャンセルできません` });
+    }
+
+    db.prepare(`
+        UPDATE sf_raid_jobs SET status = 'cancelled', updated_at = CURRENT_TIMESTAMP
+        WHERE id = ?
+    `).run(job.id);
+
+    // ポイント返金 (points払いの場合)
+    if (job.payment_method === 'points' && job.points_used > 0) {
+        try {
+            db.prepare(`UPDATE users SET point_balance = point_balance + ? WHERE id = ?`)
+              .run(job.points_used, job.user_id);
+            db.prepare(`
+                INSERT INTO point_logs (user_id, type, amount, note, created_at)
+                VALUES (?, 'refund', ?, ?, CURRENT_TIMESTAMP)
+            `).run(job.user_id, job.points_used, `Admin cancel: SF Raid Job #${job.id}`);
+        } catch (_) { /* point_logs テーブルが存在しない場合はスキップ */ }
+    }
+
+    console.log(`[Admin] SF RaidJob #${job.id} cancelled by admin #${req.user.id}`);
+    res.json({ success: true, id: job.id, status: 'cancelled', refunded_points: job.points_used || 0 });
+});
+
+// ─── POST /api/admin/sf/raid-jobs/:id/force-complete ────────────────────────
+// 管理者がレイドジョブを強制完了（MRP タイムアウト時の手動対応）
+router.post('/sf/raid-jobs/:id/force-complete', authMiddleware, adminOnly, (req, res) => {
+    const db = getDb();
+    const job = db.prepare('SELECT * FROM sf_raid_jobs WHERE id = ?').get(req.params.id);
+    if (!job) return res.status(404).json({ error: 'ジョブが見つかりません' });
+
+    if (job.status === 'completed') {
+        return res.status(400).json({ error: '既に完了済みです' });
+    }
+
+    db.prepare(`
+        UPDATE sf_raid_jobs
+        SET status = 'completed', completed_at = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP
+        WHERE id = ?
+    `).run(job.id);
+
+    console.log(`[Admin] SF RaidJob #${job.id} force-completed by admin #${req.user.id}`);
+    res.json({ success: true, id: job.id, status: 'completed' });
+});
+
 module.exports = router;
-
-

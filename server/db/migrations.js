@@ -517,6 +517,15 @@ async function runMigrations() {
     try { db.exec(sql); } catch (_) { /* カラムが既に存在する場合はスキップ */ }
   });
 
+  // ── sf_raid_jobs 追加カラム (旧環境互換) ────────────────────────────────
+  [
+    'ALTER TABLE sf_raid_jobs ADD COLUMN node_count INTEGER DEFAULT 0',
+    'ALTER TABLE sf_raid_jobs ADD COLUMN updated_at DATETIME',
+    'ALTER TABLE sf_raid_jobs ADD COLUMN output_url TEXT',
+  ].forEach(sql => {
+    try { db.exec(sql); } catch (_) { /* 既に存在する場合はスキップ */ }
+  });
+
   console.log('✅ Database migrations complete');
 }
 
