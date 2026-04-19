@@ -4,9 +4,17 @@
   "description": "RUNPOD-like GPU rental platform - rent your RTX A4500 to anyone",
   "main": "server/index.js",
   "scripts": {
-    "start": "node server/index.js",
-    "dev": "nodemon server/index.js",
-    "setup": "node server/db/migrations.js"
+    "start":       "node server/index.js",
+    "dev":         "nodemon server/index.js",
+    "setup":       "node server/db/migrations.js",
+    "migrate:sf":  "node scripts/migrate_sf_columns.js",
+    "check":       "node check_status.js",
+    "check:sf":    "node check_status.js --sf-only",
+    "check:full":  "node check_status.js --full",
+    "check:json":  "node check_status.js --json",
+    "check:api":   "powershell -ExecutionPolicy Bypass -File scripts/check_api.ps1",
+    "check:api:sf":"powershell -ExecutionPolicy Bypass -File scripts/check_api.ps1 -SfOnly",
+    "backup":      "node -e \"require('./server/services/backup').runBackupNow()\""
   },
   "dependencies": {
     "@stripe/stripe-js": "^8.9.0",
