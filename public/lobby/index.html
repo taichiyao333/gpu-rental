@@ -255,7 +255,7 @@ body::before {
 .toast.success { border-color: #22c55e; }
 .toast.error { border-color: #ef4444; }
 
-/* ── Responsive ── */
+/* ── Responsive / Mobile ─────────────────────────────────── */
 @media (max-width: 900px) {
     .cards-grid { grid-template-columns: 1fr; max-width: 480px; }
     .raid-node-row, .raid-header-row { grid-template-columns: 2fr 2fr 1fr; }
@@ -266,7 +266,73 @@ body::before {
     .config-grid { grid-template-columns: 1fr 1fr; }
     .mode-tab { font-size: 0.85rem; padding: 0.65rem 0.75rem; }
     .btn-portal { display: none; }
+
+    /* ストッキーなボトムナビゲーションバー */
+    .header { padding: 0 1rem; }
+    .lobby-wrap { padding: 1rem 0.75rem 5rem; }
+    .arena-title h1 { font-size: 1.6rem; letter-spacing: 2px; }
+    .arena-title p { font-size: 0.78rem; }
+
+    /* タッブをフル幅に */
+    .mode-tabs { width: 100%; max-width: 100% !important; border-radius: 0;
+                 border-left: none; border-right: none; }
+    .mode-tab  { font-size: 0.9rem; padding: 0.8rem 0.5rem; }
+
+    /* Config パネルをコンパクトに */
+    .config-panel { padding: 1rem; border-radius: 8px; }
+    .config-grid  { grid-template-columns: 1fr 1fr; gap: 0.6rem; }
+    .config-field input, .config-field select { padding: 0.5rem 0.6rem; font-size: 0.85rem; }
+
+    /* マッチカードを横スクロール対応 */
+    .cards-grid { display: flex; flex-direction: column; gap: 0.75rem; }
+    .match-card { border-radius: 12px; }
+    .card-header { padding: 1rem 1rem 0.75rem; }
+    .card-node  { padding: 0.75rem 1rem; }
+    .card-footer{ padding: 0.75rem 1rem; }
+    .card-mode-label { font-size: 1.15rem; }
+    .score-ring { width: 42px; height: 42px; }
+    .score-number { font-size: 0.8rem; }
+    .stat-label { width: 42px; font-size: 0.68rem; }
+    .stat-value { width: 46px; font-size: 0.78rem; }
+    .weights-row { gap: 0.25rem; }
+    .weight-chip { font-size: 0.6rem; padding: 0.2rem 0.05rem; }
+    .weight-chip strong { font-size: 0.78rem; }
+
+    /* 確定ボタンを画面下部に固定 */
+    .confirm-wrap { position: fixed; bottom: 0; left: 0; right: 0;
+                    max-width: 100%; margin: 0; padding: 0.75rem;
+                    background: rgba(4,6,10,0.95); backdrop-filter: blur(12px);
+                    border-top: 1px solid var(--border-glow); z-index: 200;
+                    display: none; /* JSで制御 */ }
+    .confirm-wrap.visible { display: block; }
+    .btn-confirm { border-radius: 8px; padding: 0.85rem; font-size: 1.05rem; letter-spacing: 3px; }
+
+    /* Raid確定ボタンも固定 */
+    .btn-raid-confirm { position: fixed; bottom: 0; left: 0; right: 0;
+                        max-width: 100%; margin: 0; border-radius: 0;
+                        border-left: none; border-right: none;
+                        padding: 0.9rem; font-size: 1.05rem; z-index: 200; }
+
+    /* Toast を下から障害しない位置に */
+    .toast { bottom: 5rem; font-size: 0.82rem; max-width: 90vw; }
+
+    /* Raid ノード一覧 */
+    .raid-node-row  { grid-template-columns: 1fr 1fr; gap: 0.5rem; padding: 0.75rem; }
+    .raid-header-row{ grid-template-columns: 1fr 1fr; gap: 0.5rem; padding: 0 0.75rem 0.5rem; }
+    .raid-node-rank, .raid-est-time { display: none; }
+    .raid-frame-bar-wrap { display: none; }
+    .raid-summary-grid { grid-template-columns: repeat(3, 1fr); }
+    .raid-stat-val { font-size: 1.2rem; }
 }
+
+/* ── タッチ操作準拠 */
+@media (pointer: coarse) {
+    .match-card:hover { transform: none; }
+    .match-card:active { transform: scale(0.97); opacity: 0.9; }
+    .btn-action, .btn-confirm, .btn-raid-confirm { min-height: 48px; }
+    .btn-select { min-height: 42px; }
+}
+
 </style>
 </head>
 <body>
@@ -757,6 +823,67 @@ document.addEventListener('keydown', e => {
         if (e.code === 'Space' && currentRaidPlan) { e.preventDefault(); confirmRaid(); }
     }
 });
+// ──── Socket.io: リアルタイムマッチング通知 ───────────────
+(function initSocket() {
+    // socket.ioスクリプトがロード済みの場合のみ接続
+    if (typeof io === 'undefined') return;
+
+    const token = getToken();
+    const socket = io({ transports: ['websocket', 'polling'] });
+
+    socket.on('connect', () => {
+        console.log('[SF] Socket.io 接続完了');
+        if (token) socket.emit('auth', token);  // JWTでルーム参加
+    });
+
+    // ── マッチング確定通知 (confirm エンドポイントせ 発火) ──
+    socket.on('sf:match_confirmed', (data) => {
+        console.log('[SF] マッチング確定:', data);
+
+        // 現在のマッチに関係する通知のみ処理
+        if (data.match_id !== currentMatchId) return;
+
+        // 成功トースト
+        showToast(`✅ ${data.mode_label}で確定！${data.node?.hostname || ''} へ接続中…`, 'success', 4000);
+
+        // バナー通知表示
+        const banner = document.createElement('div');
+        banner.style.cssText = `
+            position:fixed; top:56px; left:0; right:0; z-index:300;
+            padding:0.75rem 1rem; text-align:center;
+            background:linear-gradient(135deg,rgba(34,197,94,0.15),rgba(16,185,129,0.1));
+            border-bottom:1px solid rgba(34,197,94,0.4);
+            font-family:var(--font-hud); font-size:0.95rem; color:#4ade80;
+            letter-spacing:2px; animation:fadeInUp 0.3s ease;
+        `;
+        banner.innerHTML = `⚡ ${data.mode_label} 確定— ノード: ${data.node?.hostname || '?'}へ接続中...`;
+        document.body.appendChild(banner);
+
+        // 2秒後にワークスペースへ遷移
+        setTimeout(() => {
+            location.href = `/workspace/?match=${data.match_id}`;
+        }, 2000);
+    });
+
+    // ── ノードハートビートでマッチカードの豐富情報をリアルタイム更新 ──
+    socket.on('sf:node_heartbeat', (data) => {
+        // 現在表示中のカードに展展するノードの情報を更新
+        const cards = document.querySelectorAll('.match-card');
+        cards.forEach(card => {
+            const nodeNameEl = card.querySelector('.node-name');
+            if (!nodeNameEl) return;
+            // GPU負荷表示を更新 (node_idが一致する場合)
+            if (card.dataset.nodeId === data.node_id) {
+                const loadEl = card.querySelector('.live-gpu-load');
+                if (loadEl) loadEl.textContent = `GPU ${data.gpu_load.toFixed(0)}%`;
+            }
+        });
+    });
+
+    socket.on('disconnect', () => {
+        console.log('[SF] Socket.io 切断');
+    });
+})();
 </script>
 </body>
 </html>
