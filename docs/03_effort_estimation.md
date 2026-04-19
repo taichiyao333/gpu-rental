@@ -423,3 +423,36 @@ Phase 5: 外部公開        ██████                              6.7
 > ⚡ **Note**: AI エージェント (Antigravity) によるペアプログラミング補助により、  
 > 推定工数の **約 40〜50% を削減** して実現しています。  
 > 人間エンジニア 1名 + AI エージェントによる実質的な 2名体制。
+
+---
+
+## セッション完了ステータス (2026-04-19)
+
+### ✅ 完了タスク (このセッション)
+
+| タスク | ファイル |
+|--------|---------|
+| Admin SF Raid Jobs タブ (HTML + JS) | `public/admin/index.html`, `app.js` |
+| Admin cancel / force-complete API | `server/routes/admin.js` |
+| migrations sf_raid_jobs カラム追加 | `server/db/migrations.js` |
+| `.env.production` SF 設定セクション | `.env.production` |
+| auth.js `agentTokenMiddleware` / `authOrAgent` | `server/middleware/auth.js` |
+| sf.js heartbeat → authOrAgent | `server/routes/sf.js` |
+| auth.js `/agent-token` GET/POST/regenerate | `server/routes/auth.js` |
+| reservations.js SF カラム + `/sf-confirm` | `server/routes/reservations.js` |
+| payments.js SF ポイント決済 + Stripe + Webhook | `server/routes/payments.js` |
+| config.js `maxRaidNodes` / `matchTimeout` | `server/config.js` |
+| portal THE DOJO エージェントトークン UI | `public/portal/index.html`, `app.js` |
+| **provider/agent.js THE DOJO エージェント本体** | `provider/agent.js` |
+| scripts/check_api.ps1 総合版 | `scripts/check_api.ps1` |
+| check_status.js refund / agentToken 統計 | `check_status.js` |
+| start_comfyui.bat 統合ランチャー | `f:/antigravity/start_comfyui.bat` |
+
+### 🔄 残作業
+
+| タスク | 優先度 | 概要 |
+|--------|--------|------|
+| MRP Orchestrator 連携 | High | `sf_raid_jobs.status='dispatched'` 後の実ノード配信ロジック |
+| クーポン × SF 対応 | Medium | レイド料金へのクーポン割引適用 |
+| PostgreSQL 移行 | Low | `migrate_to_postgres.py` 本番実行 |
+| THE LOBBY payment フロー UI | Medium | `lobby/app.js` の決済確定 UI (ポイント / Stripe 切り替え) |
