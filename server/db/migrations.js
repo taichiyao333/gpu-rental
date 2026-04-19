@@ -506,6 +506,17 @@ async function runMigrations() {
     );
   `);
 
+  // ── SF 統合カラム追加: pods ──────────────────────────────────────────
+  // sf_raid_job_id / sf_match_id は後から追加したため ALTER TABLE で安全に追加
+  [
+    'ALTER TABLE pods ADD COLUMN sf_raid_job_id INTEGER',
+    'ALTER TABLE pods ADD COLUMN sf_match_id TEXT',
+    'ALTER TABLE reservations ADD COLUMN sf_raid_job_id INTEGER',
+    'ALTER TABLE reservations ADD COLUMN sf_match_id TEXT',
+  ].forEach(sql => {
+    try { db.exec(sql); } catch (_) { /* カラムが既に存在する場合はスキップ */ }
+  });
+
   console.log('✅ Database migrations complete');
 }
 

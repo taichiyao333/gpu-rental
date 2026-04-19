@@ -51,5 +51,26 @@ module.exports = {
 
     baseUrl: process.env.BASE_URL || 'http://localhost:3000',
     providerPayoutRate: parseFloat(process.env.PROVIDER_PAYOUT_RATE) || 0.8,
+
+    // ─── GPU Street Fighter 設定 ─────────────────────────────────────
+    sf: {
+        // ポイント→円換算レート (1pt = N円)
+        pointRate: parseInt(process.env.SF_POINT_RATE) || 1,
+
+        // ノードをオフラインと判定するまでのハートビートタイムアウト (ms)
+        nodeHeartbeatTimeout: parseInt(process.env.SF_NODE_HEARTBEAT_TIMEOUT) || 120000, // 2分
+
+        // レイドジョブのディスパッチタイムアウト (ms) — 超過でfailed
+        raidDispatchTimeout: parseInt(process.env.SF_RAID_DISPATCH_TIMEOUT) || 300000, // 5分
+
+        // SF ボーナス倍率 (通常レンタルに対するSFノード収益ボーナス)
+        bonusMultiplier: parseFloat(process.env.SF_BONUS_MULTIPLIER) || 1.15,
+
+        // パブリック statsエンドポイントのキャッシュ TTL (ms)
+        statsCacheTtl: parseInt(process.env.SF_STATS_CACHE_TTL) || 15000, // 15秒
+
+        // MRP Orchestrator エンドポイント
+        mrpOrchestratorUrl: process.env.MRP_ORCHESTRATOR_URL || 'http://localhost:7860',
+    },
 };
 

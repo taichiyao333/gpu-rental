@@ -462,6 +462,8 @@ async function start() {
         console.log(`🛡  Admin:      http://localhost:${config.port}/admin/`);
         console.log(`💻 Workspace:  http://localhost:${config.port}/workspace/`);
         console.log(`🏭 Provider:   http://localhost:${config.port}/provider/`);
+        console.log(`⚡ THE LOBBY:  http://localhost:${config.port}/lobby/`);
+        console.log(`🌐 SF Stats:   http://localhost:${config.port}/api/sf/stats/public`);
         console.log('\n─────────────────────────────────────────────');
         console.log(`📧 Admin: ${process.env.ADMIN_EMAIL || 'taichi.yao@gmail.com'} / [see .env ADMIN_PASSWORD]`);
         console.log('─────────────────────────────────────────────\n');
