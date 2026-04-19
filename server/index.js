@@ -12,7 +12,7 @@ let compression; try { compression = require('compression'); } catch(_) { compre
 const config = require('./config');
 const { runMigrations } = require('./db/migrations');
 const { initDb } = require('./db/database');
-const { startGpuMonitor, getGpuNodesWithStats } = require('./services/gpuManager');
+const { startGpuMonitor, getGpuNodesWithStats, watchdogDispatchPaidJobs } = require('./services/gpuManager');
 const { startScheduler } = require('./services/scheduler');
 const { attachTerminal } = require('./services/terminal');
 const { startBackupScheduler } = require('./services/backup');
@@ -454,6 +454,14 @@ async function start() {
     initTunnelRelay(io);
     console.log('✅ SSH Tunnel Relay started');
 
+    // ⚡ SF Raid ウォッチドッグ: 30秒ごとに「paid」ジョブを自動ディスパッチ
+    setTimeout(() => {
+        watchdogDispatchPaidJobs().catch(() => {});
+        setInterval(() => {
+            watchdogDispatchPaidJobs().catch(() => {});
+        }, 30000);
+        console.log('✅ SF Raid watchdog started (every 30s)');
+    }, 5000); // サーバー起動5秒後から開始
 
     // Start server
     server.listen(config.port, () => {

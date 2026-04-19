@@ -181,6 +181,135 @@ function getCachedStats(deviceIndex) {
     return gpuStatsCache.get(deviceIndex) || null;
 }
 
+// ─── GPU Street Fighter: ノード選択 & ディスパッチ ──────────────────────────
+
+/**
+ * SF ノード選択: レイドジョブに最適なSFノード群を選ぶ
+ * @param {number} requestedCount - 必要ノード数
+ * @returns {Array} 選択された sf_nodes レコード配列
+ */
+function selectSfNodesForRaid(requestedCount = 1) {
+    const db = getDb();
+    const timeout = config.sf?.nodeHeartbeatTimeout ?? 120000;
+    const thresholdSec = Math.floor(timeout / 1000);
+
+    // オンライン・アイドル状態のノードを RTT 昇順、fp32_tflops 降順で選択
+    const nodes = db.prepare(`
+        SELECT *
+        FROM sf_nodes
+        WHERE status = 'idle'
+          AND last_seen > datetime('now', '-${thresholdSec} seconds')
+        ORDER BY rtt_ms ASC, fp32_tflops DESC
+        LIMIT ?
+    `).all(Math.min(requestedCount, config.sf?.maxRaidNodes ?? 50));
+
+    return nodes;
+}
+
+/**
+ * SF レイドジョブを MRP Orchestrator に送信する
+ * - sf_raid_jobs.status を 'running' に更新
+ * - 各ノードに対して MRP Orchestrator へ HTTP リクエスト
+ *
+ * @param {number} raidJobId - sf_raid_jobs.id
+ * @returns {{ dispatched: boolean, nodeCount: number, error?: string }}
+ */
+async function dispatchSfRaidJob(raidJobId) {
+    const db = getDb();
+    const job = db.prepare('SELECT * FROM sf_raid_jobs WHERE id = ?').get(raidJobId);
+
+    if (!job) return { dispatched: false, error: 'Job not found' };
+    if (!['paid', 'dispatched'].includes(job.status)) {
+        return { dispatched: false, error: `Invalid status: ${job.status}` };
+    }
+
+    let plan = {};
+    try { plan = JSON.parse(job.raid_plan_json); } catch (_) {}
+    const requestedNodes = plan.node_count || 1;
+
+    // ノード選択
+    const selectedNodes = selectSfNodesForRaid(requestedNodes);
+    if (selectedNodes.length === 0) {
+        console.warn(`[SF Dispatch] No idle SF nodes available for job #${raidJobId}`);
+        return { dispatched: false, error: 'No idle SF nodes available' };
+    }
+
+    // ステータスを 'running' に更新
+    db.prepare(`
+        UPDATE sf_raid_jobs
+        SET status = 'running', node_count = ?, mrp_job_ids = ?,
+            dispatched_at = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP
+        WHERE id = ?
+    `).run(selectedNodes.length, JSON.stringify(selectedNodes.map(n => n.id)), raidJobId);
+
+    // ノードをビジー状態に
+    const nodeIds = selectedNodes.map(n => n.id);
+    nodeIds.forEach(id => {
+        db.prepare("UPDATE sf_nodes SET status = 'busy' WHERE id = ?").run(id);
+    });
+
+    // MRP Orchestrator への通知 (非同期、失敗しても続行)
+    const mrpUrl = config.sf?.mrpOrchestratorUrl;
+    if (mrpUrl) {
+        const payload = {
+            job_id:   raidJobId,
+            plan:     plan,
+            nodes:    selectedNodes.map(n => ({ id: n.id, hostname: n.hostname, rtt_ms: n.rtt_ms })),
+        };
+        fetch(`${mrpUrl}/api/sf/dispatch`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload),
+            signal: AbortSignal.timeout(10000),
+        }).then(r => {
+            if (r.ok) console.log(`[SF Dispatch] MRP notified for job #${raidJobId} (${selectedNodes.length} nodes)`);
+            else      console.warn(`[SF Dispatch] MRP responded ${r.status} for job #${raidJobId}`);
+        }).catch(e => {
+            console.warn(`[SF Dispatch] MRP unreachable for job #${raidJobId}: ${e.message}`);
+        });
+    } else {
+        // MRP URL 未設定 → シミュレーション完了 (开発環境)
+        const simDelay = (plan.est_completion_min ?? 1) * 60 * 1000;
+        setTimeout(() => {
+            try {
+                db.prepare(`
+                    UPDATE sf_raid_jobs
+                    SET status = 'completed', completed_at = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP
+                    WHERE id = ? AND status = 'running'
+                `).run(raidJobId);
+                nodeIds.forEach(id => db.prepare("UPDATE sf_nodes SET status = 'idle' WHERE id = ?").run(id));
+                console.log(`[SF Simulate] Job #${raidJobId} completed (dev mode, ${simDelay / 1000}s)`);
+            } catch (_) {}
+        }, Math.min(simDelay, 30000)); // 開発環境では最大30秒でシミュレート完了
+    }
+
+    console.log(`[SF Dispatch] Job #${raidJobId} dispatched to ${selectedNodes.length} nodes`);
+    return { dispatched: true, nodeCount: selectedNodes.length };
+}
+
+/**
+ * 支払い済み・未ディスパッチのレイドジョブを自動ディスパッチするウォッチドッグ
+ * server/index.js から setInterval で呼び出す
+ */
+async function watchdogDispatchPaidJobs() {
+    const db = getDb();
+    let paidJobs;
+    try {
+        paidJobs = db.prepare("SELECT id FROM sf_raid_jobs WHERE status = 'paid'").all();
+    } catch (_) { return; }
+
+    for (const job of paidJobs) {
+        try {
+            const result = await dispatchSfRaidJob(job.id);
+            if (!result.dispatched) {
+                console.log(`[SF Watchdog] Job #${job.id} not dispatched: ${result.error}`);
+            }
+        } catch (e) {
+            console.error(`[SF Watchdog] Error dispatching job #${job.id}: ${e.message}`);
+        }
+    }
+}
+
 module.exports = {
     fetchGpuStats,
     fetchGpuProcesses,
@@ -188,4 +317,8 @@ module.exports = {
     updateGpuStatus,
     startGpuMonitor,
     getCachedStats,
+    // SF ディスパッチ
+    selectSfNodesForRaid,
+    dispatchSfRaidJob,
+    watchdogDispatchPaidJobs,
 };
