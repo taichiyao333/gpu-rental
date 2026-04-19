@@ -46,7 +46,7 @@ module.exports = {
     stripe: {
         secretKey: process.env.STRIPE_SECRET_KEY || '',
         webhookSecret: process.env.STRIPE_WEBHOOK_SECRET || '',
-        publishableKey: process.env.STRIPE_PK || '',
+        publishableKey: process.env.STRIPE_PK || process.env.STRIPE_PUBLISHABLE_KEY || '',
     },
 
     baseUrl: process.env.BASE_URL || 'http://localhost:3000',

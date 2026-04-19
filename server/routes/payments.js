@@ -358,11 +358,9 @@ router.post('/sf-raid/create-stripe-session', authMiddleware, async (req, res) =
     }
 });
 
-// ─── POST /api/payments/webhook (上書き拡張) ─────────────────────
-// ※ webhookは上の定義と同じパスになるため、SF handling は
-//   既存 webhook 内の checkout.session.completed イベントハンドラに
-//   metadata.type === 'sf_raid' の分岐として追加が必要。
-//   ここでは別ルート POST /api/payments/webhook/sf として補助実装。
-//   (本番では上の webhook を統合してください)
+// ─── Stripe Webhook SF Raid 統合 ─────────────────────────────────
+// ✅ server/routes/stripe.js の checkout.session.completed ハンドラに
+//    metadata.type === 'sf_raid' の分岐として統合済み。
+//    (sf_raid_jobs.status → 'paid', coupon_uses 記録, sf:raid_paid WS 送信)
 
 module.exports = router;
