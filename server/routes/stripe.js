@@ -331,8 +331,8 @@ router.get('/verify-payment', authMiddleware, async (req, res) => {
         db.prepare('UPDATE users SET wallet_balance = wallet_balance + ?, point_balance = point_balance + ? WHERE id = ?')
           .run(purchase.points, purchase.points, purchase.user_id);
 
-        db.prepare(`INSERT INTO point_logs (user_id, points, type, description, ref_id) VALUES (?, ?, 'purchase', ?, ?)`)
-          .run(purchase.user_id, purchase.points, `Stripe決済完了: ${purchase.plan_name}`, purchase.id);
+        db.prepare(`INSERT INTO point_logs (user_id, type, amount, source, source_id, note) VALUES (?, 'earn', ?, 'purchase', ?, ?)`)
+          .run(purchase.user_id, purchase.points, String(purchase.id), `Stripe決済完了: ${purchase.plan_name}`);
 
         // クーポン使用数更新
         if (purchase.coupon_id) {
@@ -481,8 +481,8 @@ async function webhookHandler(req, res) {
                     db.prepare('UPDATE users SET wallet_balance = wallet_balance + ?, point_balance = point_balance + ? WHERE id = ?')
                       .run(purchase.points, purchase.points, purchase.user_id);
 
-                    db.prepare(`INSERT INTO point_logs (user_id, points, type, description, ref_id) VALUES (?, ?, 'purchase', ?, ?)`)
-                      .run(purchase.user_id, purchase.points, `Stripe Webhook: ${purchase.plan_name}購入`, purchase.id);
+                    db.prepare(`INSERT INTO point_logs (user_id, type, amount, source, source_id, note) VALUES (?, 'earn', ?, 'purchase', ?, ?)`)
+                      .run(purchase.user_id, purchase.points, String(purchase.id), `Stripe Webhook: ${purchase.plan_name}購入`);
 
                     if (purchase.coupon_id) {
                         db.prepare('UPDATE coupons SET used_count = used_count + 1 WHERE id = ?').run(purchase.coupon_id);

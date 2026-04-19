@@ -1038,7 +1038,7 @@ router.get('/stats/public', (req, res) => {
     let onlineNodes = 0;
     try {
         const r = db.prepare(
-            "SELECT COUNT(*) as c FROM sf_nodes WHERE status IN ('idle','busy') AND last_heartbeat > datetime('now','-2 minutes')"
+            "SELECT COUNT(*) as c FROM sf_nodes WHERE status IN ('idle','busy','online') AND datetime(last_seen) > datetime('now','-2 minutes')"
         ).get();
         onlineNodes = r?.c || 0;
     } catch (_) {}
@@ -1052,10 +1052,10 @@ router.get('/stats/public', (req, res) => {
         ).get();
         if (tableExists) {
             activeRaids = db.prepare(
-                "SELECT COUNT(*) as c FROM sf_raid_jobs WHERE status IN ('paid','dispatched')"
+                "SELECT COUNT(*) as c FROM sf_raid_jobs WHERE status IN ('paid','dispatched','running')"
             ).get()?.c || 0;
             completedToday = db.prepare(
-                "SELECT COUNT(*) as c FROM sf_raid_jobs WHERE status='completed' AND date(updated_at)=date('now')"
+                "SELECT COUNT(*) as c FROM sf_raid_jobs WHERE status='completed' AND date(completed_at)=date('now')"
             ).get()?.c || 0;
         }
     } catch (_) {}
