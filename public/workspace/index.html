@@ -151,6 +151,86 @@
         .docker-tmpl { display:flex; align-items:center; gap:8px; padding:8px 10px; background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.06); border-radius:8px; font-size:0.8rem; color:rgba(255,255,255,0.7); cursor:default; }
         .docker-icon { font-size:1.1rem; }
         @media (max-width:900px) { .blender-layout { grid-template-columns:1fr; } }
+
+        /* ── GPU Street Fighter パネル ── */
+        .sf-pane { padding: 20px; overflow-y: auto; height: 100%; }
+        .sf-banner {
+            background: linear-gradient(135deg, rgba(245,158,11,0.12), rgba(239,68,68,0.08));
+            border: 1px solid rgba(245,158,11,0.3);
+            border-radius: 14px;
+            padding: 20px 24px;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+        .sf-banner-icon { font-size: 2.5rem; flex-shrink: 0; }
+        .sf-banner-title { font-size: 1.1rem; font-weight: 700; color: #fbbf24; margin-bottom: 4px; }
+        .sf-banner-sub   { font-size: 0.82rem; color: rgba(255,255,255,0.5); }
+        .sf-status-grid  { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px,1fr)); gap: 12px; margin-bottom: 20px; }
+        .sf-stat-card {
+            background: rgba(255,255,255,0.04);
+            border: 1px solid rgba(255,255,255,0.07);
+            border-radius: 10px;
+            padding: 14px;
+            text-align: center;
+        }
+        .sf-stat-val   { font-size: 1.6rem; font-weight: 800; font-family: 'JetBrains Mono', monospace; margin-bottom: 4px; }
+        .sf-stat-label { font-size: 0.72rem; color: rgba(255,255,255,0.4); letter-spacing: 0.05em; text-transform: uppercase; }
+        .sf-job-card {
+            background: rgba(255,255,255,0.03);
+            border: 1px solid rgba(255,255,255,0.08);
+            border-radius: 12px;
+            padding: 18px;
+            margin-bottom: 14px;
+        }
+        .sf-job-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
+        .sf-job-mode   { font-size: 0.78rem; font-weight: 700; letter-spacing: 0.08em; padding: 3px 10px; border-radius: 20px; }
+        .sf-job-mode.raid     { background: rgba(245,158,11,0.15); color: #fbbf24; border: 1px solid rgba(245,158,11,0.3); }
+        .sf-job-mode.match    { background: rgba(99,102,241,0.15); color: #a5b4fc; border: 1px solid rgba(99,102,241,0.3); }
+        .sf-job-id    { font-family: 'JetBrains Mono', monospace; font-size: 0.75rem; color: rgba(255,255,255,0.3); }
+        .sf-progress-wrap   { margin-bottom: 12px; }
+        .sf-progress-head   { display: flex; justify-content: space-between; font-size: 0.78rem; color: rgba(255,255,255,0.5); margin-bottom: 6px; }
+        .sf-progress-bar    { height: 8px; background: rgba(255,255,255,0.05); border-radius: 4px; overflow: hidden; }
+        .sf-progress-fill   {
+            height: 100%;
+            border-radius: 4px;
+            background: linear-gradient(90deg, #d97706, #f59e0b);
+            transition: width 0.6s ease;
+            position: relative;
+            overflow: hidden;
+        }
+        .sf-progress-fill.complete { background: linear-gradient(90deg, #10b981, #059669); }
+        .sf-progress-fill.failed   { background: linear-gradient(90deg, #ef4444, #dc2626); }
+        .sf-progress-shimmer {
+            position: absolute; inset: 0;
+            background: linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.25) 50%, transparent 100%);
+            background-size: 200% 100%;
+            animation: sfShimmer 1.5s linear infinite;
+        }
+        @keyframes sfShimmer { 0% { background-position: -200% 0; } 100% { background-position: 200% 0; } }
+        .sf-nodes-list   { display: flex; flex-direction: column; gap: 8px; margin-top: 10px; }
+        .sf-node-row     { display: flex; align-items: center; gap: 10px; padding: 8px 12px; background: rgba(255,255,255,0.02); border-radius: 8px; font-size: 0.8rem; }
+        .sf-node-dot     { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+        .sf-node-dot.running  { background: #f59e0b; animation: pulse 2s infinite; }
+        .sf-node-dot.done     { background: #10b981; }
+        .sf-node-dot.pending  { background: rgba(255,255,255,0.2); }
+        .sf-dl-btn {
+            display: inline-flex; align-items: center; gap: 6px;
+            padding: 10px 20px; border-radius: 10px; font-size: 0.88rem; font-weight: 700;
+            background: linear-gradient(135deg, #10b981, #059669);
+            color: #fff; text-decoration: none; border: none; cursor: pointer;
+            transition: opacity 0.2s, transform 0.2s;
+            margin-top: 12px;
+        }
+        .sf-dl-btn:hover { opacity: 0.9; transform: translateY(-1px); }
+        .sf-empty {
+            text-align: center; padding: 60px 20px;
+            color: rgba(255,255,255,0.3);
+        }
+        .sf-empty-icon { font-size: 3rem; margin-bottom: 12px; }
+        .sf-empty-link { display: inline-block; margin-top: 16px; padding: 10px 24px; border-radius: 10px; background: rgba(245,158,11,0.15); border: 1px solid rgba(245,158,11,0.3); color: #fbbf24; text-decoration: none; font-size: 0.85rem; font-weight: 600; }
+        .sf-empty-link:hover { background: rgba(245,158,11,0.25); }
     </style>
 </head>
 
@@ -230,6 +310,7 @@
                     <button class="ws-tab" id="tabConnect">🔌 接続情報</button>
                     <button class="ws-tab" id="tabRender">🎬 レンダリング</button>
                     <button class="ws-tab" id="tabBlender">🎨 Blender</button>
+                    <button class="ws-tab" id="tabSF" style="color:#fbbf24">⚡ GPU SF</button>
                 </div>
                 <div class="ws-terminal-actions">
                     <button class="icon-btn" id="btnClearTerm" title="クリア">✕</button>
@@ -561,6 +642,8 @@ jupyter lab --ip=0.0.0.0 --port=8888 --no-browser --NotebookApp.token='gpurental
             </div>
         </main>
 
+            <!-- ⚡ GPU Street Fighter パネル (</main>の外に配置; ws-mainの中に入れるから移動) -->
+
         <!-- RIGHT: GPU Monitor -->
         <aside class="ws-monitor">
             <div class="ws-panel-header"><span>📊 GPU モニター</span></div>
@@ -642,6 +725,175 @@ jupyter lab --ip=0.0.0.0 --port=8888 --no-browser --NotebookApp.token='gpurental
     <script src="/lib/xterm-addon-fit.min.js"></script>
     <script src="/lib/chart.umd.min.js"></script>
     <script src="app.js"></script>
+
+    <!-- ⚡ GPU SF パネルロジック -->
+    <script>
+    (function(){
+        var params  = new URLSearchParams(location.search);
+        var matchId = params.get('match');
+        var raidId  = params.get('raid_job');
+        var sfMode  = raidId ? 'raid' : matchId ? 'match' : null;
+        var sfPoller = null;
+
+        // ─ SF パネル HTML を ws-main 内に動的挿入 ────────────────────
+        function injectSfPanel() {
+            if (document.getElementById('sfPane')) return;
+            var main = document.querySelector('.ws-main');
+            if (!main) return;
+            var div = document.createElement('div');
+            div.id = 'sfPane';
+            div.className = 'sf-pane hidden';
+            div.innerHTML = [
+                '<div class="sf-banner">',
+                '  <div class="sf-banner-icon">⚡</div>',
+                '  <div>',
+                '    <div class="sf-banner-title">GPU STREET FIGHTER — ジョブモニター</div>',
+                '    <div class="sf-banner-sub" id="sfBannerSub">フローを読み込んでいます...</div>',
+                '  </div>',
+                '</div>',
+                '<div class="sf-status-grid">',
+                '  <div class="sf-stat-card"><div class="sf-stat-val" id="sfStatMode" style="color:#a5b4fc">—</div><div class="sf-stat-label">モード</div></div>',
+                '  <div class="sf-stat-card"><div class="sf-stat-val" id="sfStatNodes" style="color:#fbbf24">—</div><div class="sf-stat-label">ノード数</div></div>',
+                '  <div class="sf-stat-card"><div class="sf-stat-val" id="sfStatProgress" style="color:#10b981">—%</div><div class="sf-stat-label">進捗</div></div>',
+                '  <div class="sf-stat-card"><div class="sf-stat-val" id="sfStatEta" style="color:#f87171">—</div><div class="sf-stat-label">残り時間</div></div>',
+                '</div>',
+                '<div id="sfJobCards"></div>'
+            ].join('');
+            main.appendChild(div);
+        }
+
+        // ─ タブ切り替えロジック ─────────────────────────
+        function openSfTab() {
+            document.querySelectorAll('.ws-tab').forEach(function(t){ t.classList.remove('active'); });
+            var allPanes = ['terminalPane','connectPane','renderPane','blenderPane','sfPane'];
+            allPanes.forEach(function(id){
+                var p = document.getElementById(id);
+                if (p) p.classList.add('hidden');
+            });
+            var tb = document.getElementById('tabSF');
+            if (tb) tb.classList.add('active');
+            var sp = document.getElementById('sfPane');
+            if (sp) sp.classList.remove('hidden');
+        }
+
+        // ─ 1on1 マッチ ──────────────────────────────────
+        function getToken() {
+            return localStorage.getItem('token') || sessionStorage.getItem('token') || '';
+        }
+        function setStatCard(id, val) {
+            var el = document.getElementById(id);
+            if (el) el.textContent = val;
+        }
+        function fmtSec(sec) {
+            if (!sec || sec <= 0) return '—';
+            if (sec < 60)  return sec + '秒';
+            if (sec < 3600) return Math.floor(sec/60) + '分';
+            return Math.floor(sec/3600) + '時間' + Math.floor((sec%3600)/60) + '分';
+        }
+
+        function renderRaidCard(data) {
+            var summary  = data.summary || {};
+            var nodeCount= summary.node_count || '—';
+            var estMin   = summary.est_completion_min || '—';
+            var status   = data.status || 'dispatched';
+            var isDone   = status === 'completed';
+            var isFail   = status === 'failed';
+            var sub = document.getElementById('sfBannerSub');
+            if (sub) sub.textContent = 'RAID BATTLE #' + data.raid_job_id + ' — ' + (isDone ? '完了' : status);
+            setStatCard('sfStatMode', '🔥 RAID');
+            setStatCard('sfStatNodes', nodeCount + ' ノード');
+            setStatCard('sfStatProgress', isDone ? '100%' : isFail ? 'ERR' : '処理中');
+            setStatCard('sfStatEta', isDone ? '完了! ✅' : fmtSec(estMin * 60));
+            var cards = document.getElementById('sfJobCards');
+            if (!cards) return;
+            var mrpIds = data.mrp_job_ids || [];
+            var fillClass = isDone ? 'complete' : isFail ? 'failed' : '';
+            var shimmer = (!isDone && !isFail) ? '<div class="sf-progress-shimmer"></div>' : '';
+            var nodeRows = mrpIds.length > 0
+                ? mrpIds.map(function(jid, i){
+                    return '<div class="sf-node-row"><span class="sf-node-dot ' + (isDone ? 'done' : 'running') + '"></span><span style="font-family:monospace;font-size:0.75rem;opacity:0.6">ノード ' + (i+1) + '</span><span style="margin-left:auto;font-size:0.72rem;opacity:0.4">' + jid.slice(0,8) + '</span></div>';
+                  }).join('')
+                : '<div style="font-size:0.78rem;color:rgba(255,255,255,0.25);padding:6px 0">ノード情報を取得中...</div>';
+            var dlBtn = (isDone && data.output_url)
+                ? '<a href="' + data.output_url + '" download class="sf-dl-btn">⬇ 完成ファイルをダウンロード</a>' : '';
+            cards.innerHTML = '<div class="sf-job-card">' +
+                '<div class="sf-job-header"><span class="sf-job-mode raid">🔥 RAID BATTLE</span><span class="sf-job-id">#' + data.raid_job_id + '</span></div>' +
+                '<div class="sf-progress-wrap"><div class="sf-progress-head"><span>' + nodeCount + 'ノード並列処理</span><span>' + status + '</span></div>' +
+                '<div class="sf-progress-bar"><div class="sf-progress-fill ' + fillClass + '" style="width:' + (isDone ? 100 : 60) + '%">' + shimmer + '</div></div></div>' +
+                '<div style="display:flex;flex-wrap:wrap;gap:12px;font-size:0.78rem;color:rgba(255,255,255,0.4);margin-top:8px">' +
+                '<span>💰 ' + (data.amount_yen != null ? '¥' + Number(data.amount_yen).toLocaleString() : '—') + '</span>' +
+                '<span>⚡ ' + (summary.total_tflops != null ? summary.total_tflops + ' TFLOPS' : '—') + '</span>' +
+                '<span>⏱ 推定 ' + estMin + '分</span></div>' +
+                '<div class="sf-nodes-list">' + nodeRows + '</div>' + dlBtn + '</div>';
+            if (isDone || isFail) {
+                if (sfPoller) { clearInterval(sfPoller); sfPoller = null; }
+            }
+        }
+
+        function renderMatchCard(data) {
+            var status = data.status || 'confirmed';
+            var isDone = status === 'completed';
+            var isFail = status === 'cancelled' || status === 'failed';
+            var sub = document.getElementById('sfBannerSub');
+            if (sub) sub.textContent = '1on1 マッチ #' + data.id + ' — ' + status;
+            setStatCard('sfStatMode', '⚔ 1on1');
+            setStatCard('sfStatNodes', '1 ノード');
+            setStatCard('sfStatProgress', isDone ? '100%' : isFail ? 'ERR' : '処理中');
+            setStatCard('sfStatEta', isDone ? '完了! ✅' : '—');
+            var cards = document.getElementById('sfJobCards');
+            if (!cards) return;
+            var fillClass = isDone ? 'complete' : isFail ? 'failed' : '';
+            var shimmer = (!isDone && !isFail) ? '<div class="sf-progress-shimmer"></div>' : '';
+            cards.innerHTML = '<div class="sf-job-card">' +
+                '<div class="sf-job-header"><span class="sf-job-mode match">⚔ 1on1 MATCH</span><span class="sf-job-id">#' + data.id.slice(0,8) + '</span></div>' +
+                '<div class="sf-progress-wrap"><div class="sf-progress-head"><span>モード: ' + (data.selected_mode || '—') + '</span><span>' + status + '</span></div>' +
+                '<div class="sf-progress-bar"><div class="sf-progress-fill ' + fillClass + '" style="width:' + (isDone ? 100 : 50) + '%">' + shimmer + '</div></div></div></div>';
+            if (isDone || isFail) { if (sfPoller) { clearInterval(sfPoller); sfPoller = null; } }
+        }
+
+        async function pollRaid(id) {
+            var token = getToken();
+            try {
+                var h = token ? { 'Authorization': 'Bearer ' + token } : {};
+                var r = await fetch('/api/sf/raid/' + id + '/receipt', { headers: h });
+                if (r.ok) renderRaidCard(await r.json());
+            } catch(e) {}
+        }
+        async function pollMatch(id) {
+            var token = getToken();
+            try {
+                var h = token ? { 'Authorization': 'Bearer ' + token } : {};
+                var r = await fetch('/api/sf/match/' + id, { headers: h });
+                if (r.ok) renderMatchCard(await r.json());
+            } catch(e) {}
+        }
+
+        // ─ 起動 ───────────────────────────────────────────
+        document.addEventListener('DOMContentLoaded', function() {
+            injectSfPanel();
+
+            var tabSFBtn = document.getElementById('tabSF');
+            if (tabSFBtn) tabSFBtn.addEventListener('click', openSfTab);
+
+            if (!sfMode) {
+                var cards = document.getElementById('sfJobCards');
+                if (cards) cards.innerHTML = '<div class="sf-empty"><div class="sf-empty-icon">🎮</div><div style="font-size:0.9rem;color:rgba(255,255,255,0.35)">アクティブなジョブはありません</div><a href="/lobby/" class="sf-empty-link">⚡ THE LOBBY でジョブを依頼する</a></div>';
+                return;
+            }
+
+            // URL パラメータあり → SF タブを自動開く
+            setTimeout(openSfTab, 400);
+
+            if (sfMode === 'raid')  pollRaid(raidId);
+            if (sfMode === 'match') pollMatch(matchId);
+
+            sfPoller = setInterval(function() {
+                if (sfMode === 'raid')  pollRaid(raidId);
+                if (sfMode === 'match') pollMatch(matchId);
+            }, 10000);
+        });
+    })();
+    </script>
 
     <!-- Google Translate (非表示) -->
     <div id="google_translate_element" style="display:none"></div>
