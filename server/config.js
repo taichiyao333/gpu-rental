@@ -71,6 +71,12 @@ module.exports = {
 
         // MRP Orchestrator エンドポイント
         mrpOrchestratorUrl: process.env.MRP_ORCHESTRATOR_URL || 'http://localhost:7860',
+
+        // レイドバトル最大ノード数
+        maxRaidNodes: parseInt(process.env.SF_RAID_MAX_NODES) || 50,
+
+        // 1on1 マッチ受付タイムアウト (ms) - 24時間
+        matchTimeout: parseInt(process.env.SF_MATCH_TIMEOUT_MS) || 86400000,
     },
 };
 

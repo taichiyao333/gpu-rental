@@ -1219,6 +1219,46 @@
         <a href="/downloads/gpurental_addon.py" download style="color:#6c47ff;margin:0 0.5rem">🎨 Blender Addon</a> ·
         © 2026 METADATALAB.INC
     </div>
+
+    <!-- ⚡ THE DOJO エージェントトークン管理 (プロバイダー専用) -->
+    <div id="theDojoSection" style="display:none;margin:2rem auto;max-width:640px;padding:0 1rem">
+        <div style="background:rgba(10,10,25,0.8);border:1px solid rgba(108,71,255,0.35);border-radius:16px;padding:1.5rem;backdrop-filter:blur(12px)">
+            <div style="display:flex;align-items:center;gap:0.75rem;margin-bottom:1rem">
+                <span style="font-size:1.4rem">⚡</span>
+                <div>
+                    <div style="font-weight:700;color:#e8e8f0;font-size:0.95rem">THE DOJO — エージェント設定</div>
+                    <div style="font-size:0.73rem;color:#6c47ff">GPU Street Fighter ノード登録</div>
+                </div>
+            </div>
+            <div style="font-size:0.78rem;color:#7a7a9a;margin-bottom:1rem">
+                このトークンを THE DOJO エージェントの <code style="color:#00d4ff;background:rgba(0,212,255,0.08);padding:2px 6px;border-radius:4px">X-Agent-Token</code> ヘッダーに設定してください。
+            </div>
+            <div style="display:flex;gap:0.5rem;align-items:center;margin-bottom:1rem">
+                <code id="agentTokenValue" style="flex:1;background:rgba(0,0,0,0.4);border:1px solid rgba(108,71,255,0.2);border-radius:8px;padding:0.6rem 0.75rem;font-size:0.72rem;color:#a0a0c8;word-break:break-all;font-family:monospace">
+                    読み込み中...
+                </code>
+                <button onclick="copyAgentToken()" style="flex-shrink:0;background:rgba(108,71,255,0.15);border:1px solid rgba(108,71,255,0.3);border-radius:8px;color:#9c7cff;cursor:pointer;padding:0.6rem 0.9rem;font-size:0.78rem;transition:all 0.2s" onmouseover="this.style.background='rgba(108,71,255,0.3)'" onmouseout="this.style.background='rgba(108,71,255,0.15)'">
+                    📋 コピー
+                </button>
+            </div>
+            <details style="margin-bottom:1rem">
+                <summary style="font-size:0.78rem;color:#5a5a8a;cursor:pointer;margin-bottom:0.5rem">📖 使い方</summary>
+                <pre style="font-size:0.68rem;color:#6c47ff;background:rgba(108,71,255,0.06);border-radius:8px;padding:0.75rem;margin:0.5rem 0;overflow-x:auto">curl -X POST https://gpurental.jp/api/sf/nodes/heartbeat \
+  -H "X-Agent-Token: &lt;YOUR_TOKEN&gt;" \
+  -H "Content-Type: application/json" \
+  -d '{"gpu_stats":[{"index":0,"utilization":45}],"rtt_ms":3.2}'</pre>
+            </details>
+            <div style="display:flex;gap:0.5rem">
+                <button onclick="regenerateAgentToken()" style="background:rgba(239,68,68,0.12);border:1px solid rgba(239,68,68,0.25);border-radius:8px;color:#f87171;cursor:pointer;padding:0.5rem 1rem;font-size:0.78rem;transition:all 0.2s" onmouseover="this.style.background='rgba(239,68,68,0.2)'" onmouseout="this.style.background='rgba(239,68,68,0.12)'">
+                    🔄 再生成
+                </button>
+                <a href="/provider/" style="display:inline-flex;align-items:center;background:rgba(0,212,255,0.08);border:1px solid rgba(0,212,255,0.2);border-radius:8px;color:#00d4ff;padding:0.5rem 1rem;font-size:0.78rem;text-decoration:none;transition:all 0.2s" onmouseover="this.style.background='rgba(0,212,255,0.15)'" onmouseout="this.style.background='rgba(0,212,255,0.08)'">
+                    🏠 プロバイダーダッシュボード →
+                </a>
+            </div>
+        </div>
+    </div>
+
 </body>
 
 </html>
