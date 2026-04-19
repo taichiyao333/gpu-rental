@@ -999,4 +999,123 @@ router.post('/sf/raid-jobs/:id/force-complete', authMiddleware, adminOnly, (req,
     res.json({ success: true, id: job.id, status: 'completed' });
 });
 
+// ═══════════════════════════════════════════════════════════════════════════
+// ⚡ THE DOJO: SF ノード管理 API
+// ═══════════════════════════════════════════════════════════════════════════
+
+// ─── GET /api/admin/sf/nodes ───────────────────────────────────────────────
+// THE DOJO エージェントノード一覧 (ステータス・統計付き)
+router.get('/sf/nodes', authMiddleware, adminOnly, (req, res) => {
+    const db = getDb();
+    try {
+        const nodes = db.prepare(`
+            SELECT
+                n.*,
+                u.username   AS provider_name,
+                u.email      AS provider_email,
+                CASE
+                  WHEN datetime(n.last_seen) > datetime('now', '-120 seconds') THEN 'online'
+                  ELSE 'offline'
+                END AS heartbeat_status
+            FROM sf_nodes n
+            LEFT JOIN users u ON n.provider_id = u.id
+            ORDER BY n.last_seen DESC
+        `).all();
+
+        // サマリー統計
+        const total   = nodes.length;
+        const online  = nodes.filter(n => n.status === 'idle' || n.status === 'online').length;
+        const busy    = nodes.filter(n => n.status === 'busy').length;
+        const offline = nodes.filter(n => n.status === 'offline').length;
+        const totalTf = nodes.reduce((s, n) => s + (n.fp32_tflops || 0), 0);
+
+        res.json({
+            nodes,
+            stats: { total, online, busy, offline, total_tflops: Math.round(totalTf * 10) / 10 },
+        });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// ─── GET /api/admin/sf/nodes/:id ──────────────────────────────────────────
+router.get('/sf/nodes/:id', authMiddleware, adminOnly, (req, res) => {
+    const db = getDb();
+    try {
+        const node = db.prepare(`
+            SELECT n.*, u.username as provider_name, u.email as provider_email
+            FROM sf_nodes n LEFT JOIN users u ON n.provider_id = u.id
+            WHERE n.id = ?
+        `).get(req.params.id);
+        if (!node) return res.status(404).json({ error: 'ノードが見つかりません' });
+
+        // このノードに関連する直近5件のレイドジョブ
+        let recentJobs = [];
+        try {
+            recentJobs = db.prepare(`
+                SELECT id, status, node_count, points_used, created_at
+                FROM sf_raid_jobs
+                WHERE mrp_job_ids LIKE ?
+                ORDER BY created_at DESC LIMIT 5
+            `).all(`%${node.id}%`);
+        } catch (_) {}
+
+        res.json({ ...node, recent_jobs: recentJobs });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// ─── PATCH /api/admin/sf/nodes/:id/status ─────────────────────────────────
+// ノードステータスを強制変更 (idle / busy / offline / maintenance)
+router.patch('/sf/nodes/:id/status', authMiddleware, adminOnly, (req, res) => {
+    const db = getDb();
+    const { status } = req.body;
+    const VALID = ['idle', 'busy', 'offline', 'maintenance'];
+    if (!VALID.includes(status)) {
+        return res.status(400).json({ error: `ステータスは ${VALID.join('/')} のいずれかを指定してください` });
+    }
+
+    const node = db.prepare('SELECT id FROM sf_nodes WHERE id = ?').get(req.params.id);
+    if (!node) return res.status(404).json({ error: 'ノードが見つかりません' });
+
+    db.prepare('UPDATE sf_nodes SET status = ? WHERE id = ?').run(status, node.id);
+    console.log(`[Admin] SF Node #${node.id} status → ${status} by admin #${req.user.id}`);
+    res.json({ success: true, id: node.id, status });
+});
+
+// ─── DELETE /api/admin/sf/nodes/:id ───────────────────────────────────────
+// ノードレコードを削除 (長期オフライン・不正ノードの整理)
+router.delete('/sf/nodes/:id', authMiddleware, adminOnly, (req, res) => {
+    const db = getDb();
+    const node = db.prepare('SELECT * FROM sf_nodes WHERE id = ?').get(req.params.id);
+    if (!node) return res.status(404).json({ error: 'ノードが見つかりません' });
+
+    if (node.status === 'busy') {
+        return res.status(400).json({ error: 'busy状態のノードは削除できません。先にオフラインに変更してください。' });
+    }
+
+    db.prepare('DELETE FROM sf_nodes WHERE id = ?').run(node.id);
+    console.log(`[Admin] SF Node #${node.id} (${node.hostname}) deleted by admin #${req.user.id}`);
+    res.json({ success: true, id: node.id, hostname: node.hostname });
+});
+
+// ─── POST /api/admin/sf/nodes/bulk-offline ────────────────────────────────
+// heartbeat タイムアウトした全ノードを強制オフライン
+router.post('/sf/nodes/bulk-offline', authMiddleware, adminOnly, (req, res) => {
+    const db = getDb();
+    try {
+        const result = db.prepare(`
+            UPDATE sf_nodes
+            SET status = 'offline'
+            WHERE status IN ('idle', 'busy')
+              AND (last_seen IS NULL OR datetime(last_seen) < datetime('now', '-120 seconds'))
+        `).run();
+        console.log(`[Admin] Bulk offline: ${result.changes} SF nodes → offline by admin #${req.user.id}`);
+        res.json({ success: true, affected: result.changes });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
 module.exports = router;

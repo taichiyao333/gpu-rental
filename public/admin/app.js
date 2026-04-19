@@ -1,4 +1,4 @@
-﻿/* 笏笏 STATE 笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏 */
+/* 笏笏 STATE 笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏 */
 const token = localStorage.getItem('gpu_token');
 const user = JSON.parse(localStorage.getItem('gpu_user') || 'null');
 
@@ -610,55 +610,107 @@ setInterval(() => { if (currentSection === 'overview') refreshAll(); }, 8000);
 
 /* 笏笏 GPU SF 繝弱・繝臥屮隕・笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏 */
 async function loadSfNodes() {
-    const tbody = document.getElementById('sfNodeTableBody');
+    const tbody   = document.getElementById('sfNodeTableBody');
     const summary = document.getElementById('sfNodeSummary');
     if (!tbody) return;
-    tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:2rem;color:var(--text3)">繝ｭ繝ｼ繝我ｸｭ...</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="9" style="text-align:center;padding:2rem;color:var(--text3)">ロード中...</td></tr>';
 
     try {
-        const data = await api('/sf/nodes');
+        const data  = await api('/sf/nodes');
         const nodes = data.nodes || [];
+        const stats = data.stats || {};
 
-        const online  = nodes.filter(n => n.status === 'online').length;
-        const busy    = nodes.filter(n => n.status === 'busy').length;
-        const offline = nodes.filter(n => n.status === 'offline').length;
-        const totalTf = nodes.reduce((s, n) => s + (n.fp32_tflops || 0), 0);
-
+        // ── サマリー統計カード ─────────────────────────────────────────
         if (summary) {
             summary.innerHTML = [
-                { label: 'ONLINE',    val: online,               color: '#00e5a0' },
-                { label: 'BUSY',      val: busy,                 color: '#ffd700' },
-                { label: 'OFFLINE',   val: offline,              color: '#5a5a7a' },
-                { label: 'TOTAL TF',  val: totalTf.toFixed(1)+' TF', color: '#00d4ff' },
+                { label: 'ONLINE/IDLE', val: stats.online  ?? nodes.filter(n => n.status === 'idle').length, color: '#00e5a0' },
+                { label: 'BUSY',        val: stats.busy    ?? nodes.filter(n => n.status === 'busy').length, color: '#ffd700' },
+                { label: 'OFFLINE',     val: stats.offline ?? nodes.filter(n => n.status === 'offline').length, color: '#5a5a7a' },
+                { label: 'TOTAL TF',    val: (stats.total_tflops ?? 0).toFixed(1)+' TF', color: '#00d4ff' },
+                { label: 'NODES',       val: stats.total ?? nodes.length, color: '#a78bfa' },
             ].map(s => `<div class="stat-card" style="border-left:3px solid ${s.color}">
                 <div style="font-size:1.6rem;font-weight:700;color:${s.color}">${s.val}</div>
                 <div style="font-size:.8rem;color:var(--text2);margin-top:.25rem">${s.label}</div>
             </div>`).join('');
         }
 
-        const statusBadge = { online:'b-success', busy:'b-warning', offline:'b-muted' };
-        const statusLabel = { online:'ONLINE', busy:'BUSY', offline:'OFFLINE' };
+        const STATUS_BADGE = {
+            idle:        { cls: 'b-success',  text: 'IDLE' },
+            online:      { cls: 'b-success',  text: 'ONLINE' },
+            busy:        { cls: 'b-warning',  text: 'BUSY' },
+            offline:     { cls: 'b-muted',    text: 'OFFLINE' },
+            maintenance: { cls: 'b-danger',   text: 'MAINT' },
+        };
 
         tbody.innerHTML = nodes.map(n => {
             const age = n.last_seen ? Math.round((Date.now() - new Date(n.last_seen)) / 1000) : 9999;
             const ageColor = age < 30 ? '#00e5a0' : age < 120 ? '#ffb300' : '#ff4757';
+            const sb = STATUS_BADGE[n.status] || { cls: 'b-muted', text: n.status };
             const upMbps = n.upload_mbps;
+            const gpuShort = (() => { try { const g = JSON.parse(n.gpu_specs||'[]'); return g[0]?.name?.replace(/NVIDIA\s+/i,'').substring(0,18) || '?'; } catch { return '?'; } })();
+            const isOffline = n.status === 'offline' || age > 120;
+
             return `<tr>
               <td class="mono">#${n.id}</td>
-              <td><strong>${n.hostname || '窶・}</strong><div style="font-size:.72rem;color:var(--text3)">${n.provider_name || ''}</div></td>
-              <td>${n.location || '窶・}</td>
-              <td><span class="badge ${statusBadge[n.status] || 'b-muted'}">${statusLabel[n.status] || n.status}</span></td>
-              <td class="mono" style="color:#00d4ff">${(n.fp32_tflops || 0).toFixed(1)} TF</td>
-              <td class="mono">${n.rtt_ms ? n.rtt_ms.toFixed(0)+'ms' : '窶・}</td>
-              <td class="mono">${upMbps ? (upMbps >= 1000 ? (upMbps/1000).toFixed(1)+'G' : upMbps.toFixed(0)+'M') : '窶・}</td>
-              <td class="mono" style="color:${ageColor}">${age < 9999 ? age+'s蜑・ : '窶・}</td>
+              <td><strong>${n.hostname || '–'}</strong><div style="font-size:.72rem;color:var(--text3)">${n.provider_name || ''}</div></td>
+              <td style="font-size:.8rem">${gpuShort}</td>
+              <td>${n.location || '–'}</td>
+              <td><span class="badge ${sb.cls}">${sb.text}</span></td>
+              <td class="mono" style="color:#00d4ff">${(n.fp32_tflops||0).toFixed(1)} TF</td>
+              <td class="mono">${n.rtt_ms ? n.rtt_ms.toFixed(0)+'ms' : '–'}</td>
+              <td class="mono" style="color:${ageColor}">${age < 9999 ? age+'s前' : '–'}</td>
+              <td style="display:flex;gap:.35rem;flex-wrap:wrap">
+                ${!isOffline ? `<button class="btn btn-ghost btn-xs"
+                    onclick="setSfNodeStatus(${n.id},'offline')"
+                    title="強制オフライン">⏹</button>` : ''}
+                ${n.status === 'offline' ? `<button class="btn btn-ghost btn-xs"
+                    onclick="setSfNodeStatus(${n.id},'idle')"
+                    title="IDLEに復帰">▶</button>` : ''}
+                <button class="btn btn-danger btn-xs"
+                    onclick="deleteSfNode(${n.id},'${(n.hostname||'').replace(/'/g,'')}')"
+                    title="削除">🗑</button>
+              </td>
             </tr>`;
-        }).join('') || '<tr><td colspan="8" style="text-align:center;color:var(--text3);padding:2rem">逋ｻ骭ｲ貂医∩繝弱・繝峨↑縺・/td></tr>';
+        }).join('') || '<tr><td colspan="9" style="text-align:center;color:var(--text3);padding:2rem">登録済みノードなし</td></tr>';
 
     } catch (err) {
-        tbody.innerHTML = `<tr><td colspan="8" style="text-align:center;padding:1rem;color:var(--danger)">${err.message}</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="9" style="text-align:center;padding:1rem;color:var(--danger)">${err.message}</td></tr>`;
     }
 }
+
+async function setSfNodeStatus(nodeId, status) {
+    if (!confirm(`ノード #${nodeId} のステータスを「${status}」に変更しますか？`)) return;
+    try {
+        await api(`/sf/nodes/${nodeId}/status`, 'PATCH', { status });
+        showToast(`ノード #${nodeId} → ${status} に変更しました`, 'success');
+        loadSfNodes();
+    } catch (err) {
+        showToast('ステータス変更失敗: ' + err.message, 'error');
+    }
+}
+
+async function deleteSfNode(nodeId, hostname) {
+    if (!confirm(`ノード #${nodeId} (${hostname}) を削除しますか？この操作は取り消せません。`)) return;
+    try {
+        await api(`/sf/nodes/${nodeId}`, 'DELETE');
+        showToast(`ノード #${nodeId} を削除しました`, 'success');
+        loadSfNodes();
+    } catch (err) {
+        showToast('削除失敗: ' + (err.message || ''), 'error');
+    }
+}
+
+async function bulkOfflineSfNodes() {
+    if (!confirm('heartbeat タイムアウトした全ノードをオフラインに変更しますか？')) return;
+    try {
+        const d = await api('/sf/nodes/bulk-offline', 'POST');
+        showToast(`${d.affected}件のノードをオフラインに変更しました`, 'success');
+        loadSfNodes();
+    } catch (err) {
+        showToast('一括オフライン失敗: ' + err.message, 'error');
+    }
+}
+
 
 
 

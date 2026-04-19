@@ -1971,23 +1971,27 @@
                         <div class="section-title">🥊 GPU SF ノード監視</div>
                         <div class="section-sub">THE DOJO エージェントの稼働状況・ベンチマーク</div>
                     </div>
-                    <button class="btn btn-ghost btn-sm" onclick="loadSfNodes()">↻ 更新</button>
+                    <div style="display:flex;gap:0.5rem">
+                        <button class="btn btn-ghost btn-sm" onclick="loadSfNodes()">↻ 更新</button>
+                        <button class="btn btn-ghost btn-sm" style="border-color:#ff4757;color:#ff4757" onclick="bulkOfflineSfNodes()">⏹ 一括オフライン</button>
+                    </div>
                 </div>
-                <div id="sfNodeSummary" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:1rem;margin-bottom:1.5rem"></div>
+                <div id="sfNodeSummary" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:1rem;margin-bottom:1.5rem"></div>
                 <div class="table-card">
                     <table>
                         <thead><tr>
                             <th>ID</th>
                             <th>ホスト名 / プロバイダー</th>
+                            <th>GPU</th>
                             <th>ロケーション</th>
                             <th>ステータス</th>
                             <th>算力 (TF)</th>
                             <th>RTT</th>
-                            <th>帯域</th>
                             <th>最終確認</th>
+                            <th>操作</th>
                         </tr></thead>
                         <tbody id="sfNodeTableBody">
-                            <tr><td colspan="8" style="text-align:center;color:var(--text3);padding:2rem">
+                            <tr><td colspan="9" style="text-align:center;color:var(--text3);padding:2rem">
                                 <div class="spinner"></div>
                             </td></tr>
                         </tbody>
@@ -2001,6 +2005,7 @@
                     <a href="/lobby/" target="_blank" class="btn btn-ghost btn-sm" style="border-color:#00d4ff;color:#00d4ff">🥊 THE LOBBY →</a>
                 </div>
             </div>
+
 
             <!-- ═══ SF RAID JOBS ═══ -->
             <div class="section" id="section-sf-raid-jobs">
