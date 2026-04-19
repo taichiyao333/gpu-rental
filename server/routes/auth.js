@@ -1,4 +1,4 @@
-const express = require('express');
+﻿const express = require('express');
 const router = express.Router();
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
@@ -71,6 +71,38 @@ async function verifyCaptcha(token) {
 
 
 // POST /api/auth/register
+/**
+ * @openapi
+ * /api/auth/register:
+ *   post:
+ *     tags: [Auth]
+ *     summary: 新規ユーザー登録
+ *     security: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [username, email, password]
+ *             properties:
+ *               username: { type: string, example: taich }
+ *               email:    { type: string, format: email, example: taich@example.com }
+ *               password: { type: string, minLength: 8, example: Passw0rd! }
+ *               coupon_code: { type: string, example: WELCOME10 }
+ *     responses:
+ *       201:
+ *         description: 登録成功・JWT を返す
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 token: { type: string }
+ *                 user:  { $ref: '#/components/schemas/User' }
+ *       400: { description: バリデーションエラー }
+ *       409: { description: メールアドレス重複 }
+ */
 router.post('/register', async (req, res) => {
     const { username, email, password, captcha_token } = req.body;
     if (!username || !email || !password)

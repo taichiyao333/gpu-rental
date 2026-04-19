@@ -39,6 +39,7 @@ const stripeRoutes = require('./routes/stripe');
 const agentRoutes = require('./routes/agent');
 const blenderRoutes = require('./routes/blender');
 const createSfRouter = require('./routes/sf');  // GPU SF: THE REFEREE (factory)
+const { setupSwagger } = require('./swagger');   // Swagger / OpenAPI docs
 
 
 
@@ -258,6 +259,11 @@ app.get('/api/maintenance/status', (req, res) => {
         message: global.maintenanceMode?.message ?? '',
     });
 });
+
+// ─── Swagger / OpenAPI Docs ──────────────────────────────────────────────────
+// /api/docs       → Swagger UI (dark theme)
+// /api/docs.json  → OpenAPI 3.0 JSON
+setupSwagger(app);
 
 // ─── API Routes ───────────────────────────────────────────────────────────────
 app.use('/api/auth', authRoutes);
