@@ -999,3 +999,114 @@ a {
 .file-action-btn:hover { background: rgba(255,255,255,0.1); color: var(--text); }
 .file-action-btn.download-btn:hover { background: rgba(0,229,160,0.15); color: #00e5a0; }
 .file-action-btn.delete-btn:hover { background: rgba(255,71,87,0.15); color: #ff4757; }
+
+
+/* ─────────────────────────────────────────────────────────────────
+   ⚡ GPU STREET FIGHTER — Workspace Status Panel
+   #sfStatusPanel は app.js で動的に生成されるため、
+   ここではアニメーションと補助スタイルのみ定義する
+   ───────────────────────────────────────────────────────────────── */
+
+@keyframes sfWidgetIn {
+    from { opacity: 0; transform: translateY(16px) scale(0.96); }
+    to   { opacity: 1; transform: translateY(0)    scale(1);    }
+}
+
+@keyframes sfPulse {
+    0%, 100% { box-shadow: 0 0 0   0 rgba(108, 71, 255, 0.4); }
+    50%       { box-shadow: 0 0 24px 4px rgba(108, 71, 255, 0.15); }
+}
+
+/* SF ステータスバッジ (ワークスペースヘッダー内) */
+.sf-status-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 0.7rem;
+    font-weight: 600;
+    padding: 3px 10px;
+    border-radius: 100px;
+    border: 1px solid rgba(108, 71, 255, 0.35);
+    background: rgba(108, 71, 255, 0.12);
+    color: #9c7cff;
+    letter-spacing: 0.04em;
+    cursor: default;
+    user-select: none;
+    white-space: nowrap;
+}
+
+.sf-status-badge .sf-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: #6c47ff;
+    animation: sfDotPulse 2s ease infinite;
+}
+
+@keyframes sfDotPulse {
+    0%, 100% { opacity: 1; }
+    50%       { opacity: 0.3; }
+}
+
+.sf-status-badge.running .sf-dot { background: #ff4757; }
+.sf-status-badge.completed .sf-dot { background: #00e5a0; animation: none; }
+.sf-status-badge.failed .sf-dot { background: #ff4757; animation: none; }
+
+/* SF プログレストラック (パネル内外共通) */
+.sf-progress-track {
+    height: 3px;
+    background: rgba(108, 71, 255, 0.12);
+    border-radius: 2px;
+    overflow: hidden;
+}
+
+.sf-progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #6c47ff, #00d4ff);
+    border-radius: 2px;
+    transition: width 0.6s ease;
+}
+
+/* SF ダウンロードボタン (完了時) */
+.sf-download-btn {
+    display: block;
+    text-align: center;
+    padding: 0.6rem 1rem;
+    background: linear-gradient(135deg, #6c47ff, #00d4ff);
+    border: none;
+    border-radius: 10px;
+    color: #fff;
+    font-weight: 700;
+    font-size: 0.83rem;
+    text-decoration: none;
+    cursor: pointer;
+    transition: opacity 0.2s, transform 0.15s;
+    font-family: 'Inter', sans-serif;
+}
+
+.sf-download-btn:hover {
+    opacity: 0.9;
+    transform: translateY(-1px);
+}
+
+/* テーブル内 SF バッジ */
+.sf-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 0.72rem;
+    font-weight: 600;
+    padding: 2px 8px;
+    border-radius: 100px;
+    border: 1px solid transparent;
+    white-space: nowrap;
+}
+
+.sf-badge.payment_pending { background: rgba(255,179,0,.12);  color: #ffb300; border-color: rgba(255,179,0,.25);  }
+.sf-badge.paid            { background: rgba(0,229,160,.12);  color: #00e5a0; border-color: rgba(0,229,160,.25);  }
+.sf-badge.dispatched      { background: rgba(0,212,255,.12);  color: #00d4ff; border-color: rgba(0,212,255,.25);  }
+.sf-badge.running         { background: rgba(255,71,87,.12);  color: #ff4757; border-color: rgba(255,71,87,.25);  }
+.sf-badge.completed       { background: rgba(0,229,160,.15);  color: #00e5a0; border-color: rgba(0,229,160,.3);   }
+.sf-badge.failed          { background: rgba(255,71,87,.12);  color: #ff4757; border-color: rgba(255,71,87,.25);  }
+.sf-badge.cancelled       { background: rgba(120,120,150,.1); color: #787896; border-color: rgba(120,120,150,.2); }
+

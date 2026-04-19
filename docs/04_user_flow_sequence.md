@@ -365,3 +365,112 @@ Scheduler / User
 [管理画面 /admin/]
   └── SF Raid Jobs タブ: GET /api/admin/sf/raid-jobs/stats
 ```
+
+---
+
+## 6. SF Raid 決済フロー (2026-04-19 実装)
+
+### 6.1 ポイント払いフロー
+
+```
+[THE LOBBY /lobby/]
+   ユーザー: レイドプラン確定 → ポイント払いを選択
+        │
+        ▼
+POST /api/payments/sf-raid/pay-with-points
+   { sf_raid_job_id: 7 }
+        │
+        ├─ sf_raid_jobs.status='payment_pending' を確認
+        ├─ users.point_balance >= points_needed を確認
+        └─ DB トランザクション:
+           ├─ users.point_balance -= pointsNeeded
+           ├─ sf_raid_jobs.status = 'paid', paid_at = NOW()
+           └─ point_logs INSERT (type='spend', source='raid_job')
+        │
+        ▼
+   レスポンス: { status: 'paid', points_used: 150 }
+        │
+        ▼
+POST /api/reservations/sf-confirm
+   { sf_raid_job_id: 7, gpu_id: 3, duration_hours: 1 }
+        │
+        ├─ reservations INSERT (total_price=0, sf_raid_job_id=7)
+        └─ sf_raid_jobs.status = 'dispatched'
+        │
+        ▼
+   レスポンス: { workspace_url: '/workspace/?pod=pending&raid_job=7' }
+        │
+        ▼
+[ワークスペース /workspace/?pod=pending&raid_job=7]
+   initSfFromUrl() → SF ステータスパネル注入
+   10秒ポーリング: GET /api/sf/raid/7
+        │
+        ▼ status='completed'
+   ダウンロードボタン表示 (output_url or ファイルタブ)
+```
+
+### 6.2 Stripe クレジットカード払いフロー
+
+```
+[THE LOBBY]
+   ユーザー: カード払いを選択
+        │
+        ▼
+POST /api/payments/sf-raid/create-stripe-session
+   { sf_raid_job_id: 7 }
+        │
+        ▼ Stripe Checkout Session 作成
+   metadata: { sf_raid_job_id: '7', type: 'sf_raid' }
+        │
+        ▼ ユーザー → Stripe Checkout ページ
+        │
+        ▼ 決済成功
+POST /api/payments/webhook (Stripe)
+   event.type = 'checkout.session.completed'
+   metadata.type === 'sf_raid'
+        │
+        ▼
+   sf_raid_jobs.status = 'paid'
+   (以降は 6.1 と同じ → sf-confirm → ワークスペース)
+```
+
+### 6.3 THE DOJO エージェントセットアッププロー
+
+```
+[プロバイダー]
+   1. ポータル /portal/ にログイン
+   2. THE DOJO セクション → エージェントトークンをコピー
+        GET /api/auth/agent-token
+        │ → { agent_token: 'abc123...' }
+        │
+   3. GPU サーバーで起動:
+      node provider/agent.js --token abc123... --server https://gpurental.jp
+        │
+   4. 初回起動: POST /api/sf/nodes/register (X-Agent-Token: abc123...)
+        │ → SF Node #5 登録完了
+        │
+   5. 30秒ごと: POST /api/sf/nodes/heartbeat
+        │ Body: { gpu_stats: [{index:0, temp:62, util:45, ...}], rtt_ms: 3.2 }
+        │ Auth: X-Agent-Token ヘッダー (authOrAgent ミドルウェア)
+        │
+   6. 管理画面 /admin/ → SF Nodes タブでリアルタイム確認
+```
+
+### 6.4 管理者オペレーションフロー
+
+```
+[管理画面 /admin/ → SF Raid Jobs タブ]
+   loadSfRaidJobs() → GET /api/admin/sf/raid-jobs
+        │
+   テーブル表示 (ステータス・収益・ノード数)
+        │
+   dispatched/running ジョブ:
+        [停止] → POST /api/admin/sf/raid-jobs/:id/cancel
+                   ├─ status = 'cancelled'
+                   └─ points_used > 0 → 自動返金 (point_logs.type='refund')
+        │
+   payment_pending ジョブ:
+        [強制完了] → POST /api/admin/sf/raid-jobs/:id/force-complete
+                     └─ status = 'completed', completed_at = NOW()
+```
+
