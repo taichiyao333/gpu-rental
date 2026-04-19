@@ -5,6 +5,7 @@ module.exports = {
             script: 'server/index.js',
             cwd: 'F:/antigravity/gpu-platform',
             instances: 1,
+            exec_mode: 'fork',
             autorestart: true,
             watch: false,
             max_memory_restart: '1G',
