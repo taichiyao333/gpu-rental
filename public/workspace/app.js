@@ -1311,5 +1311,136 @@ function stopBlenderPolling() {
 }
 
 
-init();
 
+/* ─── GPU Street Fighter: URL パラメータ検出 ─────────────────────── */
+(function initSfFromUrl() {
+    const params  = new URLSearchParams(location.search);
+    const raidJob = params.get('raid_job');
+    const matchId = params.get('match');
+
+    if (!raidJob && !matchId) return; // SF パラメータなし → 通常起動
+
+    // SF タブへ自動切り替え (DOMContentLoaded 後に実行)
+    function switchToSfTab() {
+        // タブボタンを探す (data-tab="sf" または id="tabSf" など)
+        const sfTabBtn = document.querySelector('[data-tab="sf"], #tabSf, .ws-tab-btn[data-target="sf"]');
+        const sfPanel  = document.getElementById('tabPanelSf') || document.getElementById('sfPanel');
+
+        if (sfTabBtn) {
+            // 全タブを非アクティブ化
+            document.querySelectorAll('.ws-tab-btn, [data-tab]').forEach(b => b.classList.remove('active'));
+            document.querySelectorAll('.ws-tab-panel, [id^="tabPanel"]').forEach(p => {
+                p.style.display = 'none';
+                p.classList.remove('active');
+            });
+            sfTabBtn.classList.add('active');
+            if (sfPanel) { sfPanel.style.display = ''; sfPanel.classList.add('active'); }
+        }
+
+        // SF ジョブ情報パネルをインジェクト（既存パネルがない場合）
+        injectSfStatusPanel(raidJob, matchId);
+    }
+
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', () => setTimeout(switchToSfTab, 600));
+    } else {
+        setTimeout(switchToSfTab, 600);
+    }
+})();
+
+/* ─── SF ジョブ状態パネル ────────────────────────────────────────── */
+let _sfPollingTimer = null;
+
+function injectSfStatusPanel(raidJobId, matchId) {
+    // 既存パネルがあればスキップ
+    if (document.getElementById('sfStatusPanel')) return;
+
+    const jobType   = raidJobId ? 'raid' : 'match';
+    const jobId     = raidJobId || matchId;
+    const apiPath   = raidJobId ? `/sf/raid/${raidJobId}` : `/sf/match/${matchId}`;
+    const jobTitle  = raidJobId ? '⚡ RAID BATTLE' : '⚡ 1on1 MATCH';
+
+    // パネル HTML
+    const panel = document.createElement('div');
+    panel.id = 'sfStatusPanel';
+    panel.style.cssText = [
+        'position:fixed', 'bottom:1.5rem', 'right:1.5rem',
+        'width:320px', 'z-index:8000',
+        'background:rgba(10,10,25,0.95)',
+        'border:1px solid rgba(108,71,255,0.45)',
+        'backdrop-filter:blur(14px)',
+        'border-radius:16px',
+        'padding:1.2rem 1.4rem',
+        'font-family:Inter,sans-serif',
+        'box-shadow:0 12px 40px rgba(0,0,0,0.6)',
+        'animation:sfWidgetIn 0.4s ease',
+    ].join(';');
+
+    panel.innerHTML = `
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0.9rem">
+            <span style="font-size:0.9rem;font-weight:800;color:#e8e8f0;letter-spacing:0.05em">${jobTitle}</span>
+            <button onclick="document.getElementById('sfStatusPanel').remove();clearInterval(window._sfPollingTimer)"
+                style="background:none;border:none;color:#555;cursor:pointer;font-size:1rem;line-height:1">✕</button>
+        </div>
+        <div id="sfJobId" style="font-size:0.72rem;color:#6c47ff;margin-bottom:0.75rem">Job #${jobId}</div>
+        <div id="sfJobStatus" style="font-size:0.82rem;color:#9898b8;margin-bottom:0.6rem">📡 ステータスを取得中...</div>
+        <div id="sfJobProgress" style="height:3px;background:rgba(108,71,255,0.15);border-radius:2px;overflow:hidden;margin-bottom:0.9rem">
+            <div id="sfJobProgressFill" style="height:100%;width:0%;background:linear-gradient(90deg,#6c47ff,#00d4ff);border-radius:2px;transition:width 0.5s ease"></div>
+        </div>
+        <div id="sfJobActions"></div>
+        <div style="font-size:0.65rem;color:#3a3a5a;margin-top:0.6rem;text-align:right">10秒ごとに自動更新</div>
+    `;
+    document.body.appendChild(panel);
+
+    // 即時取得 + ポーリング
+    async function fetchSfStatus() {
+        try {
+            const data = await apiFetch(apiPath);
+            updateSfPanel(data, jobType);
+        } catch (e) {
+            const el = document.getElementById('sfJobStatus');
+            if (el) el.textContent = '⚠️ 取得エラー: ' + e.message;
+        }
+    }
+
+    fetchSfStatus();
+    window._sfPollingTimer = setInterval(fetchSfStatus, 10000);
+}
+
+function updateSfPanel(data, jobType) {
+    const statusEl   = document.getElementById('sfJobStatus');
+    const progressEl = document.getElementById('sfJobProgressFill');
+    const actionsEl  = document.getElementById('sfJobActions');
+    if (!statusEl) return;
+
+    const STATUS_LABEL = {
+        payment_pending: { icon: '⏳', text: '決済待ち',     pct: 5 },
+        paid:            { icon: '💳', text: '決済完了',     pct: 15 },
+        dispatched:      { icon: '📡', text: 'ノードへ配信中', pct: 35 },
+        running:         { icon: '🔥', text: '処理中...',    pct: 65 },
+        completed:       { icon: '✅', text: '完了しました！', pct: 100 },
+        failed:          { icon: '❌', text: '失敗',         pct: 0 },
+        cancelled:       { icon: '🚫', text: 'キャンセル済み', pct: 0 },
+    };
+
+    const s = STATUS_LABEL[data.status] || { icon: '?', text: data.status, pct: 0 };
+    statusEl.innerHTML = `<span style="font-size:1.2rem">${s.icon}</span> <strong style="color:#e8e8f0">${s.text}</strong>`;
+    if (progressEl) progressEl.style.width = s.pct + '%';
+
+    // 完了時: ダウンロードボタン表示
+    if (data.status === 'completed' && actionsEl) {
+        actionsEl.innerHTML = data.output_url
+            ? `<a href="${data.output_url}" target="_blank"
+                style="display:block;text-align:center;padding:0.55rem;background:linear-gradient(135deg,#6c47ff,#00d4ff);
+                       border-radius:9px;color:#fff;font-weight:700;font-size:0.82rem;text-decoration:none">
+                ⬇ 成果物をダウンロード</a>`
+            : `<p style="font-size:0.78rem;color:#00e5a0;text-align:center">✅ 完了 — ファイルタブを確認してください</p>`;
+
+        // 完了したらポーリング停止
+        clearInterval(window._sfPollingTimer);
+    } else if (['failed', 'cancelled'].includes(data.status)) {
+        clearInterval(window._sfPollingTimer);
+    }
+}
+
+init();
