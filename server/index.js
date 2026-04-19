@@ -82,6 +82,7 @@ const io = new Server(server, {
         credentials: true,
     },
 });
+global.io = io; // Stripe webhook 等、io を直接参照できないモジュールから使用
 
 // ─── Ensure Storage Directories ──────────────────────────────────────────────
 [

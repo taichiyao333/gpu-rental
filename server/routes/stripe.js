@@ -501,6 +501,35 @@ async function webhookHandler(req, res) {
                     console.log(`✅ [Webhook] Points granted: user=${purchase.user_id} +${purchase.points}pt purchase=${purchase.id}`);
                 }
             }
+
+            // ─── SF Raid カード決済完了 ───────────────────────────
+            if (meta.type === 'sf_raid') {
+                const jobId   = Number(meta.sf_raid_job_id);
+                const userId  = Number(meta.user_id);
+                const couponId = meta.coupon_id ? Number(meta.coupon_id) : null;
+
+                const job = db.prepare('SELECT * FROM sf_raid_jobs WHERE id = ?').get(jobId);
+                if (job && job.status === 'payment_pending') {
+                    db.prepare(`UPDATE sf_raid_jobs SET status = 'paid', stripe_payment_id = ? WHERE id = ?`)
+                      .run(session.payment_intent || session.id, jobId);
+
+                    // クーポン使用記録
+                    if (couponId) {
+                        db.prepare('UPDATE coupons SET used_count = used_count + 1 WHERE id = ?').run(couponId);
+                        try {
+                            db.prepare('INSERT INTO coupon_uses (coupon_id, user_id, discount_yen) VALUES (?, ?, ?)')
+                              .run(couponId, userId, 0);
+                        } catch (_) {}
+                    }
+
+                    // WebSocket でリアルタイム通知
+                    if (global.io) {
+                        global.io.to(`user_${userId}`).emit('sf:raid_paid', { job_id: jobId });
+                    }
+
+                    console.log(`✅ [Webhook] SF Raid Job #${jobId} paid via Stripe (user=${userId})`);
+                }
+            }
             break;
         }
         default:
