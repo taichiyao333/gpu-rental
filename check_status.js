@@ -168,12 +168,24 @@ async function main() {
     // ═══════════════════════════════════════
     const plTable = safeGet(() => db.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='point_logs'").get());
     if (plTable) {
-        const sfLogs = safeGet(() => db.prepare("SELECT COUNT(*) as c FROM point_logs WHERE source='raid_job'").get()?.c ?? 0, 0);
+        const sfLogs    = safeGet(() => db.prepare("SELECT COUNT(*) as c FROM point_logs WHERE source='raid_job'").get()?.c ?? 0, 0);
         const earnTotal = safeGet(() => db.prepare("SELECT SUM(amount) as s FROM point_logs WHERE type='earn'").get()?.s ?? 0, 0);
-        const spendTotal = safeGet(() => db.prepare("SELECT SUM(amount) as s FROM point_logs WHERE type='spend'").get()?.s ?? 0, 0);
-        console.log(`\n  ポイントログ : earn合計: ${c.green}+${earnTotal}pt${c.reset} | spend合計: ${c.red}-${spendTotal}pt${c.reset} | SF由来: ${sfLogs}件`);
-        result.pointLogs = { sfCount: sfLogs, earnTotal, spendTotal };
+        const spendTotal= safeGet(() => db.prepare("SELECT SUM(amount) as s FROM point_logs WHERE type='spend'").get()?.s ?? 0, 0);
+        const refundTotal=safeGet(() => db.prepare("SELECT SUM(amount) as s FROM point_logs WHERE type='refund'").get()?.s ?? 0, 0);
+        console.log(`\n  ポイントログ : earn: ${c.green}+${earnTotal}pt${c.reset} | spend: ${c.red}-${spendTotal}pt${c.reset} | refund: ${c.yellow}+${refundTotal}pt${c.reset} | SF由来: ${sfLogs}件`);
+        result.pointLogs = { sfCount: sfLogs, earnTotal, spendTotal, refundTotal };
     }
+
+    // --- THE DOJO エージェントトークン設定済みプロバイダー ---
+    const agentProviders = safeGet(() => db.prepare("SELECT COUNT(*) as c FROM users WHERE agent_token IS NOT NULL AND role='provider'").get()?.c ?? 0, 0);
+    const sfConfirmResv  = safeGet(() => {
+        const col = db.prepare("PRAGMA table_info(reservations)").all().some(c => c.name === 'sf_raid_job_id');
+        return col ? db.prepare("SELECT COUNT(*) as c FROM reservations WHERE sf_raid_job_id IS NOT NULL").get()?.c ?? 0 : '—';
+    }, '—');
+    console.log(`\n  THE DOJO    : エージェントトークン設定済みプロバイダー: ${c.bold}${agentProviders}${c.reset}`);
+    console.log(`  SF予約紐付き : ${c.bold}${sfConfirmResv}${c.reset} 件 (/api/reservations/sf-confirm)`);
+    result.theDojoProviders = agentProviders;
+    result.sfLinkedReservations = sfConfirmResv;
 
     // ═══════════════════════════════════════
     // 4. JSON モード出力

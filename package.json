@@ -1,4 +1,4 @@
-{
+﻿{
   "name": "gpu-rental-platform",
   "version": "1.0.0",
   "description": "RUNPOD-like GPU rental platform - rent your RTX A4500 to anyone",
@@ -13,7 +13,7 @@
     "check:full":  "node check_status.js --full",
     "check:json":  "node check_status.js --json",
     "check:api":   "powershell -ExecutionPolicy Bypass -File scripts/check_api.ps1",
-    "check:api:sf":"powershell -ExecutionPolicy Bypass -File scripts/check_api.ps1 -SfOnly",
+    "check:api:sf":"powershell -ExecutionPolicy Bypass -File scripts/check_api.ps1 -sf",
     "backup":      "node -e \"require('./server/services/backup').runBackupNow()\""
   },
   "dependencies": {
@@ -40,3 +40,4 @@
     "nodemon": "^3.0.3"
   }
 }
+
