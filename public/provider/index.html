@@ -988,6 +988,107 @@
         </div>
     </div>
 
+    <!-- ⚡ THE DOJO SECTION -->
+    <div style="max-width:960px;margin:0 auto 3rem;padding:0 1.5rem">
+        <div style="
+            background: linear-gradient(135deg, rgba(245,158,11,0.08) 0%, rgba(239,68,68,0.05) 100%);
+            border: 1px solid rgba(245,158,11,0.25);
+            border-radius: 20px;
+            padding: 2rem 2.5rem;
+            position: relative;
+            overflow: hidden;
+        ">
+            <!-- 背景グロー -->
+            <div style="position:absolute;top:-40px;right:-40px;width:200px;height:200px;background:radial-gradient(circle,rgba(245,158,11,0.12),transparent 70%);pointer-events:none"></div>
+
+            <div style="display:flex;align-items:flex-start;gap:1.5rem;flex-wrap:wrap">
+                <div style="font-size:3rem;flex-shrink:0;line-height:1">⚡</div>
+                <div style="flex:1;min-width:280px">
+                    <div style="font-size:0.72rem;font-weight:700;letter-spacing:0.12em;color:#fbbf24;text-transform:uppercase;margin-bottom:6px">
+                        GPU STREET FIGHTER — THE DOJO
+                    </div>
+                    <h2 style="font-size:1.4rem;font-weight:900;margin:0 0 0.5rem;line-height:1.3">
+                        AIジョブ処理エージェントで<br>さらに稼ごう
+                    </h2>
+                    <p style="font-size:0.85rem;color:rgba(255,255,255,0.55);margin:0 0 1.25rem;line-height:1.7">
+                        GPURental のGPU貸出に加え、<strong style="color:#fbbf24">GPU Street Fighter</strong> の
+                        レイドバトルジョブ（Real-ESRGAN / Jasmy Upscaler など）を受け取るエージェントとしても
+                        登録できます。AIジョブは1本あたり最大<strong style="color:#fbbf24">+30% ボーナス</strong>が付与されます。
+                    </p>
+
+                    <!-- ステップ -->
+                    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;margin-bottom:1.5rem">
+                        <div style="background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.07);border-radius:12px;padding:14px">
+                            <div style="font-size:1.3rem;margin-bottom:6px">📦</div>
+                            <div style="font-size:0.8rem;font-weight:700;margin-bottom:4px">1. Docker インストール</div>
+                            <div style="font-size:0.74rem;color:rgba(255,255,255,0.4)">NVIDIA Container Toolkit が必要。GPU対応Dockerを準備してください</div>
+                        </div>
+                        <div style="background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.07);border-radius:12px;padding:14px">
+                            <div style="font-size:1.3rem;margin-bottom:6px">🐍</div>
+                            <div style="font-size:0.8rem;font-weight:700;margin-bottom:4px">2. エージェントを起動</div>
+                            <div style="font-size:0.74rem;color:rgba(255,255,255,0.4)">Python スクリプトを実行するだけ。自動でオーケストレーターに登録されます</div>
+                        </div>
+                        <div style="background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.07);border-radius:12px;padding:14px">
+                            <div style="font-size:1.3rem;margin-bottom:6px">💰</div>
+                            <div style="font-size:0.8rem;font-weight:700;margin-bottom:4px">3. ジョブを受けて報酬</div>
+                            <div style="font-size:0.74rem;color:rgba(255,255,255,0.4)">AIジョブが自動でキューに届きます。完了後に報酬が自動積立</div>
+                        </div>
+                    </div>
+
+                    <!-- インストールコマンド -->
+                    <div style="background:rgba(0,0,0,0.4);border:1px solid rgba(245,158,11,0.2);border-radius:10px;padding:12px 16px;font-family:'JetBrains Mono',monospace;font-size:0.8rem;color:#fbbf24;margin-bottom:1.25rem;position:relative">
+                        <div style="font-size:0.68rem;color:rgba(255,255,255,0.3);margin-bottom:6px"># エージェント起動コマンド</div>
+                        <span id="dojoCmd">pip install -r agent/requirements.txt &amp;&amp; python agent/agent.py</span>
+                        <button onclick="copyDojoCmd()" style="position:absolute;top:10px;right:12px;background:rgba(245,158,11,0.15);border:1px solid rgba(245,158,11,0.3);color:#fbbf24;border-radius:6px;padding:3px 10px;font-size:0.72rem;cursor:pointer;font-family:inherit">コピー</button>
+                    </div>
+
+                    <!-- 環境変数ヒント -->
+                    <div style="background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.06);border-radius:8px;padding:10px 14px;font-size:0.74rem;color:rgba(255,255,255,0.4);margin-bottom:1.25rem;line-height:1.8">
+                        <strong style="color:rgba(255,255,255,0.6)">必要な環境変数:</strong><br>
+                        <code style="color:#a5b4fc">ORCHESTRATOR_URL</code>=http://your-server:8000/v1 &nbsp;
+                        <code style="color:#a5b4fc">NODE_ID</code>=your-node-id &nbsp;
+                        <code style="color:#a5b4fc">STORAGE_PROVIDER</code>=r2|s3|local
+                    </div>
+
+                    <div style="display:flex;gap:0.75rem;flex-wrap:wrap;align-items:center">
+                        <a href="https://github.com/metadatalab/mrp-orchestrator/tree/main/agent" target="_blank"
+                            style="display:inline-flex;align-items:center;gap:6px;padding:10px 20px;border-radius:10px;background:linear-gradient(135deg,#d97706,#f59e0b);color:#000;font-weight:700;font-size:0.85rem;text-decoration:none;transition:opacity 0.2s"
+                            onmouseover="this.style.opacity='0.85'" onmouseout="this.style.opacity='1'">
+                            ⬇ エージェントをダウンロード
+                        </a>
+                        <a href="/provider/download.html" style="font-size:0.82rem;color:#fbbf24;opacity:0.7;text-decoration:none">
+                            セットアップガイド →
+                        </a>
+                        <span style="font-size:0.75rem;color:rgba(255,255,255,0.25);margin-left:auto">
+                            NVIDIA GPU + Docker 必須
+                        </span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 収益比較バナー -->
+            <div style="margin-top:1.5rem;padding-top:1.5rem;border-top:1px solid rgba(255,255,255,0.06);display:flex;gap:1.5rem;flex-wrap:wrap">
+                <div style="text-align:center;flex:1;min-width:120px">
+                    <div style="font-size:0.68rem;color:rgba(255,255,255,0.35);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:4px">通常レンタル</div>
+                    <div style="font-size:1.4rem;font-weight:800;color:#00e5a0">¥640<span style="font-size:0.8rem;font-weight:400;opacity:0.7">/時間</span></div>
+                    <div style="font-size:0.7rem;color:rgba(255,255,255,0.3)">RTX A4500 目安</div>
+                </div>
+                <div style="text-align:center;flex:0;padding:0 1rem;display:flex;align-items:center;font-size:1.5rem;opacity:0.3">+</div>
+                <div style="text-align:center;flex:1;min-width:120px">
+                    <div style="font-size:0.68rem;color:#fbbf24;text-transform:uppercase;letter-spacing:0.08em;margin-bottom:4px">⚡ SF AIジョブ</div>
+                    <div style="font-size:1.4rem;font-weight:800;color:#fbbf24">+¥200<span style="font-size:0.8rem;font-weight:400;opacity:0.7">/ジョブ</span></div>
+                    <div style="font-size:0.7rem;color:rgba(255,255,255,0.3)">平均ボーナス</div>
+                </div>
+                <div style="text-align:center;flex:0;padding:0 1rem;display:flex;align-items:center;font-size:1.5rem;opacity:0.3">=</div>
+                <div style="text-align:center;flex:1;min-width:120px;background:rgba(245,158,11,0.08);border:1px solid rgba(245,158,11,0.2);border-radius:12px;padding:10px">
+                    <div style="font-size:0.68rem;color:#fbbf24;text-transform:uppercase;letter-spacing:0.08em;margin-bottom:4px">最大収益</div>
+                    <div style="font-size:1.6rem;font-weight:900;color:#fbbf24">¥13万+<span style="font-size:0.8rem;font-weight:400;opacity:0.7">/月</span></div>
+                    <div style="font-size:0.7rem;color:rgba(255,255,255,0.3)">月200h稼働時</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- REGISTRATION FORM -->
     <div class="register-section" id="registerSection">
         <div class="register-card" id="registerCard">
@@ -1325,6 +1426,18 @@
                 let token = localStorage.getItem('gpu_token');
                 let user = JSON.parse(localStorage.getItem('gpu_user') || 'null');
                 const API = ''; // same-origin
+
+                function copyDojoCmd() {
+                    var txt = document.getElementById('dojoCmd');
+                    if (!txt) return;
+                    navigator.clipboard.writeText(txt.textContent)
+                        .then(function() {
+                            var btn = document.querySelector('[onclick="copyDojoCmd()"]');
+                            if (btn) { var orig = btn.textContent; btn.textContent = 'コピー済 ✓'; setTimeout(function(){ btn.textContent = orig; }, 2000); }
+                        }).catch(function() {
+                            var r = document.createRange(); r.selectNode(txt); window.getSelection().removeAllRanges(); window.getSelection().addRange(r); document.execCommand('copy');
+                        });
+                }
 
                 /* ── Provider auth modal ── */
                 function openProviderAuth(tab) {

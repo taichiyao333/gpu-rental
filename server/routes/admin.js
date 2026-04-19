@@ -796,6 +796,155 @@ router.post('/balance-sync', authMiddleware, adminOnly, (req, res) => {
     res.json({ success: true, fixed: results.length, details: results });
 });
 
+
+// ─── GPU Street Fighter — Raid Jobs 管理 (Admin) ───────────────────────────
+
+// GET /api/admin/sf/raid-jobs — レイドジョブ一覧
+router.get('/sf/raid-jobs', authMiddleware, adminOnly, (req, res) => {
+    const db = getDb();
+    const { status, limit = 100 } = req.query;
+
+    // テーブルが存在しない場合は空を返す
+    const tableExists = db.prepare(
+        "SELECT name FROM sqlite_master WHERE type='table' AND name='sf_raid_jobs'"
+    ).get();
+    if (!tableExists) return res.json({ jobs: [], total: 0 });
+
+    const where = status ? `WHERE rj.status = ?` : '';
+    const params = status
+        ? [status, parseInt(limit)]
+        : [parseInt(limit)];
+
+    const jobs = db.prepare(`
+        SELECT
+            rj.*,
+            u.username  AS user_name,
+            u.email     AS user_email
+        FROM sf_raid_jobs rj
+        LEFT JOIN users u ON rj.user_id = u.id
+        ${where}
+        ORDER BY rj.created_at DESC
+        LIMIT ?
+    `).all(...params);
+
+    const total = db.prepare(
+        `SELECT COUNT(*) as c FROM sf_raid_jobs ${where ? where.replace('rj.', '') : ''}`
+    ).get(status ? [status] : []).c;
+
+    res.json({ jobs, total });
+});
+
+
+// GET /api/admin/sf/raid-jobs/stats — ステータス集計 + 売上
+router.get('/sf/raid-jobs/stats', authMiddleware, adminOnly, (req, res) => {
+    const db = getDb();
+
+    const tableExists = db.prepare(
+        "SELECT name FROM sqlite_master WHERE type='table' AND name='sf_raid_jobs'"
+    ).get();
+    if (!tableExists) {
+        return res.json({
+            total: 0, paid: 0, dispatched: 0, completed: 0, failed: 0,
+            total_revenue_yen: 0, month_revenue_yen: 0,
+            avg_nodes: 0, total_tflops_consumed: 0,
+        });
+    }
+
+    const stats = db.prepare(`
+        SELECT
+            COUNT(*)                                                     AS total,
+            SUM(CASE WHEN status = 'paid'       THEN 1 ELSE 0 END)      AS paid,
+            SUM(CASE WHEN status = 'dispatched' THEN 1 ELSE 0 END)      AS dispatched,
+            SUM(CASE WHEN status = 'completed'  THEN 1 ELSE 0 END)      AS completed,
+            SUM(CASE WHEN status = 'failed'     THEN 1 ELSE 0 END)      AS failed,
+            COALESCE(SUM(amount_yen), 0)                                 AS total_revenue_yen,
+            COALESCE(SUM(CASE WHEN created_at >= date('now','-30 days')
+                               THEN amount_yen ELSE 0 END), 0)           AS month_revenue_yen,
+            COALESCE(AVG(
+                CAST(json_extract(plan_summary, '$.node_count') AS REAL)
+            ), 0)                                                        AS avg_nodes,
+            COALESCE(SUM(
+                CAST(json_extract(plan_summary, '$.total_tflops') AS REAL)
+            ), 0)                                                        AS total_tflops_consumed
+        FROM sf_raid_jobs
+    `).get();
+
+    // 日別売上 (直近30日)
+    const daily = db.prepare(`
+        SELECT
+            date(created_at) AS date,
+            COUNT(*)         AS count,
+            SUM(amount_yen)  AS revenue_yen
+        FROM sf_raid_jobs
+        WHERE status IN ('paid','dispatched','completed')
+          AND created_at >= date('now', '-30 days')
+        GROUP BY date(created_at)
+        ORDER BY date ASC
+    `).all();
+
+    res.json({ ...stats, daily });
+});
+
+
+// GET /api/admin/sf/raid-jobs/:id — ジョブ詳細
+router.get('/sf/raid-jobs/:id', authMiddleware, adminOnly, (req, res) => {
+    const db = getDb();
+    const job = db.prepare(`
+        SELECT rj.*, u.username AS user_name, u.email AS user_email
+        FROM sf_raid_jobs rj
+        LEFT JOIN users u ON rj.user_id = u.id
+        WHERE rj.id = ?
+    `).get(req.params.id);
+    if (!job) return res.status(404).json({ error: 'ジョブが見つかりません' });
+    res.json(job);
+});
+
+
+// PATCH /api/admin/sf/raid-jobs/:id/status — ステータス手動変更
+router.patch('/sf/raid-jobs/:id/status', authMiddleware, adminOnly, (req, res) => {
+    const db = getDb();
+    const { status, note } = req.body;
+    const allowed = ['paid', 'dispatched', 'completed', 'failed', 'refunded'];
+    if (!allowed.includes(status)) {
+        return res.status(400).json({ error: `status は ${allowed.join(' / ')} のいずれか` });
+    }
+    db.prepare(`
+        UPDATE sf_raid_jobs
+        SET status = ?, updated_at = CURRENT_TIMESTAMP
+        WHERE id = ?
+    `).run(status, req.params.id);
+
+    console.log(`[Admin] SF RaidJob #${req.params.id} → ${status} by admin #${req.user.id}${note ? ' | ' + note : ''}`);
+    res.json({ success: true, id: req.params.id, status });
+});
+
+
+// GET /api/admin/sf/point-logs — ポイント消費ログ
+router.get('/sf/point-logs', authMiddleware, adminOnly, (req, res) => {
+    const db = getDb();
+    const tableExists = db.prepare(
+        "SELECT name FROM sqlite_master WHERE type='table' AND name='point_logs'"
+    ).get();
+    if (!tableExists) return res.json([]);
+
+    const { type, limit = 100 } = req.query;
+    const where = type ? `WHERE pl.type = ?` : '';
+    const params = type ? [type, parseInt(limit)] : [parseInt(limit)];
+
+    const logs = db.prepare(`
+        SELECT
+            pl.*,
+            u.username AS user_name
+        FROM point_logs pl
+        LEFT JOIN users u ON pl.user_id = u.id
+        ${where}
+        ORDER BY pl.created_at DESC
+        LIMIT ?
+    `).all(...params);
+
+    res.json(logs);
+});
+
 module.exports = router;
 
 
