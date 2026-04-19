@@ -218,7 +218,7 @@ F:/gpu-rental-main/data/           # ストレージ (DB_PATH / STORAGE_PATH)
 ### GPU Street Fighter
 | テーブル | 説明 |
 |---------|------|
-| `sf_nodes` | SF ノード登録 (user_id, gpu_specs, status, last_seen, tflops, rtt_ms) |
+| `sf_nodes` | SF ノード登録 (user_id, gpu_specs, status, last_seen) |
 | `sf_benchmarks` | ベンチマーク計測値 (fp32_tflops, upload/download_mbps etc.) |
 | `sf_match_requests` | 1on1 マッチリクエスト (cards_json, selected_mode) |
 | `sf_raid_jobs` | レイドバトルジョブ (payment_amount_yen, points_used, status) |
@@ -260,15 +260,23 @@ saveToDisk();  // 3秒間隔の自動保存もあり
 
 ## 7. 今後の開発ステップ
 
-| # | タスク | 優先度 |
-|---|--------|-------|
-| 1 | **本番デプロイ**: Nginx リバースプロキシ + Let's Encrypt SSL | 高 |
-| 2 | **SF エージェント (THE DOJO)**: provider/agent.js の実装完成 | 高 |
-| 3 | **MRP Orchestrator 連携**: レイドジョブの実際のノード配信 | 高 |
-| 4 | **ワークスペース SF タブ UI**: workspace/index.html に SF タブ明示 | 中 |
-| 5 | **クーポン × SF 対応**: レイド料金へのクーポン適用ロジック | 中 |
-| 6 | **PostgreSQL 移行**: migrate_to_postgres.py による本番DB移行 | 低 |
-| 7 | **SF リーダーボード**: ノード戦績・勝率ランキング表示 | 低 |
+| # | タスク | 優先度 | ステータス |
+|---|--------|-------|--------|
+| 1 | **MRP Orchestrator 本番接続**: `.env` に `MRP_ORCHESTRATOR_URL` を設定、実際のノード配信ロジックへ切替 | 高 | 🔄 残作業 |
+| 2 | **PostgreSQL 移行**: `migrate_to_postgres.py` による本番 DB 移行 | 低 | 🔄 残作業 |
+
+### ✅ 完了済み機能
+| タスク | 実装ファイル |
+|--------|------|
+| THE REFEREE 全 API (raid/match/nodes/heartbeat/benchmark) | `server/routes/sf.js` |
+| THE LOBBY 全 UI (RAID/1on1/決済モーダル/クーポン) | `public/lobby/` |
+| THE DOJO エージェント (heartbeat/register/benchmark) | `provider/agent.js` |
+| ワークスペース SF ステータスパネル + DL UI | `public/workspace/app.js` |
+| クーポン × SF 決済対応 (RAID + 1on1 共) | `server/routes/sf.js`, `payments.js` |
+| Admin THE DOJO Nodes 管理 UI | `public/admin/app.js`, `server/routes/admin.js` |
+| Stripe Webhook SF Raid ケース追加 | `server/routes/stripe.js` |
+| sql.js point_logs スキーマ導入 | `server/db/migrations.js` |
+| 法的表記 (tokushoho) + ドキュメント 最終化 | `public/tokushoho/`, `docs/` |
 
 ---
 

@@ -69,8 +69,8 @@ module.exports = {
         // パブリック statsエンドポイントのキャッシュ TTL (ms)
         statsCacheTtl: parseInt(process.env.SF_STATS_CACHE_TTL) || 15000, // 15秒
 
-        // MRP Orchestrator エンドポイント
-        mrpOrchestratorUrl: process.env.MRP_ORCHESTRATOR_URL || 'http://localhost:7860',
+        // MRP Orchestrator エンドポイント (未設定の場合はシミュレーションモード)
+        mrpOrchestratorUrl: process.env.MRP_ORCHESTRATOR_URL || '',
 
         // レイドバトル最大ノード数
         maxRaidNodes: parseInt(process.env.SF_RAID_MAX_NODES) || 50,
