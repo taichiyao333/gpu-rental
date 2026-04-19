@@ -108,7 +108,21 @@ router.post('/webhook', express.raw({ type: 'application/json' }), async (req, r
                     paid_at = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP
                 WHERE id = ? AND status = 'payment_pending'
             `).run(sfRaidJobId);
-            console.log(`✅ SF Raid Job #${sfRaidJobId} marked as paid via Stripe`);
+
+            // クーポン使用記録 (Stripe 決済完了時)
+            const couponId = session.metadata.coupon_id;
+            if (couponId) {
+                try {
+                    db.prepare('UPDATE coupons SET used_count = used_count + 1 WHERE id = ?').run(couponId);
+                    const userId = session.metadata.user_id;
+                    if (userId) {
+                        db.prepare('INSERT OR IGNORE INTO coupon_uses (coupon_id, user_id, used_at) VALUES (?, ?, CURRENT_TIMESTAMP)')
+                          .run(couponId, userId);
+                    }
+                } catch (_) { /* coupon_uses テーブル非存在時はスキップ */ }
+            }
+
+            console.log(`✅ SF Raid Job #${sfRaidJobId} marked as paid via Stripe${couponId ? ` (coupon #${couponId})` : ''}`);
         } else if (reservationId) {
             // 通常の GPU 予約 Stripe 決済
             db.prepare("UPDATE reservations SET status = 'paid' WHERE id = ? AND status = 'confirmed'")
@@ -182,9 +196,9 @@ router.post('/withdraw', authMiddleware, (req, res) => {
 
 // ─── POST /api/payments/sf-raid/pay-with-points ──────────────────
 // THE LOBBY でポイント払いで SF Raid Job を確定する
-// Body: { sf_raid_job_id }
+// Body: { sf_raid_job_id, coupon_code? }
 router.post('/sf-raid/pay-with-points', authMiddleware, (req, res) => {
-    const { sf_raid_job_id } = req.body;
+    const { sf_raid_job_id, coupon_code } = req.body;
     if (!sf_raid_job_id) return res.status(400).json({ error: 'sf_raid_job_id required' });
 
     const db = getDb();
@@ -196,17 +210,31 @@ router.post('/sf-raid/pay-with-points', authMiddleware, (req, res) => {
         return res.status(400).json({ error: `ジョブのステータスが payment_pending ではありません (${job.status})` });
     }
 
-    const pointsNeeded = job.points_used || Math.ceil(job.payment_amount_yen || 0);
+    const basePoints = job.points_used || Math.ceil(job.payment_amount_yen || 0);
+
+    // クーポン適用 (任意)
+    let pointsNeeded = basePoints;
+    let couponResult = null;
+    if (coupon_code) {
+        const { validateCoupon } = require('./coupons');
+        couponResult = validateCoupon(db, coupon_code, req.user.id, job.payment_amount_yen || basePoints);
+        if (!couponResult.ok) {
+            return res.status(400).json({ error: couponResult.error });
+        }
+        pointsNeeded = Math.max(0, Math.ceil(couponResult.final_yen));
+    }
+
     const user = db.prepare('SELECT point_balance FROM users WHERE id = ?').get(req.user.id);
     if (!user || user.point_balance < pointsNeeded) {
         return res.status(400).json({
             error: `ポイントが不足しています。必要: ${pointsNeeded}pt / 現在: ${Math.floor(user?.point_balance ?? 0)}pt`,
             required: pointsNeeded,
             balance: Math.floor(user?.point_balance ?? 0),
+            coupon_applied: !!couponResult,
         });
     }
 
-    // トランザクション: ポイント引き落とし + ジョブステータス更新
+    // トランザクション: ポイント引き落とし + ジョブステータス更新 + クーポン使用記録
     db.transaction(() => {
         db.prepare('UPDATE users SET point_balance = point_balance - ? WHERE id = ?')
           .run(pointsNeeded, req.user.id);
@@ -217,29 +245,46 @@ router.post('/sf-raid/pay-with-points', authMiddleware, (req, res) => {
             WHERE id = ?
         `).run(pointsNeeded, job.id);
 
+        // クーポン使用記録
+        if (couponResult?.ok) {
+            try {
+                db.prepare('UPDATE coupons SET used_count = used_count + 1 WHERE id = ?').run(couponResult.coupon.id);
+                db.prepare('INSERT INTO coupon_uses (coupon_id, user_id, used_at) VALUES (?, ?, CURRENT_TIMESTAMP)')
+                  .run(couponResult.coupon.id, req.user.id);
+            } catch (_) { /* coupon_uses テーブル非存在時はスキップ */ }
+        }
+
         // ポイントログ記録
         try {
+            const note = couponResult?.ok
+                ? `SF Raid Job #${job.id} ポイント決済 (クーポン ${couponResult.coupon.code}: ${couponResult.label})`
+                : `SF Raid Job #${job.id} ポイント決済`;
             db.prepare(`
                 INSERT INTO point_logs (user_id, type, amount, source, source_id, note, created_at)
                 VALUES (?, 'spend', ?, 'raid_job', ?, ?, CURRENT_TIMESTAMP)
-            `).run(req.user.id, pointsNeeded, String(job.id), `SF Raid Job #${job.id} ポイント決済`);
+            `).run(req.user.id, pointsNeeded, String(job.id), note);
         } catch (_) { /* point_logs テーブルが存在しない環境ではスキップ */ }
     })();
 
-    console.log(`[SF Payment] Raid Job #${job.id} paid with ${pointsNeeded}pt by user #${req.user.id}`);
+    console.log(`[SF Payment] Raid Job #${job.id} paid with ${pointsNeeded}pt by user #${req.user.id}${couponResult ? ` (coupon: ${coupon_code})` : ''}`);
     res.json({
         success: true,
         sf_raid_job_id: job.id,
         points_used: pointsNeeded,
+        original_points: basePoints,
         status: 'paid',
-        message: `${pointsNeeded}pt でレイドジョブ #${job.id} の決済が完了しました`,
+        coupon: couponResult?.ok ? { code: couponResult.coupon.code, discount: couponResult.label } : null,
+        message: couponResult?.ok
+            ? `${pointsNeeded}pt (クーポン ${couponResult.label} 適用) でレイドジョブ #${job.id} の決済が完了しました`
+            : `${pointsNeeded}pt でレイドジョブ #${job.id} の決済が完了しました`,
     });
 });
 
 // ─── POST /api/payments/sf-raid/create-stripe-session ───────────
 // THE LOBBY で Stripe 払いで SF Raid Job を確定する
+// Body: { sf_raid_job_id, coupon_code? }
 router.post('/sf-raid/create-stripe-session', authMiddleware, async (req, res) => {
-    const { sf_raid_job_id } = req.body;
+    const { sf_raid_job_id, coupon_code } = req.body;
     if (!sf_raid_job_id) return res.status(400).json({ error: 'sf_raid_job_id required' });
 
     const db = getDb();
@@ -261,7 +306,19 @@ router.post('/sf-raid/create-stripe-session', authMiddleware, async (req, res) =
 
     try {
         const summary = job.summary_json ? JSON.parse(job.summary_json) : {};
-        const amountYen = job.payment_amount_yen || summary.estimated_cost_yen || 500;
+        let amountYen = job.payment_amount_yen || summary.estimated_cost_yen || 500;
+
+        // クーポン適用 (任意)
+        let couponResult = null;
+        if (coupon_code) {
+            const { validateCoupon } = require('./coupons');
+            couponResult = validateCoupon(db, coupon_code, req.user.id, amountYen);
+            if (couponResult.ok) {
+                amountYen = Math.max(50, Math.ceil(couponResult.final_yen)); // Stripe 最低50円
+            } else {
+                return res.status(400).json({ error: couponResult.error });
+            }
+        }
 
         const session = await stripe.checkout.sessions.create({
             payment_method_types: ['card'],
@@ -272,7 +329,10 @@ router.post('/sf-raid/create-stripe-session', authMiddleware, async (req, res) =
                     currency: 'jpy',
                     product_data: {
                         name: `GPU Street Fighter: RAID BATTLE #${job.id}`,
-                        description: `ノード数: ${summary.node_count ?? '?'} / 推定完了: ${summary.est_completion_min ?? '?'}分`,
+                        description: [
+                            `ノード数: ${summary.node_count ?? '?'} / 推定完了: ${summary.est_completion_min ?? '?'}分`,
+                            couponResult?.ok ? `クーポン ${couponResult.label} 適用済み` : null,
+                        ].filter(Boolean).join(' | '),
                     },
                     unit_amount: amountYen,
                 },
@@ -282,6 +342,7 @@ router.post('/sf-raid/create-stripe-session', authMiddleware, async (req, res) =
                 sf_raid_job_id: String(job.id),
                 user_id: String(req.user.id),
                 type: 'sf_raid',
+                coupon_id: couponResult?.ok ? String(couponResult.coupon.id) : '',
             },
             success_url: `${config.baseUrl}/lobby/?sf_payment=success&raid_job=${job.id}`,
             cancel_url: `${config.baseUrl}/lobby/?sf_payment=cancelled`,
