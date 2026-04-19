@@ -714,21 +714,132 @@ function selectCard(mode) {
     showToast(`${names[mode]} を選択 — FIGHT START で確定！`, 'success');
 }
 
+// 1on1 マッチ: カード選択後に決済プレビューモーダルを経由して確定する
+let _matchCostYen = 0;
+
 async function confirmMatch() {
     const token = getToken();
     if (!token || !currentMatchId || !selectedMode) return;
-    const btn = document.getElementById('btnConfirm');
+
+    // 選択カードのコスト取得
+    const cardEl = document.getElementById(`card-${selectedMode}`);
+    const priceText = cardEl?.querySelector('.price-value')?.textContent || '0';
+    _matchCostYen = parseInt(priceText.replace(/[^0-9]/g, '')) || 0;
+
+    // ポイント残高取得
+    let balance = 0;
+    try {
+        const r = await fetch('/api/points/balance', { headers: { 'Authorization': `Bearer ${token}` } });
+        const d = await r.json();
+        balance = d.point_balance || 0;
+    } catch {}
+
+    const canPay = balance >= _matchCostYen || _matchCostYen === 0;
+    const modeNames = { speed_star: '⚡ Speed Star', heavy_weight: '💪 Heavy Weight', street_fighter: '🥊 Street Fighter' };
+
+    // 決済モーダルをマッチ用に再利用
+    document.querySelector('.modal-title').innerHTML = '⚔ 1on1 MATCH 決済確認';
+    document.getElementById('modalContent').innerHTML = `
+        <div class="modal-row">
+            <span class="modal-key">選択モード</span>
+            <span class="modal-val">${modeNames[selectedMode] || selectedMode}</span>
+        </div>
+        <div class="modal-row">
+            <span class="modal-key">決済金額</span>
+            <span class="modal-val cost" id="modalCostDisplay">
+                ${_matchCostYen > 0 ? `¥${_matchCostYen.toLocaleString()}` : '無料'}
+            </span>
+        </div>
+        <div class="modal-row">
+            <span class="modal-key">ポイント残高</span>
+            <span class="modal-val ${canPay ? 'ok' : 'err'}">${balance.toLocaleString()} pt</span>
+        </div>
+
+        ${_matchCostYen > 0 ? `
+        <!-- クーポンコード入力 -->
+        <div class="modal-row" style="flex-direction:column;align-items:flex-start;gap:0.4rem">
+            <span class="modal-key">クーポンコード (任意)</span>
+            <div style="display:flex;gap:0.4rem;width:100%">
+                <input id="matchCouponInput" type="text" placeholder="例: GPUSF20"
+                    style="flex:1;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.12);
+                    border-radius:6px;padding:0.5rem 0.75rem;color:#fff;font-size:0.83rem;font-family:var(--font-hud);
+                    letter-spacing:1px;outline:none">
+                <button onclick="applyMatchCoupon()" style="background:rgba(0,212,255,0.15);border:1px solid rgba(0,212,255,0.3);
+                    border-radius:6px;color:#00d4ff;padding:0.5rem 0.9rem;font-size:0.78rem;cursor:pointer">適用</button>
+            </div>
+            <div id="matchCouponMsg" style="font-size:0.75rem;color:#4ade80;min-height:1em"></div>
+        </div>
+        ` : ''}
+
+        ${!canPay ? `<div class="modal-shortage">
+            ポイントが不足 (${_matchCostYen - balance}pt 足りない)。
+            <a href="/portal/#points" target="_blank">ポイントを購入↗</a>
+        </div>` : ''}
+    `;
+
+    const submitBtn = document.getElementById('modalSubmitBtn');
+    submitBtn.disabled   = !canPay;
+    submitBtn.textContent = canPay ? '⚔ FIGHT START' : 'ポイント不足';
+    submitBtn.onclick     = executeMatchPayment;
+
+    document.getElementById('paymentModalOverlay').classList.add('active');
+}
+
+async function applyMatchCoupon() {
+    const token = getToken();
+    const code  = (document.getElementById('matchCouponInput')?.value || '').trim();
+    const msg   = document.getElementById('matchCouponMsg');
+    if (!code || !_matchCostYen) return;
+    try {
+        const r = await fetch('/api/coupons/validate', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+            body: JSON.stringify({ code, amount_yen: _matchCostYen }),
+        });
+        const d = await r.json();
+        if (d.ok && d.final_yen !== undefined) {
+            const display = document.getElementById('modalCostDisplay');
+            if (display) display.textContent = `¥${d.final_yen.toLocaleString()} (${d.label}適用)`;
+            if (msg) { msg.style.color='#4ade80'; msg.textContent = `✅ ${d.label} 割引`; }
+        } else {
+            if (msg) { msg.style.color='#f87171'; msg.textContent = `❌ ${d.error || '無効なコード'}`; }
+        }
+    } catch {
+        if (msg) { msg.style.color='#f87171'; msg.textContent = '⚠ 通信エラー'; }
+    }
+}
+
+async function executeMatchPayment() {
+    const token = getToken();
+    if (!token || !currentMatchId || !selectedMode) return;
+
+    const btn = document.getElementById('modalSubmitBtn');
     btn.disabled = true; btn.textContent = '⚔ CONNECTING...';
+
+    const couponCode = (document.getElementById('matchCouponInput')?.value || '').trim() || undefined;
+
     try {
         const resp = await fetch(`/api/sf/match/${currentMatchId}/confirm`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-            body: JSON.stringify({ selected_mode: selectedMode }),
+            body: JSON.stringify({ selected_mode: selectedMode, coupon_code: couponCode }),
         });
         const data = await resp.json();
+
+        if (resp.status === 402) {
+            showToast('⚠ ' + data.error, 'error');
+            if (data.required) window.open('/portal/#points', '_blank');
+            btn.disabled = false; btn.textContent = '⚔ FIGHT START';
+            return;
+        }
+
         if (data.success) {
-            showToast(`✅ ${data.mode_info.label} でマッチング確定！`, 'success', 4000);
-            setTimeout(() => location.href = `/workspace/?match=${currentMatchId}`, 1500);
+            document.getElementById('paymentModalOverlay').classList.remove('active');
+            const ptNote = data.payment?.points_charged > 0
+                ? ` (${data.payment.points_charged}pt消費${data.payment.coupon ? ` / ${data.payment.coupon.label} 適用` : ''})`
+                : '';
+            showToast(`✅ ${data.mode_info.label} でマッチング確定！${ptNote}`, 'success', 4500);
+            setTimeout(() => location.href = `/workspace/?match=${currentMatchId}`, 1800);
         } else {
             showToast(data.error || '確定失敗', 'error');
             btn.disabled = false; btn.textContent = '⚔ FIGHT START';
@@ -738,6 +849,7 @@ async function confirmMatch() {
         btn.disabled = false; btn.textContent = '⚔ FIGHT START';
     }
 }
+
 
 // ──── Raid Battle ────────────────────────────
 async function startRaid() {

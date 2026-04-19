@@ -463,8 +463,58 @@ router.post('/match/:id/confirm', authMiddleware, (req, res) => {
             UPDATE sf_nodes SET status = 'busy'
             WHERE id = ?
         `).run(selectedNodeId);
+        // ── ポイント決済: 1on1 マッチ ──────────────────────────────
+        // 最低1時間分のポイントを消費する (price_per_hour が未設定の場合は無料)
+        const pricePerHour = selectedCard.top_node?.price_per_hour || 0;
+        const costYen = Math.ceil(pricePerHour); // 1時間単位 (最低料金)
+        let pointsCharged = 0;
+        let couponApplied = null;
+
+        if (costYen > 0) {
+            const { coupon_code } = req.body;
+            let finalCost = costYen;
+
+            // クーポン適用
+            if (coupon_code) {
+                try {
+                    const { validateCoupon } = require('./coupons');
+                    const cr = validateCoupon(db, coupon_code, req.user.id, costYen);
+                    if (cr.ok) {
+                        finalCost = Math.max(0, Math.ceil(cr.final_yen));
+                        couponApplied = { code: cr.coupon.code, label: cr.label };
+                        db.prepare('UPDATE coupons SET used_count = used_count + 1 WHERE id = ?').run(cr.coupon.id);
+                        try { db.prepare('INSERT INTO coupon_uses (coupon_id, user_id, used_at) VALUES (?, ?, CURRENT_TIMESTAMP)').run(cr.coupon.id, req.user.id); } catch (_) {}
+                    }
+                } catch (_) {}
+            }
+
+            // ポイント残高確認
+            const user = db.prepare('SELECT point_balance FROM users WHERE id = ?').get(req.user.id);
+            if (!user || user.point_balance < finalCost) {
+                return res.status(402).json({
+                    error: `ポイントが不足しています。必要: ${finalCost}pt / 現在: ${Math.floor(user?.point_balance ?? 0)}pt`,
+                    required: finalCost,
+                    balance: Math.floor(user?.point_balance ?? 0),
+                });
+            }
+
+            db.transaction(() => {
+                db.prepare('UPDATE users SET point_balance = point_balance - ? WHERE id = ?').run(finalCost, req.user.id);
+                try {
+                    const note = couponApplied
+                        ? `1on1 Match #${match.id} (${selected_mode}) クーポン ${couponApplied.label} 適用`
+                        : `1on1 Match #${match.id} (${selected_mode}) ポイント決済`;
+                    db.prepare('INSERT INTO point_logs (user_id, type, amount, source, source_id, note, created_at) VALUES (?, \'spend\', ?, \'match\', ?, ?, CURRENT_TIMESTAMP)')
+                      .run(req.user.id, finalCost, String(match.id), note);
+                } catch (_) {}
+            })();
+
+            pointsCharged = finalCost;
+            console.log(`[SF Match] Match #${match.id} charged ${finalCost}pt to user #${req.user.id}${couponApplied ? ` (coupon: ${couponApplied.code})` : ''}`);
+        }
 
         // ── WebSocket: マッチング確定通知 ──────────────────────
+
         if (io) {
             // 1. 選択したユーザーへ個別通知
             io.to(`user_${req.user.id}`).emit('sf:match_confirmed', {
@@ -495,6 +545,10 @@ router.post('/match/:id/confirm', authMiddleware, (req, res) => {
             selected_mode,
             selected_node: selectedCard.top_node,
             mode_info: MATCH_MODES[selected_mode],
+            payment: {
+                points_charged: pointsCharged,
+                coupon: couponApplied,
+            },
             message: `${MATCH_MODES[selected_mode].label} を選択しました。ジョブを開始します。`,
         });
 
