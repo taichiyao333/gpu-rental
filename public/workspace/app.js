@@ -1,4 +1,4 @@
-const token = localStorage.getItem('gpu_token');
+﻿const token = localStorage.getItem('gpu_token');
 const user = JSON.parse(localStorage.getItem('gpu_user') || 'null');
 if (!token || !user) { window.location.href = '/portal/'; }
 
@@ -164,10 +164,50 @@ function initSocket() {
     // ⚡ SF リアルタイム更新
     socket.on('sf:raid_completed', ({ job_id }) => {
         if (typeof window._sfFetchNow === 'function') window._sfFetchNow();
+        _sfNotifyComplete('u{1F525} RAID BATTLE u{5B8C}u{4E86}!', 'GPUu{51E6}u{7406}u{304C}u{5B8C}u{4E86}u{3057}u{307E}u{3057}u{305F}u{3002}u{6210}u{679C}u{7269}u{3092}u{30C0}u{30A6}u{30F3}u{30ED}u{30FC}u{30C9}u{3067}u{304D}u{307E}u{3059}u{3002}');
+        _sfPlayChime();
     });
     socket.on('sf:raid_paid', ({ job_id }) => {
         if (typeof window._sfFetchNow === 'function') window._sfFetchNow();
+        showNotif('u{2705} RAID u{30B8}u{30E7}u{30D6}u{3078}u{306E}u{8AB2}u{91D1}u{304C}u{5B8C}u{4E86}u{3057}u{307E}u{3057}u{305F}', 'success');
     });
+    socket.on('sf:match_confirmed', ({ match_id, mode_label }) => {
+        if (typeof window._sfFetchNow === 'function') window._sfFetchNow();
+        _sfNotifyComplete('u{2694} 1on1 u{30DE}u{30C3}u{30C1}u{5B8C}u{4E86}!', (mode_label || 'u{30DE}u{30C3}u{30C1}') + ' u{306E}u{51E6}u{7406}u{304C}u{5B8C}u{4E86}u{3057}u{307E}u{3057}u{305F}u{3002}');
+        _sfPlayChime();
+    });
+}
+
+/* ─── SF u{5B8C}u{4E86}u{901A}u{77E5}u{30D8}u{30EB}u{30D1}u{30FC} ──────────────────────────────────────── */
+function _sfRequestNotifPermission() {
+    if ('Notification' in window && Notification.permission === 'default') {
+        Notification.requestPermission();
+    }
+}
+
+function _sfNotifyComplete(title, body) {
+    showNotif(title + ' ' + body, 'success');
+    if ('Notification' in window && Notification.permission === 'granted') {
+        const n = new Notification(title, { body, icon: '/icon.svg', tag: 'sf-complete', requireInteraction: false });
+        setTimeout(() => n.close(), 6000);
+    }
+}
+
+function _sfPlayChime() {
+    try {
+        const ctx = new (window.AudioContext || window.webkitAudioContext)();
+        [523.25, 659.25, 783.99].forEach((freq, i) => {
+            const osc = ctx.createOscillator(), gain = ctx.createGain();
+            osc.connect(gain); gain.connect(ctx.destination);
+            osc.type = 'sine'; osc.frequency.value = freq;
+            const t = ctx.currentTime + i * 0.15;
+            gain.gain.setValueAtTime(0, t);
+            gain.gain.linearRampToValueAtTime(0.18, t + 0.03);
+            gain.gain.exponentialRampToValueAtTime(0.001, t + 0.55);
+            osc.start(t); osc.stop(t + 0.55);
+        });
+        setTimeout(() => ctx.close(), 1200);
+    } catch (e) {}
 }
 
 /* ─── Terminal ──────────────────────────────────────────────────── */
@@ -1141,7 +1181,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const tabs = [
         { btn: 'tabTerminal', pane: 'terminalPane' },
         { btn: 'tabConnect', pane: 'connectPane' },
-        { btn: 'tabRender', pane: 'renderPane' },
+        { btn: 'tabRender', pane: 'renderPane' },
         { btn: 'tabBlender', pane: 'blenderPane' },
     ];
 

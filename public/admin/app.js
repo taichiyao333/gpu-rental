@@ -1,4 +1,4 @@
-/* 笏笏 STATE 笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏 */
+﻿/* 笏笏 STATE 笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏 */
 const token = localStorage.getItem('gpu_token');
 const user = JSON.parse(localStorage.getItem('gpu_user') || 'null');
 
@@ -676,7 +676,6 @@ async function loadSfNodes() {
     } catch (err) {
         tbody.innerHTML = `<tr><td colspan="9" style="text-align:center;padding:1rem;color:var(--danger)">${err.message}</td></tr>`;
     }
-}
 
 async function setSfNodeStatus(nodeId, status) {
     if (!confirm(`ノード #${nodeId} のステータスを「${status}」に変更しますか？`)) return;
@@ -687,7 +686,6 @@ async function setSfNodeStatus(nodeId, status) {
     } catch (err) {
         showToast('ステータス変更失敗: ' + err.message, 'error');
     }
-}
 
 async function deleteSfNode(nodeId, hostname) {
     if (!confirm(`ノード #${nodeId} (${hostname}) を削除しますか？この操作は取り消せません。`)) return;
@@ -698,7 +696,6 @@ async function deleteSfNode(nodeId, hostname) {
     } catch (err) {
         showToast('削除失敗: ' + (err.message || ''), 'error');
     }
-}
 
 async function bulkOfflineSfNodes() {
     if (!confirm('heartbeat タイムアウトした全ノードをオフラインに変更しますか？')) return;
@@ -709,8 +706,6 @@ async function bulkOfflineSfNodes() {
     } catch (err) {
         showToast('一括オフライン失敗: ' + err.message, 'error');
     }
-}
-
 
 
 
@@ -1657,7 +1652,6 @@ async function loadMonitoring() {
     } catch (err) {
         tbody.innerHTML = `<tr><td colspan="4" style="color:var(--danger);padding:1.5rem">繧ｨ繝ｩ繝ｼ: ${err.message}<br>竊・<code>node scripts/health-check.js</code> 繧貞ｮ溯｡後＠縺ｦ縺上□縺輔＞</td></tr>`;
     }
-}
 
 async function runHealthCheck() {
     showToast('繝倥Ν繧ｹ繝√ぉ繝・け繧帝幕蟋九＠縺ｾ縺励◆...', 'info');
@@ -1668,7 +1662,6 @@ async function runHealthCheck() {
     } catch (e) {
         showToast('螳溯｡後お繝ｩ繝ｼ: ' + e.message, 'error');
     }
-}
 
 /* 笊絶武笊絶武笊絶武笊絶武笊絶武笊絶武笊絶武笊絶武笊絶武笊絶武笊絶武笊絶武笊絶武笊絶武笊絶武笊絶武笊絶武笊絶武笊絶武笊絶武笊絶武笊絶武笊絶武笊絶武笊絶武笊絶武笊絶武笊絶武笊絶武笊・   諜 PURCHASES 豎ｺ貂域価隱咲ｮ｡逅・笊絶武笊絶武笊絶武笊絶武笊絶武笊絶武笊絶武笊絶武笊絶武笊絶武笊絶武笊絶武笊絶武笊絶武笊絶武笊絶武笊絶武笊絶武笊絶武笊絶武笊絶武笊絶武笊絶武笊絶武笊絶武笊絶武笊絶武笊絶武笊絶武笊・*/
 
@@ -1702,7 +1695,6 @@ async function loadPurchases() {
     } catch (err) {
         tbody.innerHTML = `<tr><td colspan="8" style="color:var(--danger);padding:1.5rem">${err.message}</td></tr>`;
     }
-}
 
 async function approvePurchase(id, force=false) {
     if (!confirm(force?`Purchase #${id} 繧貞ｼｷ蛻ｶ莉倅ｸ弱＠縺ｾ縺呻ｼ・tripe讀懆ｨｼ縺ｪ縺暦ｼ峨ゅｈ繧阪＠縺・〒縺吶°・歔:`Purchase #${id} 繧呈価隱阪＠縺ｦ繝昴う繝ｳ繝医ｒ莉倅ｸ弱＠縺ｾ縺吶°・歔)) return;
@@ -1713,8 +1705,6 @@ async function approvePurchase(id, force=false) {
     } catch (err) {
         showToast('謇ｿ隱榊､ｱ謨・ ' + err.message, 'error');
     }
-}
-
 
 /* ─── SF RAID JOBS ──────────────────────────────────────────────── */
 async function loadSfRaidJobs() {
@@ -1765,12 +1755,12 @@ async function loadSfRaidJobs() {
             const nodeCount  = j.node_count || '—';
             const payMethod  = j.payment_method === 'points' ? '🏆 PT' : '💳 現金';
             const ops = ['dispatched','running'].includes(j.status)
-                ? `<button class="btn btn-danger btn-sm" onclick="cancelSfRaidJob(${j.id})">停止</button>`
+                ? `<button class="btn btn-danger btn-sm" onclick="event.stopPropagation();cancelSfRaidJob(${j.id})">停止</button>`
                 : j.status === 'payment_pending'
-                ? `<button class="btn btn-ghost btn-sm" onclick="forceCompleteSfJob(${j.id})">強制完了</button>`
+                ? `<button class="btn btn-ghost btn-sm" onclick="event.stopPropagation();forceCompleteSfJob(${j.id})">強制完了</button>`
                 : '<span style="color:var(--text3);font-size:.78rem">—</span>';
-            return `<tr>
-              <td class="mono">#${j.id}</td>
+            return `<tr style="cursor:pointer" onclick="toggleSfJobDetail(${j.id}, this)">
+              <td class="mono">#${j.id} <span id="sfChevron${j.id}" style="font-size:.7rem;color:var(--text3)">▶</span></td>
               <td><strong>${j.username || j.user_id || '—'}</strong></td>
               <td><span class="sf-badge ${j.status}">${icon} ${j.status}</span></td>
               <td style="font-size:.8rem;color:var(--text2)">${payMethod}</td>
@@ -1780,23 +1770,99 @@ async function loadSfRaidJobs() {
               <td style="font-size:.78rem;color:var(--text3)">${created}</td>
               <td style="font-size:.78rem;color:var(--text3)">${completedAt}</td>
               <td>${ops}</td>
+            </tr>
+            <tr id="sfJobDetail${j.id}" style="display:none">
+              <td colspan="10" style="padding:0;background:rgba(0,0,0,0.25)">
+                <div id="sfJobDetailContent${j.id}" style="padding:1rem 1.5rem;font-size:.8rem;color:var(--text2)">
+                  読み込み中...
+                </div>
+              </td>
             </tr>`;
         }).join('');
 
     } catch (err) {
         tbody.innerHTML = `<tr><td colspan="10" style="text-align:center;padding:1rem;color:var(--danger)">${err.message}</td></tr>`;
     }
-}
+
+async function toggleSfJobDetail(jobId, rowEl) {
+    const detailRow = document.getElementById(`sfJobDetail${jobId}`);
+    const chevron   = document.getElementById(`sfChevron${jobId}`);
+    if (!detailRow) return;
+
+    if (detailRow.style.display !== 'none') {
+        detailRow.style.display = 'none';
+        if (chevron) chevron.textContent = '▶';
+        return;
+    }
+
+    detailRow.style.display = '';
+    if (chevron) chevron.textContent = '▼';
+
+    const content = document.getElementById(`sfJobDetailContent${jobId}`);
+    if (!content) return;
+
+    try {
+        const j = await api(`/admin/sf/raid-jobs/${jobId}`);
+
+        // MRP ジョブID リスト
+        const mrpIds = j.mrp_job_ids || [];
+        const mrpHtml = mrpIds.length > 0
+            ? mrpIds.map((id, i) => `<span style="font-family:monospace;background:rgba(108,71,255,0.12);padding:2px 6px;border-radius:4px;margin:2px;display:inline-block">ノード${i+1}: ${id.slice(0,12)}...</span>`).join('')
+            : '<span style="color:var(--text3)">MRP ジョブID なし</span>';
+
+        // RAID プラン
+        let planHtml = '';
+        if (j.raid_plan_json) {
+            try {
+                const plan = typeof j.raid_plan_json === 'string' ? JSON.parse(j.raid_plan_json) : j.raid_plan_json;
+                const nodes = plan.raid_plan || [];
+                planHtml = nodes.map(n => `
+                    <div style="display:flex;gap:1rem;align-items:center;padding:4px 0;border-bottom:1px solid rgba(255,255,255,0.04)">
+                        <span style="width:120px;color:var(--text3);font-size:.75rem">📍 ${n.location || '不明'}</span>
+                        <span style="flex:1;font-family:monospace;font-size:.75rem">${n.gpu_name || n.provider_name || '—'}</span>
+                        <span style="color:#6c47ff;font-size:.75rem">F${n.frame_start}–${n.frame_end} (${n.frame_pct}%)</span>
+                        <span style="color:#fbbf24;font-size:.75rem">${n.fp32_tflops ? n.fp32_tflops.toFixed(1)+' TF' : '—'}</span>
+                    </div>`).join('');
+            } catch (_) { planHtml = '<span style="color:var(--danger)">プラン解析エラー</span>'; }
+        }
+
+        // 出力URL
+        const dlHtml = j.output_url
+            ? `<a href="${j.output_url}" target="_blank" download style="color:#00d4ff;font-size:.8rem">⬇ 成果物をダウンロード</a>`
+            : '<span style="color:var(--text3)">output_url なし</span>';
+
+        content.innerHTML = `
+            <div style="display:grid;gap:.75rem">
+                <div>
+                    <div style="color:var(--text3);font-size:.72rem;margin-bottom:.25rem">MRP ジョブ ID</div>
+                    ${mrpHtml}
+                </div>
+                ${planHtml ? `<div>
+                    <div style="color:var(--text3);font-size:.72rem;margin-bottom:.25rem">RAID ノード配分</div>
+                    ${planHtml}
+                </div>` : ''}
+                <div style="display:flex;gap:2rem;align-items:center">
+                    <div>
+                        <div style="color:var(--text3);font-size:.72rem">成果物</div>
+                        ${dlHtml}
+                    </div>
+                    ${j.coupon_code ? `<div>
+                        <div style="color:var(--text3);font-size:.72rem">クーポン</div>
+                        <span style="color:#4ade80;font-size:.8rem">${j.coupon_code}</span>
+                    </div>` : ''}
+                </div>
+            </div>`;
+    } catch (e) {
+        if (content) content.innerHTML = `<span style="color:var(--danger)">詳細取得失敗: ${e.message}</span>`;
+    }
 
 async function cancelSfRaidJob(jobId) {
     if (!confirm(`SF Raid Job #${jobId} を停止しますか?`)) return;
     try { await api(`/admin/sf/raid-jobs/${jobId}/cancel`, { method: 'POST' }); showToast('✅ 停止しました', 'success'); loadSfRaidJobs(); }
     catch (e) { showToast('❌ ' + e.message, 'error'); }
-}
 
 async function forceCompleteSfJob(jobId) {
     if (!confirm(`SF Raid Job #${jobId} を強制完了しますか?`)) return;
     try { await api(`/admin/sf/raid-jobs/${jobId}/force-complete`, { method: 'POST' }); showToast('✅ 強制完了しました', 'success'); loadSfRaidJobs(); }
     catch (e) { showToast('❌ ' + e.message, 'error'); }
 }
-
