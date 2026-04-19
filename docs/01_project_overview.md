@@ -1,31 +1,40 @@
-# GPU レンタルプラットフォーム - プロジェクト概要
+# GPU レンタルプラットフォーム + GPU Street Fighter — プロジェクト概要
 
 ## ドキュメント情報
 
 | 項目 | 内容 |
 |------|------|
-| プロジェクト名 | GPU Rental Platform (RUNPOD型) |
-| 作成日 | 2026-02-26 |
-| バージョン | 1.0 |
-| ステータス | 計画段階 |
+| プロジェクト名 | GPURental + GPU Street Fighter (THE LOBBY) |
+| 会社 | METADATALAB.INC |
+| 最終更新 | 2026-04-19 |
+| バージョン | 2.0 |
+| ステータス | **本番稼働中** |
+| 本番URL | https://gpurental.jp |
 
 ---
 
 ## 1. プロジェクト概要
 
 ### 1.1 目的
-ローカルマシンに搭載された複数のGPUリソースを、外部ユーザーに対してRUNPODのようなクラウドGPUサービスとして提供するプラットフォームを構築する。
+RTX A4500 をはじめとするローカルGPUを GPURental プラットフォームを通じて外部に貸し出すシステム。  
+さらに「GPU Street Fighter (THE LOBBY/THE DOJO/THE REFEREE)」として、GPU コンピューティングパワーを競技処理 (レイドバトル・1on1 マッチ) に活用する拡張機能を統合する。
 
 ### 1.2 主要機能
-1. **GPUレンタル**: ユーザーが利用したいGPUを選択し、時間単位でレンタル
-2. **WEB予約システム**: カレンダーベースの予約管理
-3. **ユーザーワークスペース**: レンタル中のGPU環境をWebブラウザから操作
-4. **管理者監視ダッシュボード**: 全GPU・ユーザー・予約のリアルタイム監視
-5. **外部公開**: Cloudflare Tunnelによる安全な外部アクセス
+| # | 機能 | 画面 |
+|---|------|------|
+| 1 | GPU レンタル (時間単位) | ポータル `/portal/` |
+| 2 | ウェブワークスペース (ターミナル・ファイル・GPU監視) | `/workspace/` |
+| 3 | ⚡ GPU Street Fighter — RAID BATTLE | THE LOBBY `/lobby/` |
+| 4 | ⚡ GPU Street Fighter — 1on1 MATCH | THE LOBBY `/lobby/` |
+| 5 | プロバイダー登録・THE DOJO エージェント | `/provider/` |
+| 6 | 管理者ダッシュボード・SF Raid Jobs 管理 | `/admin/` |
+| 7 | ポイント購入・クーポン・Stripe 決済 | API |
+| 8 | Blender クラウドレンダリング | ワークスペース |
 
 ### 1.3 対象ユーザー
-- **エンドユーザー**: GPU計算リソースを必要とする開発者・クリエイター
-- **管理者**: プラットフォーム運営者
+- **エンドユーザー**: AI 開発者・クリエイター・GPU 計算を必要とする人
+- **プロバイダー**: 自宅・オフィスの遊休 GPU を収益化したい人
+- **管理者**: METADATALAB.INC 運営チーム
 
 ---
 
@@ -37,265 +46,230 @@
 外部ユーザー (HTTPS)
        │
        ▼
-Cloudflare Tunnel (安全な外部公開)
+Cloudflare Tunnel (trycloudflare.com または Named Tunnel)
        │
-       ├──► WEB予約ポータル (:3000)
-       ├──► ユーザーワークスペース (:各Pod固有ポート)
-       └──► 管理者ダッシュボード (:3001)
+       ├──► /portal/          ポータル (GPU 一覧・予約・SF ウィジェット)
+       ├──► /lobby/           ⚡ THE LOBBY (SF マッチ・レイド発注)
+       ├──► /workspace/       ワークスペース (PTY・ファイル・⚡ SF パネル)
+       ├──► /provider/        プロバイダー (THE DOJO セットアップ)
+       ├──► /admin/           管理ダッシュボード
+       │
+       ▼
+ Node.js Backend (Express + Socket.io) :3000
+       │
+       ├── /api/auth/*         JWT 認証
+       ├── /api/gpus/*         GPU 一覧・統計
+       ├── /api/reservations/* 予約 + SF ID 連携
+       ├── /api/sf/*           ⚡ THE REFEREE (SF 全 API)
+       ├── /api/payments/*     Stripe 決済
+       ├── /api/coupons/*      クーポン
+       ├── /api/points/*       ポイント購入
+       ├── /api/files/*        ファイル API
+       ├── /api/render/*       FFmpeg レンダリング
+       ├── /api/blender/*      Blender ジョブ
+       └── /api/admin/*        管理者 API
               │
-              ▼
-       Node.js Backend (Express)
-       ├── Auth Service (JWT認証)
-       ├── Reservation Service (予約管理)
-       ├── Pod Manager (環境管理)
-       ├── GPU Manager (GPU検出・監視)
-       ├── Monitoring Service (監視)
-       ├── WebSocket Server (リアルタイム通信)
-       └── REST API Gateway
-              │
-       ┌──────┼──────┐
-       ▼      ▼      ▼
-    SQLite  GPU Pool  F:ストレージ
+    ┌─────────┼──────────────────┐
+    ▼         ▼                  ▼
+ sql.js DB  GPU Manager        Scheduler
+ (SQLite)   (nvidia-smi)       (cron / auto-pod)
+
+プロバイダー
+  └── node agent.js (THE DOJO)
+        └── POST /api/sf/agent/heartbeat
+        └── POST /api/sf/agent/benchmark
 ```
 
-### 2.2 3つの主要画面
+### 2.2 GPU Street Fighter エンドツーエンドフロー
 
-| 画面 | 対象 | 説明 |
-|------|------|------|
-| WEB予約ポータル | ユーザー | GPU閲覧・予約・マイページ |
-| ワークスペース | ユーザー | GPU環境操作 (ターミナル・ファイル管理) |
-| 管理者ダッシュボード | 管理者 | 全体監視・GPU管理・ユーザー管理 |
+```
+ユーザー             THE LOBBY          THE REFEREE (sf.js)     THE DOJO (agent)
+  │                    │                      │                       │
+  │ POST /api/sf/raid  │                      │                       │
+  ├───────────────────►│─────────────────────►│                       │
+  │                    │ ポイント残高確認       │                       │
+  │◄───────────────────┤ { raid_job_id }       │                       │
+  │                    │                      │                       │
+  │ POST /raid/confirm │                      │                       │
+  ├───────────────────►│─────────────────────►│                       │
+  │                    │ ポイント引き落とし     │                       │
+  │                    │ MRP ジョブ配信────────────────────────────── ►│
+  │ WS: sf:raid_confirmed                     │                       │
+  │◄───────────────────┤                      │                       │
+  │                    │                      │                       │
+  │ /workspace/?raid_job={id}                 │                       │
+  │──────────────────────────────────────────►│                       │
+  │ ⚡ SF ステータスパネル自動表示              │                       │
+  │  (10秒ポーリング) GET /api/sf/raid/:id    │                       │
+  │  完了 → ダウンロードボタン表示             │                       │
+```
 
 ---
 
 ## 3. 技術スタック
 
-| レイヤー | 技術 | 用途 |
+| レイヤー | 技術 | 備考 |
 |---------|------|------|
-| フロントエンド | HTML5 + CSS + JavaScript | 全3画面 |
-| バックエンド | Node.js + Express | APIサーバー |
-| データベース | SQLite (better-sqlite3) | ユーザー・予約・履歴 |
-| リアルタイム通信 | Socket.io | GPU監視・通知 |
-| Webターミナル | xterm.js + node-pty | ターミナルエミュレータ |
-| GPU管理 | nvidia-smi CLI | GPU検出・監視 |
-| レンダリング | FFmpeg (NVENC) | 動画エンコード |
-| 認証 | JWT + bcrypt | ユーザー認証 |
-| スケジューラ | node-cron | 予約自動実行 |
-| 外部公開 | Cloudflare Tunnel | セキュア公開 |
-| ストレージ | F:/gpu-rental/ | ユーザーデータ |
+| フロントエンド | Vanilla HTML5 + CSS + JavaScript | 全画面。ダークテーマ・レスポンシブ |
+| バックエンド | Node.js v18+ + Express 4 + Socket.io | 単一プロセス |
+| データベース | **sql.js** (pure-JS SQLite ラッパー) | ネイティブビルド不要 |
+| GPU 検出 | nvidia-smi CLI + WebGL (クライアント側) | ハイブリッド検出 |
+| ターミナル | xterm.js + node-pty | PTY によるリアルタイム |
+| レンダリング | FFmpeg NVENC / Blender CLI | クラウド GPU 利用 |
+| 認証 | JWT + bcrypt | 8h 期限 |
+| 決済 | Stripe Checkout + GMO Epsilon | デュアル |
+| インフラ | PM2 + Cloudflare Tunnel | プロセス管理・外部公開 |
+| バックアップ | DB 日次自動エクスポート (services/backup.js) | 7世代保存 |
 
 ---
 
 ## 4. ディレクトリ構成
 
 ```
-f:/antigravity/gpu-platform/
+gpu-platform/
 ├── server/
-│   ├── index.js                  # メインサーバー
-│   ├── config.js                 # 設定
+│   ├── index.js                  # エントリポイント・起動バナー
+│   ├── config.js                 # 設定 (SF セクション含む)
 │   ├── db/
-│   │   ├── database.js           # SQLite接続
-│   │   └── migrations.js         # テーブル作成
+│   │   ├── database.js           # sql.js ラッパー (sync API エミュレート)
+│   │   └── migrations.js         # CREATE TABLE + ALTER TABLE (SF カラム自動追加)
 │   ├── middleware/
-│   │   ├── auth.js               # JWT認証
-│   │   └── rateLimit.js          # レート制限
+│   │   ├── auth.js               # JWT 認証ミドルウェア
+│   │   └── rateLimit.js
 │   ├── routes/
-│   │   ├── auth.js               # 認証API
-│   │   ├── gpus.js               # GPU管理API
-│   │   ├── reservations.js       # 予約API
-│   │   ├── pods.js               # Pod管理API
-│   │   ├── files.js              # ファイル管理API
-│   │   ├── render.js             # レンダリングAPI
-│   │   ├── monitoring.js         # 監視API
-│   │   └── admin.js              # 管理者API
-│   ├── services/
-│   │   ├── gpuManager.js         # GPU検出・監視
-│   │   ├── podManager.js         # Pod作成・管理
-│   │   ├── reservationService.js # 予約管理ロジック
-│   │   ├── scheduler.js          # 自動開始/終了
-│   │   ├── renderEngine.js       # FFmpegレンダリング
-│   │   ├── alertService.js       # アラート管理
-│   │   └── statsService.js       # 統計・レポート
-│   └── websocket/
-│       ├── gpuMonitor.js         # GPUリアルタイム監視
-│       ├── podTerminal.js        # Webターミナル接続
-│       └── notifications.js     # 通知配信
+│   │   ├── auth.js               # 認証 API
+│   │   ├── gpus.js               # GPU 一覧・統計 (パブリック)
+│   │   ├── reservations.js       # 予約 API (sf_raid_job_id / sf_match_id 連携)
+│   │   ├── pods.js               # Pod 管理
+│   │   ├── sf.js                 # ⚡ GPU SF 全 API (THE REFEREE)
+│   │   ├── payments.js           # Stripe 決済
+│   │   ├── coupons.js            # クーポン (validateCoupon ヘルパーも)
+│   │   ├── points.js             # ポイント購入 (GMO Epsilon)
+│   │   ├── files.js              # ファイル API
+│   │   ├── render.js             # FFmpeg レンダリング
+│   │   ├── blender.js            # Blender ジョブ
+│   │   ├── admin.js              # 管理者 API (SF Raid Jobs /api/admin/sf/*)
+│   │   └── providers.js          # プロバイダー登録
+│   └── services/
+│       ├── gpuManager.js         # GPU 検出・監視
+│       ├── podManager.js         # Pod 作成 + getWorkspaceUrl() SF URL 生成
+│       ├── scheduler.js          # 自動 Pod 起動/停止
+│       ├── terminal.js           # PTY アタッチ
+│       ├── backup.js             # DB 日次バックアップ
+│       └── tunnelRelay.js        # SSH トンネルリレー
 ├── public/
-│   ├── portal/                   # WEB予約ポータル
+│   ├── portal/                   # ポータル (SF ウィジェット搭載)
 │   │   ├── index.html
-│   │   ├── style.css
-│   │   └── app.js
-│   ├── workspace/                # ユーザーワークスペース
+│   │   ├── style.css             # @keyframes pulse / sfWidgetIn 含む
+│   │   └── app.js                # loadSfWidget() 30秒ポーリング
+│   ├── lobby/                    # ⚡ THE LOBBY
 │   │   ├── index.html
-│   │   ├── style.css
 │   │   └── app.js
-│   └── admin/                    # 管理者ダッシュボード
-│       ├── index.html
-│       ├── style.css
-│       └── app.js
-├── docs/                         # ドキュメント
+│   ├── workspace/                # ワークスペース
+│   │   ├── index.html
+│   │   └── app.js                # initSfFromUrl() URL パラメータ検出
+│   ├── provider/                 # プロバイダー (THE DOJO セクション)
+│   │   ├── index.html
+│   │   └── app.js
+│   ├── admin/                    # 管理ダッシュボード
+│   │   ├── index.html
+│   │   └── app.js
+│   └── maintenance.html          # メンテナンスページ
+├── scripts/
+│   ├── migrate_sf_columns.js     # SF カラム手動マイグレーション (sql.js使用)
+│   └── check_api.ps1             # API 疎通確認 PowerShell スクリプト
+├── docs/
+│   ├── 01_project_overview.md    # (本ファイル)
+│   ├── 02_api_reference.md       # API 詳細
+│   ├── 03_database_schema.md     # DB スキーマ
+│   └── 04_user_flow_sequence.md  # ユーザーフロー・SF 統合フロー
+├── check_status.js               # DB ヘルスチェック (SF + Platform)
+├── start.bat                     # 起動ランチャー
+├── tunnel.bat                    # Cloudflare Tunnel 管理
 ├── package.json
 ├── .env
-└── start.bat
+└── .env.example
 
-F:/gpu-rental/                    # ストレージ
-├── users/{userId}/
+F:/gpu-rental-main/data/           # ストレージ (DB_PATH / STORAGE_PATH)
+├── db/platform.db                 # SQLite DB ファイル
+├── users/{userId}/                # ユーザースペース
 │   ├── workspace/
 │   ├── uploads/
 │   └── outputs/
-├── shared/templates/
-└── db/platform.db
+└── backups/                       # 日次 DB バックアップ
 ```
 
 ---
 
-## 5. データベース設計
+## 5. データベーススキーマ (主要テーブル)
 
-```sql
--- ユーザー管理
-CREATE TABLE users (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    username TEXT UNIQUE NOT NULL,
-    email TEXT UNIQUE NOT NULL,
-    password_hash TEXT NOT NULL,
-    role TEXT DEFAULT 'user',        -- 'user' | 'admin'
-    status TEXT DEFAULT 'active',    -- 'active' | 'suspended'
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    last_login DATETIME
-);
+### 通常プラットフォーム
+| テーブル | 説明 |
+|---------|------|
+| `users` | ユーザー (role: user/admin/provider) |
+| `gpu_nodes` | GPU ノード登録 |
+| `reservations` | 予約 (`sf_raid_job_id`, `sf_match_id` カラム追加済) |
+| `pods` | アクティブ Pod (`sf_raid_job_id`, `sf_match_id` カラム追加済) |
+| `usage_logs` | 利用ログ・コスト |
+| `point_purchases` | ポイント購入履歴 |
+| `point_logs` | ポイント消費ログ (`source='raid_job'` etc.) |
+| `coupons` / `coupon_uses` | クーポン管理 |
 
--- GPU登録
-CREATE TABLE gpus (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    device_index INTEGER NOT NULL,
-    name TEXT NOT NULL,
-    vram_total INTEGER NOT NULL,     -- MB単位
-    driver_version TEXT,
-    price_per_hour REAL DEFAULT 0,   -- 円/時間
-    status TEXT DEFAULT 'available', -- 'available' | 'rented' | 'maintenance'
-    max_temp_threshold INTEGER DEFAULT 85,
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-);
+### GPU Street Fighter
+| テーブル | 説明 |
+|---------|------|
+| `sf_nodes` | SF ノード登録 (user_id, gpu_specs, status, last_seen, tflops, rtt_ms) |
+| `sf_benchmarks` | ベンチマーク計測値 (fp32_tflops, upload/download_mbps etc.) |
+| `sf_match_requests` | 1on1 マッチリクエスト (cards_json, selected_mode) |
+| `sf_raid_jobs` | レイドバトルジョブ (payment_amount_yen, points_used, status) |
 
--- 予約管理
-CREATE TABLE reservations (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    user_id INTEGER NOT NULL,
-    gpu_id INTEGER NOT NULL,
-    start_time DATETIME NOT NULL,
-    end_time DATETIME NOT NULL,
-    status TEXT DEFAULT 'pending',   -- 'pending' | 'confirmed' | 'active' | 'completed' | 'cancelled'
-    total_price REAL,
-    notes TEXT,
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (user_id) REFERENCES users(id),
-    FOREIGN KEY (gpu_id) REFERENCES gpus(id)
-);
+---
 
--- アクティブPod
-CREATE TABLE pods (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    reservation_id INTEGER NOT NULL,
-    user_id INTEGER NOT NULL,
-    gpu_id INTEGER NOT NULL,
-    workspace_path TEXT NOT NULL,
-    cuda_device TEXT NOT NULL,
-    port INTEGER,
-    status TEXT DEFAULT 'creating',  -- 'creating' | 'running' | 'stopping' | 'stopped'
-    started_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    expires_at DATETIME NOT NULL,
-    FOREIGN KEY (reservation_id) REFERENCES reservations(id),
-    FOREIGN KEY (user_id) REFERENCES users(id),
-    FOREIGN KEY (gpu_id) REFERENCES gpus(id)
-);
+## 6. 重要な設計パターン
 
--- 利用ログ
-CREATE TABLE usage_logs (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    pod_id INTEGER NOT NULL,
-    user_id INTEGER NOT NULL,
-    gpu_id INTEGER NOT NULL,
-    gpu_util_avg REAL,
-    vram_usage_avg REAL,
-    max_temperature REAL,
-    duration_minutes INTEGER,
-    cost REAL,
-    logged_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (pod_id) REFERENCES pods(id)
-);
+### 6.1 sql.js ラッパー
+```js
+// database.js が better-sqlite3 互換の同期 API を提供
+const { getDb, initDb, saveToDisk } = require('./server/db/database');
+await initDb();
+const db = getDb();
+db.prepare('SELECT ...').all();   // better-sqlite3 と同じ API
+db.exec('ALTER TABLE ...');
+saveToDisk();  // 3秒間隔の自動保存もあり
+```
 
--- アラート
-CREATE TABLE alerts (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    type TEXT NOT NULL,               -- 'temperature' | 'timeout' | 'error' | 'system'
-    severity TEXT DEFAULT 'info',     -- 'info' | 'warning' | 'critical'
-    message TEXT NOT NULL,
-    gpu_id INTEGER,
-    pod_id INTEGER,
-    resolved BOOLEAN DEFAULT 0,
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    resolved_at DATETIME
-);
+### 6.2 SF URL 連携パターン
+```
+[THE LOBBY] → POST /api/sf/raid/confirm → Pod 起動
+→ podManager.getWorkspaceUrl(podId) → /workspace/?pod=1&raid_job=42
+→ WebSocket pod:started { workspace_url }
+→ portal/app.js: pod:started で workspace_url へリダイレクト
+→ workspace/app.js: initSfFromUrl() → SF ステータスパネル表示 + 10秒ポーリング
+```
+
+### 6.3 マイグレーション自動実行
+```js
+// server/index.js → runMigrations() がサーバー起動時に毎回実行
+// migrations.js 末尾で SF カラムを try/catch で安全に追加
+['ALTER TABLE pods ADD COLUMN sf_raid_job_id INTEGER', ...].forEach(sql => {
+    try { db.exec(sql); } catch (_) { /* 既存スキップ */ }
+});
 ```
 
 ---
 
-## 6. API設計概要
+## 7. 今後の開発ステップ
 
-### 認証 API
-| Method | Endpoint | 説明 |
-|--------|----------|------|
-| POST | /api/auth/register | ユーザー登録 |
-| POST | /api/auth/login | ログイン |
-| POST | /api/auth/logout | ログアウト |
-| GET | /api/auth/me | 自分の情報取得 |
+| # | タスク | 優先度 |
+|---|--------|-------|
+| 1 | **本番デプロイ**: Nginx リバースプロキシ + Let's Encrypt SSL | 高 |
+| 2 | **SF エージェント (THE DOJO)**: provider/agent.js の実装完成 | 高 |
+| 3 | **MRP Orchestrator 連携**: レイドジョブの実際のノード配信 | 高 |
+| 4 | **ワークスペース SF タブ UI**: workspace/index.html に SF タブ明示 | 中 |
+| 5 | **クーポン × SF 対応**: レイド料金へのクーポン適用ロジック | 中 |
+| 6 | **PostgreSQL 移行**: migrate_to_postgres.py による本番DB移行 | 低 |
+| 7 | **SF リーダーボード**: ノード戦績・勝率ランキング表示 | 低 |
 
-### GPU API
-| Method | Endpoint | 説明 |
-|--------|----------|------|
-| GET | /api/gpus | GPU一覧 |
-| GET | /api/gpus/:id | GPU詳細 |
-| GET | /api/gpus/:id/status | GPUリアルタイム状態 |
-| PUT | /api/gpus/:id | GPU設定変更 (admin) |
+---
 
-### 予約 API
-| Method | Endpoint | 説明 |
-|--------|----------|------|
-| GET | /api/reservations | 予約一覧 |
-| POST | /api/reservations | 新規予約 |
-| PUT | /api/reservations/:id | 予約変更 |
-| DELETE | /api/reservations/:id | 予約キャンセル |
-| GET | /api/reservations/calendar | カレンダーデータ |
-
-### Pod API
-| Method | Endpoint | 説明 |
-|--------|----------|------|
-| GET | /api/pods | アクティブPod一覧 |
-| GET | /api/pods/:id | Pod詳細 |
-| POST | /api/pods/:id/extend | 利用延長 |
-| DELETE | /api/pods/:id | Pod強制終了 |
-
-### ファイル API
-| Method | Endpoint | 説明 |
-|--------|----------|------|
-| GET | /api/files/:podId | ファイル一覧 |
-| POST | /api/files/:podId/upload | アップロード |
-| GET | /api/files/:podId/download/:path | ダウンロード |
-| DELETE | /api/files/:podId/:path | 削除 |
-
-### 監視 API (admin)
-| Method | Endpoint | 説明 |
-|--------|----------|------|
-| GET | /api/monitoring/overview | 全体概要 |
-| GET | /api/monitoring/gpus | GPU監視データ |
-| GET | /api/monitoring/alerts | アラート一覧 |
-| GET | /api/monitoring/stats | 統計データ |
-
-### WebSocket イベント
-| イベント | 方向 | 説明 |
-|---------|------|------|
-| gpu:status | Server→Client | GPU状態更新 (5秒間隔) |
-| pod:status | Server→Client | Pod状態変更通知 |
-| alert:new | Server→Client | 新規アラート |
-| reservation:remind | Server→Client | 予約リマインダー |
-| terminal:data | 双方向 | ターミナル入出力 |
+© 2026 GPURental by METADATALAB.INC. All Rights Reserved.
