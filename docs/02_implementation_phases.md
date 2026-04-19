@@ -430,3 +430,136 @@ Cloudflare Tunnelで安全にローカル環境を外部公開し、セキュリ
 ├── 管理画面 IP制限
 └── アクセスログ記録
 ```
+
+---
+
+## Phase 6: GPU Street Fighter 統合 ✅ COMPLETED (2026-04-18〜19)
+
+### 概要
+GPU同士を競い合わせる「GPU Street Fighter」システムをプラットフォームに統合。
+THE LOBBY (発注UI) · THE REFEREE (API) · THE DOJO (プロバイダーエージェント) の三層構成。
+
+### Step 6.1: THE REFEREE — バックエンド API ✅
+
+```
+実装内容:
+├── server/routes/sf.js                 ← SF専用 Express Router (createSfRouter(io))
+│   ├── POST /api/sf/match              ← 1on1マッチリクエスト作成 + スコアリング
+│   ├── POST /api/sf/match/:id/confirm  ← マッチ確定 + ポイント決済
+│   ├── GET  /api/sf/match/:id          ← マッチ状態ポーリング
+│   ├── POST /api/sf/raid               ← レイドバトル計画作成 (buildRaidPlan)
+│   ├── POST /api/sf/raid/confirm       ← レイドジョブ登録 (payment_pending状態)
+│   ├── GET  /api/sf/raid/:id           ← レイドジョブ状態ポーリング
+│   ├── GET  /api/sf/stats/public       ← SF公開統計 (認証不要)
+│   ├── POST /api/sf/nodes/register     ← エージェント初回登録 (X-Agent-Token)
+│   └── POST /api/sf/nodes/heartbeat    ← GPU統計ハートビート (30秒周期)
+├── DB マイグレーション自動適用:
+│   ├── sf_raid_jobs   (id/user_id/status/payment_method/points_used/stripe_payment_id...)
+│   ├── sf_nodes       (id/hostname/fp32_tflops/rtt_ms/status/last_seen...)
+│   ├── sf_match_requests (id/user_id/status/selected_mode/node_scores_json...)
+│   ├── point_logs     (id/type/amount/source/note...)
+│   └── ALTER TABLE pods/reservations ADD COLUMN sf_raid_job_id/sf_match_id
+└── server/config.js に SF ブロック追加
+    (maxRaidNodes=50, matchTimeout=24h, nodeHeartbeatTimeout=2m, bonusMultiplier=1.15)
+```
+
+### Step 6.2: THE DOJO — プロバイダーエージェント ✅
+
+```
+実装内容:
+├── provider/agent.js                   ← ヘッドレスエージェント本体
+│   ├── 初回起動: POST /api/sf/nodes/register
+│   ├── 30秒ハートビート: POST /api/sf/nodes/heartbeat
+│   │   └── nvidia-smiで GPU stats収集 (util/temp/VRAM)
+│   ├── agent_state.json 永続化 (node_id保持)
+│   └── 未登録時: X-Agent-Token でユーザー照合
+├── server/routes/auth.js に追加:
+│   ├── GET  /api/auth/agent-token      ← トークン取得 (プロバイダー)
+│   └── POST /api/auth/agent-token/regenerate ← 再生成
+├── server/middleware/auth.js に追加:
+│   ├── agentTokenMiddleware            ← X-Agent-Token 認証
+│   └── authOrAgent                    ← JWT or agent-token の OR 認証
+├── package.json: npm run agent / npm run agent:dev
+└── public/portal/ THE DOJO セクション (トークン表示/コピー/再生成 UI)
+```
+
+### Step 6.3: 決済統合 ✅
+
+```
+実装内容:
+├── server/routes/payments.js に SF 決済エンドポイント追加:
+│   ├── POST /api/payments/sf-raid/pay-with-points
+│   │   ├── coupon_code (任意) → validateCoupon() でポイント割引
+│   │   ├── DB トランザクション: point_balance -= N, status='paid'
+│   │   └── coupon_uses + point_logs 記録
+│   └── POST /api/payments/sf-raid/create-stripe-session
+│       ├── coupon_code (任意) → amountYen に割引適用 (最低50円)
+│       ├── Stripe Checkout Session 作成
+│       └── metadata: { sf_raid_job_id, type:'sf_raid', coupon_id }
+├── Stripe Webhook: metadata.type==='sf_raid' 分岐追加
+│   └── 決済完了時: sf_raid_jobs.status='paid' + coupon_uses記録
+├── server/routes/reservations.js: POST /api/reservations/sf-confirm
+│   └── レイドジョブ→予約→workspace_url 自動生成
+└── server/routes/coupons.js: router.validateCoupon エクスポート
+```
+
+### Step 6.4: ノード選択 & MRP 連携 ✅
+
+```
+実装内容:
+├── server/services/gpuManager.js に追加:
+│   ├── selectSfNodesForRaid(count)
+│   │   └── sf_nodes WHERE status='idle' ORDER BY rtt_ms, fp32_tflops DESC
+│   ├── dispatchSfRaidJob(raidJobId)
+│   │   ├── ノード選択 → sf_raid_jobs.status='running'
+│   │   ├── MRP_ORCHESTRATOR_URL 設定時 → POST {url}/api/sf/dispatch
+│   │   └── 未設定時 (開発) → setTimeout で 30秒後にシミュレーション完了
+│   └── watchdogDispatchPaidJobs()
+│       └── status='paid' のジョブを全件ディスパッチ試行
+├── server/index.js: 起動5秒後から30秒周期でwatchdog起動
+└── server/services/scheduler.js: SF ノードオフライン検出スイープ (30秒)
+    └── status='online'/'busy' + last_seen > 30秒前 → 'offline' + match cancel
+```
+
+### Step 6.5: フロントエンド UI ✅
+
+```
+実装内容:
+├── public/lobby/index.html             ← THE LOBBY 決済 UI 完全実装
+│   ├── confirmRaid(): レイドジョブ作成 + ポイント残高確認 + モーダル表示
+│   ├── applyCoupon(): /api/coupons/validate でプレビュー更新
+│   ├── 決済方法トグル: ポイント / 💳 Stripe カード
+│   ├── executeRaidPayment(): 新フロー (pay-with-points / create-stripe-session)
+│   └── Stripe 完了リダイレクト検出 (?sf_payment=success)
+├── public/admin/index.html + app.js    ← SF Raid Jobs 管理タブ
+│   ├── loadSfRaidJobs(): GET /api/admin/sf/raid-jobs
+│   ├── cancelSfRaidJob(): POST /api/admin/sf/raid-jobs/:id/cancel (自動返金)
+│   └── forceSfRaidComplete(): POST /api/admin/sf/raid-jobs/:id/force-complete
+├── public/workspace/style.css         ← SF専用スタイル追加
+│   (sfWidgetIn / sfPulse / sf-badge / sf-status-badge / sf-progress)
+└── public/portal/index.html + app.js  ← THE DOJO エージェントトークン管理 UI
+```
+
+### Step 6.6: 設定・ドキュメント ✅
+
+```
+実装内容:
+├── .env                SF変数全追加
+│   (SF_POINT_RATE / SF_NODE_HEARTBEAT_TIMEOUT / SF_RAID_DISPATCH_TIMEOUT /
+│    SF_BONUS_MULTIPLIER / SF_STATS_CACHE_TTL / SF_RAID_MAX_NODES /
+│    SF_MATCH_TIMEOUT_MS / MRP_ORCHESTRATOR_URL コメントアウト)
+├── README.md           SF フロー説明・env表・npm-scripts表 更新
+├── docs/03_effort_estimation.md   セッション完了ノート追加
+└── docs/04_user_flow_sequence.md  セクション6 追加
+    (SF決済フロー / THE DOJOセットアップ / 管理者オペレーション)
+```
+
+### 残タスク (Phase 7)
+
+| # | タスク | 優先度 | 備考 |
+|---|--------|--------|------|
+| 7.1 | PostgreSQL 移行 | 低 | 本番スケール時に実施 |
+| 7.2 | MRP Orchestrator 本番接続 | 中 | MRP_ORCHESTRATOR_URL を設定するだけで有効化 |
+| 7.3 | SF 結果ダウンロード UI (workspace) | 中 | sf_raid_jobs.output_url 完成後に対応 |
+| 7.4 | 1on1 マッチ ポイント決済 UI | 中 | confirmMatch() にも pay-with-points フロー追加 |
+
