@@ -474,3 +474,71 @@ POST /api/payments/webhook (Stripe)
                      └─ status = 'completed', completed_at = NOW()
 ```
 
+
+### 6.5 1on1 マッチ ポイント決済フロー
+
+```
+[THE LOBBY — 1on1 MATCH タブ]
+   ユーザー: 条件入力 → 「FIND CHALLENGER」
+        │
+        ▼
+POST /api/sf/match
+   { data_size_gb, frames, vram_required_gb, realtime }
+        │
+        ▼ 3枚のモードカード (Speed Star / Heavy Weight / Street Fighter)
+   カード選択 → selectCard('speed_star')
+        │
+        ▼
+confirmMatch()
+        │
+        ├─ GET /api/points/balance      → _raidBalance
+        ├─ .price-value から _matchCostYen 取得
+        └─ 決済モーダル表示 (クーポン入力 / ポイント残高)
+             │
+             ▼ [FIGHT START]
+executeMatchPayment()
+        │
+        ▼
+POST /api/sf/match/:id/confirm
+   { selected_mode: 'speed_star', coupon_code: 'XYZ' }
+        │
+        ├─ validateCoupon() → 割引計算
+        ├─ 残高確認 → 不足時: 402 { required, balance }
+        ├─ DB: point_balance -= finalCost
+        ├─ point_logs INSERT (type='spend', source='match')
+        ├─ sf_match_requests.status = 'confirmed'
+        └─ sf_nodes.status = 'busy'
+        │
+        ▼
+   WS: sf:match_confirmed → lobby バナー表示
+        │
+        ▼
+   location.href = /workspace/?match=:id
+   workspace initSfFromUrl() → 10秒ポーリング
+```
+
+### 6.6 管理者 SF Nodes (THE DOJO) 管理フロー
+
+```
+[管理画面 /admin/ → SF Nodes タブ]
+   loadSfNodes() → GET /api/admin/sf/nodes
+        │
+   レスポンス: { nodes[], stats: { online, busy, offline, total_tflops } }
+        │
+   テーブル表示:
+     各行にアクションボタン:
+       [⏹] busy/idle ノード → setSfNodeStatus(id, 'offline')
+                PATCH /api/admin/sf/nodes/:id/status { status: 'offline' }
+       [▶] offline ノード   → setSfNodeStatus(id, 'idle')
+                PATCH /api/admin/sf/nodes/:id/status { status: 'idle' }
+       [🗑] ノード削除      → deleteSfNode(id, hostname)
+                DELETE /api/admin/sf/nodes/:id
+                ※ busy 状態は保護 (400 エラー)
+        │
+   [⏹ 一括オフライン] ボタン → bulkOfflineSfNodes()
+        │
+        ▼
+POST /api/admin/sf/nodes/bulk-offline
+   heartbeat タイムアウト (120秒以上) の全ノードを offline に変更
+   レスポンス: { affected: N }
+```
