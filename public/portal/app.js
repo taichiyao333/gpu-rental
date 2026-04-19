@@ -67,17 +67,23 @@ function updateNavAuth() {
     const username = document.getElementById('navUsername');
     const adminBtn = document.getElementById('btnAdmin');
     const workspaceBtn = document.getElementById('btnWorkspace');
+    const lobbyBtn = document.getElementById('btnLobby');
 
     if (state.user) {
         auth.classList.add('hidden');
         user.classList.remove('hidden');
         username.textContent = `👤 ${state.user.username}`;
         if (state.user.role === 'admin') adminBtn.classList.remove('hidden');
+        // THE LOBBY ボタン: tokenをsessionStorageにも同期 (THE LOBBY用)
+        if (state.token) sessionStorage.setItem('token', state.token);
+        if (lobbyBtn) lobbyBtn.style.display = 'inline-flex';
     } else {
         auth.classList.remove('hidden');
         user.classList.add('hidden');
+        if (lobbyBtn) lobbyBtn.style.display = 'none';
     }
 }
+
 
 document.getElementById('btnLogin').addEventListener('click', () => {
     openAuthModal('login');

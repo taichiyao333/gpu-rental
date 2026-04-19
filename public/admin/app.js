@@ -65,6 +65,7 @@ function loadSection(sec) {
         case 'apikeys': loadApiKeys(); break;
         case 'monitoring': loadMonitoring(); break;
         case 'purchases': loadPurchases(); break;
+        case 'sf-nodes': loadSfNodes(); break;
     }
 }
 
@@ -605,6 +606,60 @@ async function enrichOverview(ovr) {
 initCharts();
 refreshAll();
 setInterval(() => { if (currentSection === 'overview') refreshAll(); }, 8000);
+
+/* ── GPU SF ノード監視 ──────────────────────────────────────────── */
+async function loadSfNodes() {
+    const tbody = document.getElementById('sfNodeTableBody');
+    const summary = document.getElementById('sfNodeSummary');
+    if (!tbody) return;
+    tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:2rem;color:var(--text3)">ロード中...</td></tr>';
+
+    try {
+        const data = await api('/sf/nodes');
+        const nodes = data.nodes || [];
+
+        const online  = nodes.filter(n => n.status === 'online').length;
+        const busy    = nodes.filter(n => n.status === 'busy').length;
+        const offline = nodes.filter(n => n.status === 'offline').length;
+        const totalTf = nodes.reduce((s, n) => s + (n.fp32_tflops || 0), 0);
+
+        if (summary) {
+            summary.innerHTML = [
+                { label: 'ONLINE',    val: online,               color: '#00e5a0' },
+                { label: 'BUSY',      val: busy,                 color: '#ffd700' },
+                { label: 'OFFLINE',   val: offline,              color: '#5a5a7a' },
+                { label: 'TOTAL TF',  val: totalTf.toFixed(1)+' TF', color: '#00d4ff' },
+            ].map(s => `<div class="stat-card" style="border-left:3px solid ${s.color}">
+                <div style="font-size:1.6rem;font-weight:700;color:${s.color}">${s.val}</div>
+                <div style="font-size:.8rem;color:var(--text2);margin-top:.25rem">${s.label}</div>
+            </div>`).join('');
+        }
+
+        const statusBadge = { online:'b-success', busy:'b-warning', offline:'b-muted' };
+        const statusLabel = { online:'ONLINE', busy:'BUSY', offline:'OFFLINE' };
+
+        tbody.innerHTML = nodes.map(n => {
+            const age = n.last_seen ? Math.round((Date.now() - new Date(n.last_seen)) / 1000) : 9999;
+            const ageColor = age < 30 ? '#00e5a0' : age < 120 ? '#ffb300' : '#ff4757';
+            const upMbps = n.upload_mbps;
+            return `<tr>
+              <td class="mono">#${n.id}</td>
+              <td><strong>${n.hostname || '—'}</strong><div style="font-size:.72rem;color:var(--text3)">${n.provider_name || ''}</div></td>
+              <td>${n.location || '—'}</td>
+              <td><span class="badge ${statusBadge[n.status] || 'b-muted'}">${statusLabel[n.status] || n.status}</span></td>
+              <td class="mono" style="color:#00d4ff">${(n.fp32_tflops || 0).toFixed(1)} TF</td>
+              <td class="mono">${n.rtt_ms ? n.rtt_ms.toFixed(0)+'ms' : '—'}</td>
+              <td class="mono">${upMbps ? (upMbps >= 1000 ? (upMbps/1000).toFixed(1)+'G' : upMbps.toFixed(0)+'M') : '—'}</td>
+              <td class="mono" style="color:${ageColor}">${age < 9999 ? age+'s前' : '—'}</td>
+            </tr>`;
+        }).join('') || '<tr><td colspan="8" style="text-align:center;color:var(--text3);padding:2rem">登録済みノードなし</td></tr>';
+
+    } catch (err) {
+        tbody.innerHTML = `<tr><td colspan="8" style="text-align:center;padding:1rem;color:var(--danger)">${err.message}</td></tr>`;
+    }
+}
+
+
 
 /* ── MAINTENANCE MODE ────────────────────────────────────────────── */
 let _maintEnabled = false;

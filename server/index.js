@@ -38,6 +38,8 @@ const renderRoutes = require('./routes/render');
 const stripeRoutes = require('./routes/stripe');
 const agentRoutes = require('./routes/agent');
 const blenderRoutes = require('./routes/blender');
+const createSfRouter = require('./routes/sf');  // GPU SF: THE REFEREE (factory)
+
 
 
 // ─── Startup Environment Validation ────────────────────────────────────────
@@ -198,6 +200,8 @@ app.use('/workspace', express.static(path.join(__dirname, '../public/workspace')
 app.use('/admin', express.static(path.join(__dirname, '../public/admin'), staticOpts));
 app.use('/provider', express.static(path.join(__dirname, '../public/provider'), staticOpts));
 app.use('/mypage', express.static(path.join(__dirname, '../public/mypage'), staticOpts));
+app.use('/lobby', express.static(path.join(__dirname, '../public/lobby'), staticOpts));  // GPU SF: THE LOBBY
+
 
 
 // Root → landing page
@@ -274,6 +278,8 @@ app.use('/api/stripe', stripeRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/agent', agentRoutes);
 app.use('/api/blender', blenderRoutes);
+app.use('/api/sf', createSfRouter(io));  // GPU SF: THE REFEREE マッチングエンジン (io付き)
+
 
 // ─── AI Inference Proxy ───────────────────────────────────────────────────────
 // /api/inference/* → FastAPI inference server (port 8000)

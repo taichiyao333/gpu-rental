@@ -409,6 +409,66 @@ async function runMigrations() {
     );
   `);
 
+  // ─── GPU Street Fighter: THE DOJO ノード ──────────────────────────────
+  // provider-agent から登録されるノード情報 (gpu_nodes の "SF拡張版")
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS sf_nodes (
+      id              INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id         INTEGER NOT NULL UNIQUE,      -- プロバイダーユーザー
+      hostname        TEXT,                          -- エージェントのホスト名
+      agent_version   TEXT DEFAULT '2.0.0',
+      gpu_specs       TEXT,                          -- JSON: [{ index, name, vram_mb, driver_version }]
+      gpu_live_stats  TEXT,                          -- JSON: [{ temperature, utilization, vram_used, power_draw }]
+      location        TEXT DEFAULT 'Unknown',        -- 拠点名 ('東京', '大阪', 'Data Center' etc.)
+      network_region  TEXT DEFAULT 'ap-northeast-1', -- P2Pマッチング用リージョン
+      status          TEXT DEFAULT 'offline',        -- 'online' | 'offline' | 'busy'
+      last_seen       DATETIME,
+      created_at      DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (user_id) REFERENCES users(id)
+    );
+  `);
+
+  // ─── GPU Street Fighter: ベンチマーク（戦闘力測定） ───────────────────────
+  // THE DOJO 初回セットアップ時に測定・送信される指標
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS sf_benchmarks (
+      id                  INTEGER PRIMARY KEY AUTOINCREMENT,
+      node_id             INTEGER NOT NULL UNIQUE,
+      -- Computing Power
+      fp32_tflops         REAL DEFAULT 0,   -- FP32 推算 TFLOPS
+      -- Network Capabilities
+      upload_mbps         REAL DEFAULT 0,   -- アップロード速度 (Mbps)
+      download_mbps       REAL DEFAULT 0,   -- ダウンロード速度 (Mbps)
+      rtt_ms              REAL DEFAULT 0,   -- マッチングサーバーへのRTT (ms) ← heartbeatで更新
+      -- Storage Performance
+      storage_read_mbps   REAL DEFAULT 0,   -- ストレージ読み出し速度
+      storage_write_mbps  REAL DEFAULT 0,   -- ストレージ書き込み速度
+      -- System Stability
+      power_w             REAL DEFAULT 0,   -- 利用可能電力枠 (W)
+      uptime_rate         REAL DEFAULT 100, -- 稼働率 (0〜100%)
+      measured_at         DATETIME,
+      FOREIGN KEY (node_id) REFERENCES sf_nodes(id)
+    );
+  `);
+
+  // ─── GPU Street Fighter: マッチングリクエスト ─────────────────────────────
+  // ユーザーが /api/sf/match に投げたジョブ要件と、THE REFEREEが生成した3枚の対戦カード
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS sf_match_requests (
+      id               INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id          INTEGER NOT NULL,             -- マッチングリクエストしたユーザー
+      job_params       TEXT,                          -- JSON: { data_size_gb, frames, realtime, vram_required_gb }
+      cards_json       TEXT,                          -- JSON: { speed_star, heavy_weight, street_fighter }
+      status           TEXT DEFAULT 'pending',        -- 'pending' | 'confirmed' | 'running' | 'completed' | 'cancelled'
+      selected_mode    TEXT,                          -- 'speed_star' | 'heavy_weight' | 'street_fighter'
+      selected_node_id INTEGER,                       -- 確定したノードID
+      created_at       DATETIME DEFAULT CURRENT_TIMESTAMP,
+      confirmed_at     DATETIME,
+      FOREIGN KEY (user_id)          REFERENCES users(id),
+      FOREIGN KEY (selected_node_id) REFERENCES sf_nodes(id)
+    );
+  `);
+
   console.log('✅ Database migrations complete');
 }
 

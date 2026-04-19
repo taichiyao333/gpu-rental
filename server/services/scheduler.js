@@ -298,7 +298,34 @@ function startScheduler(socketIo) {
         }
     }, 10000); // サーバー起動10秒後
 
-    console.log('✅ Scheduler started (with email reminders + RunPod pricing monitor)');
+    // ── GPU SF: ノードオフライン検出スイープ (30秒ごと) ──────────────────
+    // heartbeatが途絶えたノードを自動的に offline に変更し、
+    // busy → offline になった場合は match_requests もキャンセルにする
+    setInterval(() => {
+        try {
+            const db = getDb();
+
+            // 30秒以上heartbeatがないノードをofflineに
+            db.prepare(`
+                UPDATE sf_nodes
+                SET status = 'offline'
+                WHERE status IN ('online', 'busy')
+                  AND (last_seen IS NULL OR datetime(last_seen) < datetime('now', '-30 seconds'))
+            `).run();
+
+            // offlineになったノードに紐づくpending/confirmed matchをキャンセル
+            db.prepare(`
+                UPDATE sf_match_requests
+                SET status = 'cancelled'
+                WHERE status IN ('pending', 'confirmed')
+                  AND selected_node_id IN (
+                      SELECT id FROM sf_nodes WHERE status = 'offline'
+                  )
+            `).run();
+        } catch (_) { /* sf_nodes未作成でも続行 */ }
+    }, 30000);
+
+    console.log('✅ Scheduler started (with email reminders + RunPod pricing monitor + SF node sweep)');
 }
 
 module.exports = { startScheduler, setIo };

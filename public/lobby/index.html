@@ -1,0 +1,762 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>THE LOBBY — GPU Street Fighter | GPURental</title>
+<meta name="description" content="GPUリソースを格闘ゲームのマッチングで最適配置。Speed Star・Heavy Weight・Street Fighterの3カード、またはレイドバトルで複数ノードに分散レンダリング。">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;600;700&family=Inter:wght@400;500;600&family=Noto+Sans+JP:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+:root {
+    --bg-void:      #04060a;
+    --bg-arena:     #080d14;
+    --bg-card:      #0d1520;
+    --bg-card-alt:  #111a28;
+    --border-glow:  #1e3a5f;
+    --speed-star:   #00d4ff;
+    --heavy-weight: #ff6b35;
+    --street-ftr:   #a855f7;
+    --raid:         #f59e0b;
+    --gold:         #ffd700;
+    --text-primary: #e8f4f8;
+    --text-dim:     #6b8ba4;
+    --font-hud:     'Rajdhani', sans-serif;
+    --font-ui:      'Inter', 'Noto Sans JP', sans-serif;
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+body { background: var(--bg-void); color: var(--text-primary); font-family: var(--font-ui); min-height: 100vh; overflow-x: hidden; }
+body::before {
+    content: ''; pointer-events: none; position: fixed; inset: 0; z-index: 9000;
+    background: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,0,0,0.04) 2px, rgba(0,0,0,0.04) 4px);
+}
+
+/* ── Header ── */
+.header {
+    position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 0 2rem; height: 56px;
+    background: rgba(4,6,10,0.95);
+    border-bottom: 1px solid var(--border-glow);
+    backdrop-filter: blur(12px);
+}
+.header-logo { font-family: var(--font-hud); font-size: 1.3rem; font-weight: 700; color: var(--speed-star); letter-spacing: 2px; text-shadow: 0 0 20px var(--speed-star); }
+.header-logo span { color: var(--text-dim); font-size: 0.75rem; display: block; letter-spacing: 1px; }
+.header-nav { display: flex; gap: 1.5rem; }
+.header-nav a { color: var(--text-dim); text-decoration: none; font-size: 0.85rem; transition: color 0.2s; }
+.header-nav a:hover { color: var(--text-primary); }
+.btn-portal { padding: 0.4rem 1.2rem; background: transparent; border: 1px solid var(--speed-star); color: var(--speed-star); border-radius: 4px; font-size: 0.8rem; cursor: pointer; transition: all 0.2s; }
+.btn-portal:hover { background: rgba(0,212,255,0.1); }
+
+/* ── Layout ── */
+.lobby-wrap { margin-top: 56px; min-height: calc(100vh - 56px); display: flex; flex-direction: column; align-items: center; padding: 2.5rem 1.5rem; }
+
+/* ── Title ── */
+.arena-title { text-align: center; margin-bottom: 1.5rem; }
+.arena-title h1 {
+    font-family: var(--font-hud); font-size: clamp(2rem, 5vw, 3.5rem); font-weight: 700;
+    letter-spacing: 4px; text-transform: uppercase;
+    background: linear-gradient(135deg, var(--speed-star), var(--street-ftr));
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+    animation: titlePulse 3s ease-in-out infinite;
+}
+@keyframes titlePulse { 0%,100%{ filter: brightness(1); } 50%{ filter: brightness(1.3); } }
+.arena-title p { color: var(--text-dim); font-size: 0.9rem; margin-top: 0.4rem; letter-spacing: 1px; }
+
+/* ── Mode Tabs ── */
+.mode-tabs { display: flex; gap: 0; margin-bottom: 2rem; background: var(--bg-card); border: 1px solid var(--border-glow); border-radius: 10px; overflow: hidden; }
+.mode-tab {
+    flex: 1; padding: 0.75rem 1.5rem; background: transparent;
+    border: none; color: var(--text-dim); font-family: var(--font-hud); font-size: 1rem;
+    font-weight: 600; letter-spacing: 2px; cursor: pointer; transition: all 0.25s;
+    position: relative;
+}
+.mode-tab::after { content: ''; position: absolute; bottom: 0; left: 0; right: 0; height: 2px; transform: scaleX(0); transition: transform 0.25s; }
+.mode-tab.active { color: var(--text-primary); background: rgba(255,255,255,0.04); }
+.mode-tab:first-child.active::after { background: var(--speed-star); transform: scaleX(1); }
+.mode-tab:last-child.active::after { background: var(--raid); transform: scaleX(1); }
+.mode-tab:first-child:hover { color: var(--speed-star); }
+.mode-tab:last-child:hover { color: var(--raid); }
+.tab-icon { margin-right: 0.4rem; }
+
+/* ── Tab Panels ── */
+.tab-panel { width: 100%; display: flex; flex-direction: column; align-items: center; }
+.tab-panel.hidden { display: none; }
+
+/* ── Config Panel ── */
+.config-panel {
+    width: 100%; max-width: 720px; background: var(--bg-card);
+    border: 1px solid var(--border-glow); border-radius: 12px;
+    padding: 1.5rem 2rem; margin-bottom: 2rem; position: relative; overflow: hidden;
+}
+.config-panel::before {
+    content: attr(data-label); position: absolute; top: 0.75rem; right: 1.25rem;
+    font-family: var(--font-hud); font-size: 0.65rem; letter-spacing: 2px;
+    color: var(--text-dim); opacity: 0.5;
+}
+.config-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 1rem; }
+.config-field label { display: block; font-size: 0.72rem; letter-spacing: 1px; color: var(--text-dim); margin-bottom: 0.4rem; text-transform: uppercase; }
+.config-field input, .config-field select {
+    width: 100%; background: var(--bg-void); border: 1px solid var(--border-glow);
+    border-radius: 6px; color: var(--text-primary); padding: 0.55rem 0.75rem;
+    font-size: 0.9rem; font-family: var(--font-hud); transition: border-color 0.2s;
+}
+.config-field input:focus, .config-field select:focus { outline: none; border-color: var(--speed-star); box-shadow: 0 0 0 3px rgba(0,212,255,0.1); }
+.config-field select option { background: var(--bg-card); }
+
+.btn-action {
+    margin-top: 1.5rem; width: 100%; padding: 0.9rem;
+    border-radius: 8px; color: #fff; font-family: var(--font-hud);
+    font-size: 1.1rem; font-weight: 600; letter-spacing: 3px; text-transform: uppercase;
+    cursor: pointer; transition: all 0.25s; position: relative; overflow: hidden; border: 1px solid;
+}
+.btn-action::after { content: ''; position: absolute; inset: 0; background: linear-gradient(135deg, transparent 40%, rgba(255,255,255,0.08)); }
+.btn-action:hover:not(:disabled) { transform: translateY(-2px); }
+.btn-action:disabled { opacity: 0.5; cursor: not-allowed; }
+.btn-action.loading { animation: btnPulse 1s ease-in-out infinite; }
+.btn-match { background: linear-gradient(135deg, #0088cc, #0044aa); border-color: var(--speed-star); }
+.btn-match:hover:not(:disabled) { box-shadow: 0 8px 32px rgba(0,136,204,0.5); }
+.btn-raid-action { background: linear-gradient(135deg, #b45309, #92400e); border-color: var(--raid); }
+.btn-raid-action:hover:not(:disabled) { box-shadow: 0 8px 32px rgba(245,158,11,0.5); }
+@keyframes btnPulse { 0%,100%{opacity:1} 50%{opacity:0.6} }
+
+/* ── Divider ── */
+.vs-line { width: 100%; max-width: 960px; display: flex; align-items: center; gap: 1rem; margin: 1rem 0; }
+.vs-line::before, .vs-line::after { content: ''; flex: 1; height: 1px; }
+.vs-line::before { background: linear-gradient(90deg, transparent, var(--border-glow)); }
+.vs-line::after { background: linear-gradient(270deg, transparent, var(--border-glow)); }
+.vs-badge { font-family: var(--font-hud); font-size: 0.75rem; letter-spacing: 3px; color: var(--text-dim); white-space: nowrap; }
+
+/* ── Status ── */
+.match-status { width: 100%; max-width: 960px; min-height: 60px; display: flex; align-items: center; justify-content: center; margin-bottom: 1.5rem; }
+.status-idle { color: var(--text-dim); font-size: 0.9rem; letter-spacing: 1px; }
+.status-searching { display: flex; gap: 0.5rem; align-items: center; font-family: var(--font-hud); font-size: 1rem; color: var(--speed-star); letter-spacing: 2px; }
+.dot-spin { width: 20px; height: 20px; border: 2px solid transparent; border-top-color: var(--speed-star); border-radius: 50%; animation: spin 0.8s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ── Match Cards ── */
+.cards-grid { width: 100%; max-width: 1080px; display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.5rem; opacity: 0; transform: translateY(20px); transition: opacity 0.4s, transform 0.4s; }
+.cards-grid.visible { opacity: 1; transform: translateY(0); }
+.match-card { background: var(--bg-card); border: 2px solid transparent; border-radius: 16px; padding: 0; cursor: pointer; transition: all 0.3s; position: relative; overflow: hidden; display: flex; flex-direction: column; }
+.match-card:hover { transform: translateY(-6px); }
+.match-card.selected { transform: translateY(-8px) scale(1.02); }
+.match-card.no-node { opacity: 0.4; cursor: not-allowed; }
+.match-card[data-mode="speed_star"] { border-color: rgba(0,212,255,0.3); background: linear-gradient(160deg, #0a1a2e 0%, #0d1520 60%); }
+.match-card[data-mode="speed_star"]:hover, .match-card[data-mode="speed_star"].selected { border-color: var(--speed-star); box-shadow: 0 0 40px rgba(0,212,255,0.25), 0 16px 48px rgba(0,0,0,0.5); }
+.match-card[data-mode="heavy_weight"] { border-color: rgba(255,107,53,0.3); background: linear-gradient(160deg, #1e1008 0%, #1a130d 60%); }
+.match-card[data-mode="heavy_weight"]:hover, .match-card[data-mode="heavy_weight"].selected { border-color: var(--heavy-weight); box-shadow: 0 0 40px rgba(255,107,53,0.25), 0 16px 48px rgba(0,0,0,0.5); }
+.match-card[data-mode="street_fighter"] { border-color: rgba(168,85,247,0.3); background: linear-gradient(160deg, #110a1e 0%, #0f0d20 60%); }
+.match-card[data-mode="street_fighter"]:hover, .match-card[data-mode="street_fighter"].selected { border-color: var(--street-ftr); box-shadow: 0 0 40px rgba(168,85,247,0.25), 0 16px 48px rgba(0,0,0,0.5); }
+.card-header { padding: 1.2rem 1.5rem 1rem; position: relative; }
+.card-mode-label { font-family: var(--font-hud); font-size: 1.4rem; font-weight: 700; letter-spacing: 2px; line-height: 1.2; }
+.match-card[data-mode="speed_star"]    .card-mode-label { color: var(--speed-star); }
+.match-card[data-mode="heavy_weight"]  .card-mode-label { color: var(--heavy-weight); }
+.match-card[data-mode="street_fighter"].card-mode-label { color: var(--street-ftr); }
+.card-desc { font-size: 0.78rem; color: var(--text-dim); margin-top: 0.3rem; line-height: 1.5; }
+.score-ring { position: absolute; top: 1rem; right: 1.2rem; width: 54px; height: 54px; }
+.score-ring svg { width: 100%; height: 100%; transform: rotate(-90deg); }
+.score-ring circle { fill: none; stroke-width: 4; stroke-linecap: round; }
+.score-ring .track { stroke: rgba(255,255,255,0.05); }
+.match-card[data-mode="speed_star"]    .score-ring .fill { stroke: var(--speed-star); }
+.match-card[data-mode="heavy_weight"]  .score-ring .fill { stroke: var(--heavy-weight); }
+.match-card[data-mode="street_fighter"].score-ring .fill { stroke: var(--street-ftr); }
+.score-number { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-family: var(--font-hud); font-size: 1rem; font-weight: 700; }
+.card-divider { height: 1px; background: var(--border-glow); margin: 0 1.5rem; }
+.card-node { padding: 1rem 1.5rem; flex: 1; }
+.node-name { font-family: var(--font-hud); font-size: 0.95rem; font-weight: 600; letter-spacing: 1px; margin-bottom: 0.75rem; color: var(--text-primary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.stat-row { display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.55rem; font-size: 0.78rem; }
+.stat-label { width: 52px; color: var(--text-dim); font-size: 0.7rem; letter-spacing: 0.5px; flex-shrink: 0; }
+.stat-bar-wrap { flex: 1; height: 5px; background: rgba(255,255,255,0.05); border-radius: 3px; overflow: hidden; }
+.stat-bar { height: 100%; border-radius: 3px; transition: width 0.8s cubic-bezier(0.2,0.8,0.2,1); width: 0%; }
+.match-card[data-mode="speed_star"]    .stat-bar { background: var(--speed-star); }
+.match-card[data-mode="heavy_weight"]  .stat-bar { background: var(--heavy-weight); }
+.match-card[data-mode="street_fighter"].stat-bar { background: var(--street-ftr); }
+.stat-value { width: 56px; text-align: right; color: var(--text-primary); font-family: var(--font-hud); font-size: 0.82rem; }
+.weights-row { display: flex; gap: 0.4rem; margin-top: 0.75rem; padding-top: 0.75rem; border-top: 1px solid rgba(255,255,255,0.05); }
+.weight-chip { flex: 1; text-align: center; padding: 0.25rem 0.1rem; border-radius: 4px; font-size: 0.65rem; font-family: var(--font-hud); letter-spacing: 0.5px; background: rgba(255,255,255,0.04); color: var(--text-dim); }
+.weight-chip strong { display: block; font-size: 0.85rem; color: var(--text-primary); }
+.card-footer { padding: 1rem 1.5rem; border-top: 1px solid var(--border-glow); }
+.price-info { display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem; }
+.price-label { font-size: 0.72rem; color: var(--text-dim); }
+.price-value { font-family: var(--font-hud); font-size: 1.1rem; font-weight: 700; color: var(--gold); }
+.btn-select { width: 100%; padding: 0.7rem; border: 1px solid; border-radius: 8px; background: transparent; font-family: var(--font-hud); font-size: 0.95rem; font-weight: 600; letter-spacing: 2px; text-transform: uppercase; cursor: pointer; transition: all 0.25s; }
+.match-card[data-mode="speed_star"]    .btn-select { border-color: var(--speed-star); color: var(--speed-star); }
+.match-card[data-mode="heavy_weight"]  .btn-select { border-color: var(--heavy-weight); color: var(--heavy-weight); }
+.match-card[data-mode="street_fighter"].btn-select { border-color: var(--street-ftr); color: var(--street-ftr); }
+.match-card[data-mode="speed_star"]:hover    .btn-select { background: rgba(0,212,255,0.1); }
+.match-card[data-mode="heavy_weight"]:hover  .btn-select { background: rgba(255,107,53,0.1); }
+.match-card[data-mode="street_fighter"]:hover .btn-select { background: rgba(168,85,247,0.1); }
+.match-card.selected .btn-select { color: #000; font-weight: 700; }
+.match-card[data-mode="speed_star"].selected    .btn-select { background: var(--speed-star); }
+.match-card[data-mode="heavy_weight"].selected  .btn-select { background: var(--heavy-weight); }
+.match-card[data-mode="street_fighter"].selected .btn-select { background: var(--street-ftr); }
+
+/* ── Confirm Button ── */
+.confirm-wrap { width: 100%; max-width: 400px; margin-top: 2rem; display: none; }
+.confirm-wrap.visible { display: block; }
+.btn-confirm { width: 100%; padding: 1rem; background: linear-gradient(135deg, #22c55e, #16a34a); border: 1px solid #4ade80; border-radius: 10px; color: #fff; font-family: var(--font-hud); font-size: 1.2rem; font-weight: 700; letter-spacing: 4px; text-transform: uppercase; cursor: pointer; transition: all 0.3s; box-shadow: 0 0 20px rgba(34,197,94,0.3); animation: confirmPulse 2s ease-in-out infinite; }
+@keyframes confirmPulse { 0%,100%{ box-shadow: 0 0 20px rgba(34,197,94,0.3); } 50%{ box-shadow: 0 0 40px rgba(34,197,94,0.6); } }
+.btn-confirm:hover { transform: translateY(-3px); box-shadow: 0 12px 40px rgba(34,197,94,0.5); }
+
+/* ═══════════════════════════════
+   RAID BATTLE STYLES
+═══════════════════════════════ */
+.raid-summary-card {
+    width: 100%; max-width: 960px;
+    background: linear-gradient(135deg, #1a0f00, #0f0a00);
+    border: 1px solid rgba(245,158,11,0.4);
+    border-radius: 12px; padding: 1.25rem 1.5rem;
+    margin-bottom: 1.5rem;
+    opacity: 0; transform: translateY(16px); transition: all 0.4s;
+}
+.raid-summary-card.visible { opacity: 1; transform: translateY(0); }
+.raid-summary-title { font-family: var(--font-hud); font-size: 1.1rem; font-weight: 700; color: var(--raid); letter-spacing: 3px; margin-bottom: 1rem; }
+.raid-summary-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 0.75rem; }
+.raid-stat { text-align: center; }
+.raid-stat-val { font-family: var(--font-hud); font-size: 1.5rem; font-weight: 700; color: var(--raid); }
+.raid-stat-label { font-size: 0.7rem; color: var(--text-dim); letter-spacing: 1px; margin-top: 0.15rem; }
+
+.raid-nodes { width: 100%; max-width: 960px; display: flex; flex-direction: column; gap: 0.75rem; opacity: 0; transform: translateY(16px); transition: all 0.4s 0.1s; }
+.raid-nodes.visible { opacity: 1; transform: translateY(0); }
+.raid-node-row {
+    background: var(--bg-card); border: 1px solid var(--border-glow);
+    border-radius: 10px; padding: 1rem 1.25rem;
+    display: grid; grid-template-columns: 2fr 1fr 2fr 1fr 1fr;
+    gap: 0.75rem; align-items: center;
+    transition: border-color 0.2s;
+}
+.raid-node-row:hover { border-color: rgba(245,158,11,0.4); }
+.raid-node-name { font-family: var(--font-hud); font-size: 0.9rem; font-weight: 600; }
+.raid-node-gpu { font-size: 0.75rem; color: var(--text-dim); margin-top: 0.1rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.raid-frame-range { font-family: var(--font-hud); font-size: 0.95rem; color: var(--raid); }
+.raid-frame-bar-wrap { background: rgba(255,255,255,0.05); border-radius: 3px; height: 6px; overflow: hidden; }
+.raid-frame-bar { height: 100%; background: var(--raid); border-radius: 3px; transition: width 0.8s cubic-bezier(0.2,0.8,0.2,1); width: 0%; }
+.raid-est-time { font-family: var(--font-hud); font-size: 0.85rem; color: var(--text-dim); text-align: right; }
+.raid-node-rank { display: flex; align-items: center; justify-content: center; }
+.rank-badge { width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-family: var(--font-hud); font-size: 0.85rem; font-weight: 700; }
+.rank-1 { background: rgba(255,215,0,0.2); color: var(--gold); border: 1px solid rgba(255,215,0,0.4); }
+.rank-2 { background: rgba(192,192,192,0.1); color: #c0c0c0; border: 1px solid rgba(192,192,192,0.3); }
+.rank-3 { background: rgba(205,127,50,0.1); color: #cd7f32; border: 1px solid rgba(205,127,50,0.3); }
+.rank-n { background: rgba(255,255,255,0.05); color: var(--text-dim); border: 1px solid rgba(255,255,255,0.1); }
+
+.raid-header-row {
+    display: grid; grid-template-columns: 2fr 1fr 2fr 1fr 1fr;
+    gap: 0.75rem; padding: 0 1.25rem 0.5rem;
+    font-size: 0.65rem; letter-spacing: 1.5px; color: var(--text-dim); text-transform: uppercase;
+}
+.btn-raid-confirm { width: 100%; max-width: 480px; margin-top: 2rem; padding: 1rem; background: linear-gradient(135deg, #d97706, #b45309); border: 1px solid var(--raid); border-radius: 10px; color: #fff; font-family: var(--font-hud); font-size: 1.2rem; font-weight: 700; letter-spacing: 3px; text-transform: uppercase; cursor: pointer; transition: all 0.3s; display: none; box-shadow: 0 0 20px rgba(245,158,11,0.3); animation: raidPulse 2s ease-in-out infinite; }
+@keyframes raidPulse { 0%,100%{ box-shadow: 0 0 20px rgba(245,158,11,0.3); } 50%{ box-shadow: 0 0 40px rgba(245,158,11,0.6); } }
+.btn-raid-confirm.visible { display: block; }
+.btn-raid-confirm:hover { transform: translateY(-3px); box-shadow: 0 12px 40px rgba(245,158,11,0.5); }
+
+/* ── Toast ── */
+.toast { position: fixed; bottom: 2rem; left: 50%; transform: translateX(-50%) translateY(8px); background: var(--bg-card-alt, #111a28); border: 1px solid var(--border-glow); border-radius: 8px; padding: 0.75rem 1.5rem; font-size: 0.88rem; color: var(--text-primary); opacity: 0; transition: all 0.3s; z-index: 9999; pointer-events: none; max-width: 400px; text-align: center; }
+.toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+.toast.success { border-color: #22c55e; }
+.toast.error { border-color: #ef4444; }
+
+/* ── Responsive ── */
+@media (max-width: 900px) {
+    .cards-grid { grid-template-columns: 1fr; max-width: 480px; }
+    .raid-node-row, .raid-header-row { grid-template-columns: 2fr 2fr 1fr; }
+    .raid-node-rank, .raid-est-time { display: none; }
+    .header-nav { display: none; }
+}
+@media (max-width: 600px) {
+    .config-grid { grid-template-columns: 1fr 1fr; }
+    .mode-tab { font-size: 0.85rem; padding: 0.65rem 0.75rem; }
+    .btn-portal { display: none; }
+}
+</style>
+</head>
+<body>
+
+<header class="header">
+    <div class="header-logo">
+        THE LOBBY
+        <span>GPU STREET FIGHTER — POWERED BY GPURENTAL</span>
+    </div>
+    <nav class="header-nav">
+        <a href="/portal/">マーケット</a>
+        <a href="/mypage/">マイページ</a>
+        <a href="/provider/">提供者</a>
+    </nav>
+    <button class="btn-portal" onclick="location.href='/portal/'">← ポータルへ</button>
+</header>
+
+<main class="lobby-wrap">
+    <div class="arena-title">
+        <h1>⚔ GPU STREET FIGHTER ⚔</h1>
+        <p>ジョブ要件を入力 — THE REFEREE が最適ノードをマッチングします</p>
+    </div>
+
+    <!-- Mode Tabs -->
+    <div class="mode-tabs" style="max-width:480px; width:100%">
+        <button class="mode-tab active" id="tabMatch" onclick="switchTab('match')">
+            <span class="tab-icon">🥊</span> 1on1 MATCH
+        </button>
+        <button class="mode-tab" id="tabRaid" onclick="switchTab('raid')">
+            <span class="tab-icon">⚡</span> RAID BATTLE
+        </button>
+    </div>
+
+    <!-- ═══ 1on1 MATCH PANEL ═══ -->
+    <div class="tab-panel" id="panelMatch">
+        <div class="config-panel" data-label="JOB CONFIG">
+            <div class="config-grid">
+                <div class="config-field">
+                    <label>データサイズ (GB)</label>
+                    <input type="number" id="dataSizeGb" value="5" min="0.1" step="0.1">
+                </div>
+                <div class="config-field">
+                    <label>フレーム数</label>
+                    <input type="number" id="frames" value="250" min="1">
+                </div>
+                <div class="config-field">
+                    <label>必要VRAM (GB)</label>
+                    <input type="number" id="vramRequiredGb" value="0" min="0" step="4">
+                </div>
+                <div class="config-field">
+                    <label>モード</label>
+                    <select id="realtimeMode">
+                        <option value="false">バッチレンダリング</option>
+                        <option value="true">リアルタイム編集</option>
+                    </select>
+                </div>
+            </div>
+            <button class="btn-action btn-match" id="btnMatch" onclick="startMatch()">
+                🥊 FIND CHALLENGER
+            </button>
+        </div>
+
+        <div class="vs-line"><span class="vs-badge">THE REFEREE — MATCH RESULTS</span></div>
+
+        <div class="match-status" id="matchStatus">
+            <span class="status-idle">条件を入力して「FIND CHALLENGER」をクリック</span>
+        </div>
+        <div class="cards-grid" id="cardsGrid"></div>
+        <div class="confirm-wrap" id="confirmWrap">
+            <button class="btn-confirm" id="btnConfirm" onclick="confirmMatch()">⚔ FIGHT START</button>
+        </div>
+    </div>
+
+    <!-- ═══ RAID BATTLE PANEL ═══ -->
+    <div class="tab-panel hidden" id="panelRaid">
+        <div class="config-panel" data-label="RAID CONFIG">
+            <div class="config-grid">
+                <div class="config-field">
+                    <label>総フレーム数</label>
+                    <input type="number" id="raidFrames" value="1000" min="2">
+                </div>
+                <div class="config-field">
+                    <label>データサイズ (GB)</label>
+                    <input type="number" id="raidDataSize" value="10" min="0.1" step="0.1">
+                </div>
+                <div class="config-field">
+                    <label>必要VRAM (GB)</label>
+                    <input type="number" id="raidVram" value="0" min="0" step="4">
+                </div>
+                <div class="config-field">
+                    <label>最大参加ノード</label>
+                    <select id="raidMaxNodes">
+                        <option value="2">2 ノード</option>
+                        <option value="3">3 ノード</option>
+                        <option value="5" selected>5 ノード</option>
+                        <option value="8">8 ノード</option>
+                    </select>
+                </div>
+            </div>
+            <button class="btn-action btn-raid-action" id="btnRaid" onclick="startRaid()">
+                ⚡ ASSEMBLE RAID PARTY
+            </button>
+        </div>
+
+        <div class="vs-line"><span class="vs-badge">RAID BATTLE — FRAME ALLOCATION</span></div>
+
+        <div class="match-status" id="raidStatus">
+            <span class="status-idle">フレーム数と参加ノード数を設定して「ASSEMBLE RAID PARTY」をクリック</span>
+        </div>
+
+        <!-- Raid Summary -->
+        <div class="raid-summary-card" id="raidSummary">
+            <div class="raid-summary-title">💥 RAID SUMMARY</div>
+            <div class="raid-summary-grid" id="raidSummaryGrid"></div>
+        </div>
+
+        <!-- Raid Node List -->
+        <div class="raid-nodes" id="raidNodes">
+            <div class="raid-header-row">
+                <span>ノード / GPU</span>
+                <span>担当フレーム</span>
+                <span>フレーム配分</span>
+                <span>完了推定</span>
+                <span style="text-align:center">ランク</span>
+            </div>
+            <!-- populated by JS -->
+        </div>
+
+        <button class="btn-raid-confirm" id="btnRaidConfirm" onclick="confirmRaid()">
+            ⚡ RAID START
+        </button>
+    </div>
+</main>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ─────────────────────────────────────────────
+//  THE LOBBY — GPU Street Fighter v2.0
+// ─────────────────────────────────────────────
+
+const MATCH_MODES = {
+    speed_star:     { color: '#00d4ff' },
+    heavy_weight:   { color: '#ff6b35' },
+    street_fighter: { color: '#a855f7' },
+};
+
+let currentMatchId = null;
+let selectedMode   = null;
+let currentRaidPlan = null;
+let activeTab = 'match';
+
+function getToken() {
+    return sessionStorage.getItem('token') || localStorage.getItem('token') || localStorage.getItem('gpu_token');
+}
+
+function showToast(msg, type = 'info', dur = 3500) {
+    const el = document.getElementById('toast');
+    el.textContent = msg;
+    el.className = `toast ${type} show`;
+    setTimeout(() => el.classList.remove('show'), dur);
+}
+
+function animateBar(el, pct) {
+    requestAnimationFrame(() => { el.style.width = `${Math.min(Math.max(pct,0),100)}%`; });
+}
+
+// ──── Tab Switch ─────────────────────────────
+function switchTab(tab) {
+    activeTab = tab;
+    document.getElementById('tabMatch').classList.toggle('active', tab === 'match');
+    document.getElementById('tabRaid').classList.toggle('active', tab === 'raid');
+    document.getElementById('panelMatch').classList.toggle('hidden', tab !== 'match');
+    document.getElementById('panelRaid').classList.toggle('hidden', tab !== 'raid');
+}
+
+// ──── Score Ring ─────────────────────────────
+function buildScoreRing(score, mode) {
+    const R = 22, CIRC = 2 * Math.PI * R;
+    const offset = CIRC * (1 - score / 100);
+    const color = MATCH_MODES[mode]?.color || '#fff';
+    return `<div class="score-ring">
+        <svg viewBox="0 0 54 54">
+            <circle class="track" cx="27" cy="27" r="${R}"/>
+            <circle class="fill" cx="27" cy="27" r="${R}"
+                stroke-dasharray="${CIRC}" stroke-dashoffset="${offset}"
+                style="stroke:${color}; transition: stroke-dashoffset 1s cubic-bezier(.2,.8,.2,1);"/>
+        </svg>
+        <div class="score-number">${score}</div>
+    </div>`;
+}
+
+// ──── Build Match Card HTML ───────────────────
+function buildCard(modeKey, card) {
+    const node = card.top_node;
+    const hasNode = !!node;
+    const { label, desc, weights } = card;
+    let gpuSpecs = [];
+    try { gpuSpecs = typeof node?.gpu_specs === 'string' ? JSON.parse(node.gpu_specs) : (node?.gpu_specs || []); } catch (_) {}
+    const gpuName = gpuSpecs[0]?.name || node?.hostname || '不明';
+    const vramGb  = gpuSpecs[0]?.vram_mb ? Math.round(gpuSpecs[0].vram_mb / 1024) : '?';
+    const score   = hasNode ? (node.score || 0) : 0;
+    const rtt     = hasNode ? (node.rtt_ms || 0) : 0;
+    const upMbps  = hasNode ? (node.upload_mbps || 0) : 0;
+    const tflops  = hasNode ? (node.fp32_tflops || 0) : 0;
+    const price   = hasNode ? (node.price_per_hour || '?') : '?';
+    const location = hasNode ? (node.location || '不明') : '—';
+    const rttBar  = Math.max(0, 100 - (rtt / 300 * 100));
+    const bwBar   = Math.min((upMbps / 1000) * 100, 100);
+    const cpBar   = Math.min((tflops / 120) * 100, 100);
+    const vrBar   = Math.min((vramGb / 96) * 100, 100);
+
+    return `
+    <div class="match-card ${!hasNode ? 'no-node' : ''}" data-mode="${modeKey}" id="card-${modeKey}"
+         onclick="${hasNode ? `selectCard('${modeKey}')` : ''}">
+        <div class="card-header">
+            <div class="card-mode-label">${label}</div>
+            <div class="card-desc">${desc}</div>
+            ${hasNode ? buildScoreRing(score, modeKey) : ''}
+        </div>
+        <div class="card-divider"></div>
+        <div class="card-node">
+            <div class="node-name">
+                ${hasNode ? `📍 ${location} — ${gpuName.replace(/NVIDIA\s+/i,'').replace(/GeForce\s+/i,'')}` : '⚠ 利用可能ノードなし'}
+            </div>
+            ${hasNode ? `
+            <div class="stat-row">
+                <span class="stat-label">遅延</span>
+                <div class="stat-bar-wrap"><div class="stat-bar" data-val="${rttBar}"></div></div>
+                <span class="stat-value">${rtt}ms</span>
+            </div>
+            <div class="stat-row">
+                <span class="stat-label">帯域</span>
+                <div class="stat-bar-wrap"><div class="stat-bar" data-val="${bwBar}"></div></div>
+                <span class="stat-value">${upMbps >= 1000 ? (upMbps/1000).toFixed(1)+'G' : upMbps+'M'}</span>
+            </div>
+            <div class="stat-row">
+                <span class="stat-label">算力</span>
+                <div class="stat-bar-wrap"><div class="stat-bar" data-val="${cpBar}"></div></div>
+                <span class="stat-value">${tflops.toFixed(0)}TF</span>
+            </div>
+            <div class="stat-row">
+                <span class="stat-label">VRAM</span>
+                <div class="stat-bar-wrap"><div class="stat-bar" data-val="${vrBar}"></div></div>
+                <span class="stat-value">${vramGb}GB</span>
+            </div>
+            <div class="weights-row">
+                <div class="weight-chip">LATENCY<strong>${Math.round(weights.latency*100)}%</strong></div>
+                <div class="weight-chip">BANDWIDTH<strong>${Math.round(weights.bandwidth*100)}%</strong></div>
+                <div class="weight-chip">COMPUTE<strong>${Math.round(weights.compute*100)}%</strong></div>
+            </div>
+            ` : '<div style="color:var(--text-dim);font-size:0.8rem;padding:0.5rem 0">オンラインのノードがありません</div>'}
+        </div>
+        <div class="card-footer">
+            ${hasNode ? `<div class="price-info">
+                <span class="price-label">料金</span>
+                <span class="price-value">¥${typeof price === 'number' ? price.toLocaleString() : price}<span style="font-size:0.7rem;color:var(--text-dim)">/hr</span></span>
+            </div>` : ''}
+            <button class="btn-select" ${!hasNode ? 'disabled' : ''}>${hasNode ? 'SELECT' : 'NO NODE'}</button>
+        </div>
+    </div>`;
+}
+
+// ──── 1on1 Match ─────────────────────────────
+async function startMatch() {
+    const token = getToken();
+    if (!token) { showToast('ログインが必要です', 'error'); setTimeout(() => location.href='/portal/#login', 1200); return; }
+
+    const btn = document.getElementById('btnMatch');
+    const statusEl = document.getElementById('matchStatus');
+    const grid = document.getElementById('cardsGrid');
+
+    btn.disabled = true; btn.classList.add('loading'); btn.textContent = '🔍 SEARCHING...';
+    statusEl.innerHTML = `<div class="status-searching"><div class="dot-spin"></div>THE REFEREE が対戦ノードを検索中...</div>`;
+    selectedMode = null; currentMatchId = null;
+    document.getElementById('confirmWrap').classList.remove('visible');
+    grid.classList.remove('visible');
+
+    const payload = {
+        data_size_gb:     parseFloat(document.getElementById('dataSizeGb').value) || 1,
+        frames:           parseInt(document.getElementById('frames').value) || 1,
+        vram_required_gb: parseFloat(document.getElementById('vramRequiredGb').value) || 0,
+        realtime:         document.getElementById('realtimeMode').value === 'true',
+    };
+
+    try {
+        const resp = await fetch('/api/sf/match', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+            body: JSON.stringify(payload),
+        });
+        const data = await resp.json();
+
+        if (!data.success) {
+            statusEl.innerHTML = `<span style="color:#ef4444">⚠ ${data.error || 'マッチングに失敗しました'}</span>`;
+            showToast(data.error || 'エラー', 'error');
+            return;
+        }
+
+        currentMatchId = data.match_id;
+        statusEl.innerHTML = `<span style="color:var(--text-dim);font-size:0.85rem;">
+            ✅ ${data.available_nodes}ノードから ${Object.keys(data.cards).length} 枚の対戦カードを生成 — カードを選択してください
+        </span>`;
+
+        const order = ['speed_star', 'heavy_weight', 'street_fighter'];
+        grid.innerHTML = order.map(k => buildCard(k, data.cards[k])).join('');
+        grid.classList.add('visible');
+
+        setTimeout(() => {
+            document.querySelectorAll('.stat-bar[data-val]').forEach(b => animateBar(b, parseFloat(b.dataset.val)));
+        }, 100);
+
+    } catch (err) {
+        statusEl.innerHTML = `<span style="color:#ef4444">接続エラー: ${err.message}</span>`;
+        showToast('サーバーに接続できません', 'error');
+    } finally {
+        btn.disabled = false; btn.classList.remove('loading'); btn.textContent = '🥊 FIND CHALLENGER';
+    }
+}
+
+function selectCard(mode) {
+    if (!currentMatchId) return;
+    selectedMode = mode;
+    document.querySelectorAll('.match-card').forEach(c => {
+        const sel = c.dataset.mode === mode;
+        c.classList.toggle('selected', sel);
+        const b = c.querySelector('.btn-select');
+        if (b) b.textContent = sel ? '✔ SELECTED' : 'SELECT';
+    });
+    document.getElementById('confirmWrap').classList.add('visible');
+    const names = { speed_star: '⚡ Speed Star', heavy_weight: '💪 Heavy Weight', street_fighter: '🥊 Street Fighter' };
+    showToast(`${names[mode]} を選択 — FIGHT START で確定！`, 'success');
+}
+
+async function confirmMatch() {
+    const token = getToken();
+    if (!token || !currentMatchId || !selectedMode) return;
+    const btn = document.getElementById('btnConfirm');
+    btn.disabled = true; btn.textContent = '⚔ CONNECTING...';
+    try {
+        const resp = await fetch(`/api/sf/match/${currentMatchId}/confirm`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+            body: JSON.stringify({ selected_mode: selectedMode }),
+        });
+        const data = await resp.json();
+        if (data.success) {
+            showToast(`✅ ${data.mode_info.label} でマッチング確定！`, 'success', 4000);
+            setTimeout(() => location.href = `/workspace/?match=${currentMatchId}`, 1500);
+        } else {
+            showToast(data.error || '確定失敗', 'error');
+            btn.disabled = false; btn.textContent = '⚔ FIGHT START';
+        }
+    } catch (err) {
+        showToast('エラー: ' + err.message, 'error');
+        btn.disabled = false; btn.textContent = '⚔ FIGHT START';
+    }
+}
+
+// ──── Raid Battle ────────────────────────────
+async function startRaid() {
+    const token = getToken();
+    if (!token) { showToast('ログインが必要です', 'error'); setTimeout(() => location.href='/portal/#login', 1200); return; }
+
+    const btn = document.getElementById('btnRaid');
+    const statusEl = document.getElementById('raidStatus');
+    const summaryEl = document.getElementById('raidSummary');
+    const nodesEl = document.getElementById('raidNodes');
+
+    btn.disabled = true; btn.classList.add('loading'); btn.textContent = '🔍 ASSEMBLING...';
+    statusEl.innerHTML = `<div class="status-searching"><div class="dot-spin"></div>レイドパーティを編成中...</div>`;
+    summaryEl.classList.remove('visible');
+    nodesEl.classList.remove('visible');
+    document.getElementById('btnRaidConfirm').classList.remove('visible');
+    currentRaidPlan = null;
+
+    const payload = {
+        total_frames:     parseInt(document.getElementById('raidFrames').value) || 300,
+        data_size_gb:     parseFloat(document.getElementById('raidDataSize').value) || 5,
+        vram_required_gb: parseFloat(document.getElementById('raidVram').value) || 0,
+        max_nodes:        parseInt(document.getElementById('raidMaxNodes').value) || 5,
+    };
+
+    try {
+        const resp = await fetch('/api/sf/raid', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+            body: JSON.stringify(payload),
+        });
+        const data = await resp.json();
+
+        if (!data.success) {
+            statusEl.innerHTML = `<span style="color:#ef4444">⚠ ${data.error}</span>`;
+            showToast(data.error, 'error');
+            return;
+        }
+
+        currentRaidPlan = data;
+        const s = data.summary;
+
+        statusEl.innerHTML = `<span style="color:var(--text-dim);font-size:0.85rem;">
+            ✅ ${s.node_count}ノードのレイドパーティを編成しました — 合計 ${s.total_tflops} TFLOPS
+        </span>`;
+
+        // Summary card
+        document.getElementById('raidSummaryGrid').innerHTML = `
+            <div class="raid-stat"><div class="raid-stat-val">${s.node_count}</div><div class="raid-stat-label">NODES</div></div>
+            <div class="raid-stat"><div class="raid-stat-val">${s.total_tflops} TF</div><div class="raid-stat-label">TOTAL COMPUTE</div></div>
+            <div class="raid-stat"><div class="raid-stat-val">${s.est_completion_min}分</div><div class="raid-stat-label">推定完了時間</div></div>
+            <div class="raid-stat"><div class="raid-stat-val">${s.speedup_vs_single}x</div><div class="raid-stat-label">高速化倍率</div></div>
+            <div class="raid-stat"><div class="raid-stat-val">¥${s.estimated_cost_yen.toLocaleString()}</div><div class="raid-stat-label">推定コスト</div></div>
+        `;
+        summaryEl.classList.add('visible');
+
+        // Node rows
+        const rankIcons = ['rank-1','rank-2','rank-3'];
+        const rankNums = ['1','2','3'];
+        const nodeHtml = data.raid_plan.map((n, i) => {
+            const rankClass = i < 3 ? rankIcons[i] : 'rank-n';
+            const rankNum   = i < 3 ? rankNums[i] : String(i+1);
+            const estMin = n.est_seconds >= 60 ? `${Math.round(n.est_seconds/60)}分` : `${n.est_seconds}秒`;
+            const gpuShort = (n.gpu_name || '').replace(/NVIDIA\s+/i,'').replace(/GeForce\s+/i,'').substring(0, 20);
+            return `
+            <div class="raid-node-row">
+                <div>
+                    <div class="raid-node-name">📍 ${n.location || '不明'} — ${n.provider_name}</div>
+                    <div class="raid-node-gpu">${gpuShort} / ${n.fp32_tflops.toFixed(1)} TF</div>
+                </div>
+                <div>
+                    <div class="raid-frame-range" style="color:var(--raid)">${n.frame_start}–${n.frame_end}</div>
+                    <div style="font-size:0.7rem;color:var(--text-dim)">${n.frame_count}フレーム (${n.frame_pct}%)</div>
+                </div>
+                <div>
+                    <div class="raid-frame-bar-wrap">
+                        <div class="raid-frame-bar" data-val="${n.frame_pct}"></div>
+                    </div>
+                    <div style="font-size:0.7rem;color:var(--text-dim);margin-top:4px">${n.frame_pct}%</div>
+                </div>
+                <div class="raid-est-time">${estMin}<div style="font-size:0.65rem">並列稼働</div></div>
+                <div class="raid-node-rank"><div class="rank-badge ${rankClass}">${rankNum}</div></div>
+            </div>`;
+        }).join('');
+
+        // Reset header then add rows
+        const headerHtml = `<div class="raid-header-row">
+            <span>ノード / GPU</span><span>担当フレーム</span><span>フレーム配分</span><span>完了推定</span><span style="text-align:center">ランク</span>
+        </div>`;
+        nodesEl.innerHTML = headerHtml + nodeHtml;
+        nodesEl.classList.add('visible');
+
+        // Animate bars
+        setTimeout(() => {
+            nodesEl.querySelectorAll('.raid-frame-bar[data-val]').forEach(b => animateBar(b, parseFloat(b.dataset.val)));
+        }, 150);
+
+        document.getElementById('btnRaidConfirm').classList.add('visible');
+        showToast(`${s.node_count}ノードのレイドパーティ編成完了！`, 'success');
+
+    } catch (err) {
+        statusEl.innerHTML = `<span style="color:#ef4444">エラー: ${err.message}</span>`;
+        showToast('サーバーエラー', 'error');
+    } finally {
+        btn.disabled = false; btn.classList.remove('loading'); btn.textContent = '⚡ ASSEMBLE RAID PARTY';
+    }
+}
+
+async function confirmRaid() {
+    if (!currentRaidPlan) return;
+    const btn = document.getElementById('btnRaidConfirm');
+    btn.disabled = true; btn.textContent = '⚡ RAID STARTING...';
+    // 現時点では確認UI表示のみ（ジョブ実行は将来フェーズで実装）
+    showToast(`✅ ${currentRaidPlan.summary.node_count}ノードへのレイドジョブをキューに追加しました！`, 'success', 5000);
+    setTimeout(() => {
+        btn.disabled = false; btn.textContent = '⚡ RAID START';
+    }, 2000);
+}
+
+// ──── Keyboard Shortcuts ──────────────────────
+document.addEventListener('keydown', e => {
+    if (activeTab === 'match') {
+        if (e.code === 'Space' && selectedMode && currentMatchId) { e.preventDefault(); confirmMatch(); }
+        if (e.code === 'Digit1') selectCard('speed_star');
+        if (e.code === 'Digit2') selectCard('heavy_weight');
+        if (e.code === 'Digit3') selectCard('street_fighter');
+        if (e.code === 'KeyR') switchTab('raid');
+    } else {
+        if (e.code === 'KeyM') switchTab('match');
+        if (e.code === 'Space' && currentRaidPlan) { e.preventDefault(); confirmRaid(); }
+    }
+});
+</script>
+</body>
+</html>
