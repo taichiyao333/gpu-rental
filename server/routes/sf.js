@@ -974,6 +974,46 @@ function emitNodeStatusUpdate(io, node) {
     });
 }
 
+// ─────────────────────────────────────────────────────────────
+// GET /api/sf/stats/public — 認証不要の概要統計 (ポータルウィジェット用)
+// ─────────────────────────────────────────────────────────────
+router.get('/stats/public', (req, res) => {
+    const db = getDb();
+
+    // オンラインノード数
+    let onlineNodes = 0;
+    try {
+        const r = db.prepare(
+            "SELECT COUNT(*) as c FROM sf_nodes WHERE status IN ('idle','busy') AND last_heartbeat > datetime('now','-2 minutes')"
+        ).get();
+        onlineNodes = r?.c || 0;
+    } catch (_) {}
+
+    // アクティブレイドジョブ数
+    let activeRaids = 0;
+    let completedToday = 0;
+    try {
+        const tableExists = db.prepare(
+            "SELECT name FROM sqlite_master WHERE type='table' AND name='sf_raid_jobs'"
+        ).get();
+        if (tableExists) {
+            activeRaids = db.prepare(
+                "SELECT COUNT(*) as c FROM sf_raid_jobs WHERE status IN ('paid','dispatched')"
+            ).get()?.c || 0;
+            completedToday = db.prepare(
+                "SELECT COUNT(*) as c FROM sf_raid_jobs WHERE status='completed' AND date(updated_at)=date('now')"
+            ).get()?.c || 0;
+        }
+    } catch (_) {}
+
+    res.json({
+        online_nodes:    onlineNodes,
+        active_raids:    activeRaids,
+        completed_today: completedToday,
+        generated_at:    new Date().toISOString(),
+    });
+});
+
 return router;
 }; // end createSfRouter
 

@@ -210,6 +210,66 @@
         </div>
     </section>
 
+    <!-- ⚡ GPU STREET FIGHTER WIDGET -->
+    <section id="sfWidget" style="background:linear-gradient(135deg,rgba(245,158,11,0.06),rgba(99,102,241,0.04));border-top:1px solid rgba(245,158,11,0.12);border-bottom:1px solid rgba(245,158,11,0.12);padding:2rem 0;display:none">
+        <div class="container" style="max-width:1100px">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1.25rem;flex-wrap:wrap;gap:0.75rem">
+                <div style="display:flex;align-items:center;gap:10px">
+                    <span style="font-size:1.5rem">⚡</span>
+                    <div>
+                        <div style="font-size:0.68rem;font-weight:700;letter-spacing:0.12em;color:#fbbf24;text-transform:uppercase">GPU STREET FIGHTER</div>
+                        <div style="font-size:0.82rem;color:rgba(255,255,255,0.45)">分散GPUジョブ × マッチ対戦プラットフォーム</div>
+                    </div>
+                </div>
+                <a href="/lobby/"
+                    style="display:inline-flex;align-items:center;gap:7px;padding:10px 22px;border-radius:12px;background:linear-gradient(135deg,#d97706,#f59e0b);color:#000;font-weight:800;font-size:0.88rem;text-decoration:none;box-shadow:0 0 20px rgba(245,158,11,0.3);transition:opacity 0.2s,transform 0.2s"
+                    onmouseover="this.style.opacity='0.85';this.style.transform='translateY(-1px)'"
+                    onmouseout="this.style.opacity='1';this.style.transform='translateY(0)'">
+                    🏟 THE LOBBY へ入場
+                </a>
+            </div>
+            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;margin-bottom:1.25rem">
+                <div style="background:rgba(255,255,255,0.04);border:1px solid rgba(245,158,11,0.15);border-radius:12px;padding:14px 16px">
+                    <div style="font-size:0.68rem;color:rgba(255,255,255,0.35);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:6px">オンラインGPU</div>
+                    <div style="display:flex;align-items:center;gap:8px">
+                        <span id="sfNodeCount" style="font-size:1.8rem;font-weight:900;color:#fbbf24;font-family:monospace">—</span>
+                        <span style="font-size:0.78rem;color:rgba(255,255,255,0.3)">ノード</span>
+                        <span id="sfNodeDot" style="width:8px;height:8px;border-radius:50%;background:#6b7280;margin-left:auto;flex-shrink:0"></span>
+                    </div>
+                </div>
+                <div style="background:rgba(255,255,255,0.04);border:1px solid rgba(239,68,68,0.15);border-radius:12px;padding:14px 16px">
+                    <div style="font-size:0.68rem;color:rgba(255,255,255,0.35);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:6px">🔥 処理中レイド</div>
+                    <div style="display:flex;align-items:center;gap:8px">
+                        <span id="sfActiveRaids" style="font-size:1.8rem;font-weight:900;color:#f87171;font-family:monospace">—</span>
+                        <span style="font-size:0.78rem;color:rgba(255,255,255,0.3)">バトル</span>
+                    </div>
+                </div>
+                <div style="background:rgba(255,255,255,0.04);border:1px solid rgba(16,185,129,0.15);border-radius:12px;padding:14px 16px">
+                    <div style="font-size:0.68rem;color:rgba(255,255,255,0.35);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:6px">✅ 本日完了</div>
+                    <div style="display:flex;align-items:center;gap:8px">
+                        <span id="sfCompletedToday" style="font-size:1.8rem;font-weight:900;color:#34d399;font-family:monospace">—</span>
+                        <span style="font-size:0.78rem;color:rgba(255,255,255,0.3)">ジョブ</span>
+                    </div>
+                </div>
+                <div id="sfPointCard" style="background:rgba(99,102,241,0.08);border:1px solid rgba(99,102,241,0.2);border-radius:12px;padding:14px 16px;display:none">
+                    <div style="font-size:0.68rem;color:rgba(255,255,255,0.35);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:6px">💎 ポイント残高</div>
+                    <div style="display:flex;align-items:center;gap:6px">
+                        <span id="sfUserPoints" style="font-size:1.8rem;font-weight:900;color:#a5b4fc;font-family:monospace">—</span>
+                        <span style="font-size:0.78rem;color:rgba(255,255,255,0.3)">pt</span>
+                    </div>
+                </div>
+            </div>
+            <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+                <span style="font-size:0.7rem;color:rgba(255,255,255,0.25)">対応AIモデル:</span>
+                <span style="font-size:0.72rem;padding:3px 10px;border-radius:20px;background:rgba(99,102,241,0.15);border:1px solid rgba(99,102,241,0.3);color:#a5b4fc">✨ Real-ESRGAN</span>
+                <span style="font-size:0.72rem;padding:3px 10px;border-radius:20px;background:rgba(124,58,237,0.15);border:1px solid rgba(124,58,237,0.3);color:#c4b5fd">🔮 Jasmy Upscaler</span>
+                <span style="font-size:0.72rem;padding:3px 10px;border-radius:20px;background:rgba(219,39,119,0.1);border:1px solid rgba(219,39,119,0.25);color:#f9a8d4">🎯 Topaz Video AI</span>
+                <span style="font-size:0.72rem;padding:3px 10px;border-radius:20px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);color:rgba(255,255,255,0.3)">⚙️ カスタムコンテナ</span>
+                <a href="/enhance/" style="font-size:0.72rem;color:#fbbf24;opacity:0.6;text-decoration:none;margin-left:auto">MRP AI Enhancer →</a>
+            </div>
+        </div>
+    </section>
+
     <!-- HOW IT WORKS -->
     <section class="section section-dark" id="how">
         <div class="container">

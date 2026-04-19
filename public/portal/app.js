@@ -1136,6 +1136,70 @@ if (state.token) {
     loadMyReservations();
 }
 
+
+/* ─── SF Widget ─────────────────────────────────────────────────── */
+async function loadSfWidget() {
+    const widget   = document.getElementById('sfWidget');
+    const nodeCnt  = document.getElementById('sfNodeCount');
+    const nodeDot  = document.getElementById('sfNodeDot');
+    const raids    = document.getElementById('sfActiveRaids');
+    const done     = document.getElementById('sfCompletedToday');
+    const ptCard   = document.getElementById('sfPointCard');
+    const ptVal    = document.getElementById('sfUserPoints');
+
+    if (!widget) return;
+
+    // ─ GPU ノード数: /api/gpus/public から利用可能数を算出
+    try {
+        const r = await fetch('/api/gpus/public');
+        if (r.ok) {
+            const gpus = await r.json();
+            const online = Array.isArray(gpus)
+                ? gpus.filter(g => g.status === 'available' || g.status === 'rented').length
+                : 0;
+            if (nodeCnt) nodeCnt.textContent = online;
+            if (nodeDot) {
+                nodeDot.style.background = online > 0 ? '#10b981' : '#6b7280';
+                nodeDot.style.animation  = online > 0 ? 'pulse 2s infinite' : 'none';
+            }
+        }
+    } catch (_) {}
+
+    // ─ Raid 統計: 公開エンドポイント (認証不要)
+    try {
+        const r = await fetch('/api/sf/stats/public');
+        if (r.ok) {
+            const d = await r.json();
+            if (raids) raids.textContent = d.active_raids    ?? '—';
+            if (done)  done.textContent  = d.completed_today ?? '—';
+            // ノード数も上書き可能 (API の方が正確)
+            if (nodeCnt && d.online_nodes != null) nodeCnt.textContent = d.online_nodes;
+            if (nodeDot && d.online_nodes != null) {
+                nodeDot.style.background = d.online_nodes > 0 ? '#10b981' : '#6b7280';
+                nodeDot.style.animation  = d.online_nodes > 0 ? 'pulse 2s infinite' : 'none';
+            }
+        }
+    } catch (_) {
+        if (raids) raids.textContent = '—';
+        if (done)  done.textContent  = '—';
+    }
+
+    // ─ ユーザーポイント残高 (ログイン時のみ)
+    if (state.user && ptCard && ptVal) {
+        const bal = state.user.point_balance ?? state.user.wallet_balance ?? '—';
+        ptVal.textContent = typeof bal === 'number' ? Math.floor(bal).toLocaleString() : bal;
+        ptCard.style.display = 'block';
+    }
+
+    // ─ ウィジェットを表示
+    widget.style.display = 'block';
+    widget.style.animation = 'fadeIn 0.4s ease';
+}
+
+// ウィジェット表示: 常時表示 + 30秒ごと更新
+loadSfWidget();
+setInterval(loadSfWidget, 30000);
+
 /* ═══════════════════════════════════════════════════════════════════
    GPU公開ガイド パネル
 ═══════════════════════════════════════════════════════════════════ */
