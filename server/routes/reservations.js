@@ -46,17 +46,21 @@ router.get('/', authMiddleware, (req, res) => {
   let reservations;
   if (req.user.role === 'admin') {
     reservations = db.prepare(`
-      SELECT r.*, u.username as renter_name, gn.name as gpu_name, gn.price_per_hour
+      SELECT r.*, u.username as renter_name, gn.name as gpu_name, gn.price_per_hour,
+             p.id as pod_id
       FROM reservations r
       JOIN users u ON r.renter_id = u.id
       JOIN gpu_nodes gn ON r.gpu_id = gn.id
+      LEFT JOIN pods p ON p.reservation_id = r.id AND p.status = 'running'
       ORDER BY r.created_at DESC
     `).all();
   } else {
     reservations = db.prepare(`
-      SELECT r.*, gn.name as gpu_name, gn.price_per_hour, gn.location
+      SELECT r.*, gn.name as gpu_name, gn.price_per_hour, gn.location,
+             p.id as pod_id
       FROM reservations r
       JOIN gpu_nodes gn ON r.gpu_id = gn.id
+      LEFT JOIN pods p ON p.reservation_id = r.id AND p.status = 'running'
       WHERE r.renter_id = ?
       ORDER BY r.created_at DESC
     `).all(req.user.id);
@@ -195,7 +199,8 @@ router.delete('/:id', authMiddleware, (req, res) => {
 router.get('/my/active-pod', authMiddleware, (req, res) => {
   const db = getDb();
   const pod = db.prepare(`
-    SELECT p.*, gn.name as gpu_name, gn.device_index, r.start_time, r.end_time
+    SELECT p.*, gn.name as gpu_name, gn.device_index, r.start_time, r.end_time,
+           r.sf_raid_job_id, r.sf_match_id
     FROM pods p
     JOIN gpu_nodes gn ON p.gpu_id = gn.id
     JOIN reservations r ON p.reservation_id = r.id

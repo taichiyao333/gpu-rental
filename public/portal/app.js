@@ -991,7 +991,27 @@ function renderReservations(list) {
     // ワークスペースURL: 外部アクセス時はAPI（バックエンド）のURLを使う
     const wsBase = API || location.origin;
 
-    el.innerHTML = list.map(r => `
+    el.innerHTML = list.map(r => {
+        const wsBase = API || location.origin;
+        // active Podのワークスペースリンク: SF IDが紐づいていればパラメータ付き
+        const buildWsUrl = () => {
+            const params = new URLSearchParams();
+            if (r.pod_id)           params.set('pod',      r.pod_id);
+            if (r.sf_raid_job_id)   params.set('raid_job', r.sf_raid_job_id);
+            if (r.sf_match_id)      params.set('match',    r.sf_match_id);
+            const qs = params.toString();
+            return `${wsBase}/workspace/${qs ? '?' + qs : ''}`;
+        };
+
+        const actions = r.status === 'active'
+            ? `<a href="${buildWsUrl()}" target="_blank" class="btn btn-success btn-sm">🖥 ワークスペースを開く${
+                r.sf_raid_job_id || r.sf_match_id ? ' ⚡' : ''}</a>`
+            : (r.status === 'confirmed' || r.status === 'pending')
+                ? `<button class="btn btn-primary btn-sm" onclick="startPod(${r.id})" id="startBtn_${r.id}">🚀 今すぐ開始</button>
+                   <button class="btn btn-danger btn-sm" onclick="cancelReservation(${r.id})">キャンセル</button>`
+                : '';
+
+        return `
     <div class="reservation-item">
       <div class="res-header">
         <span class="res-gpu">${r.gpu_name}</span>
@@ -999,16 +1019,9 @@ function renderReservations(list) {
       </div>
       <div class="res-time">📅 ${formatDate(r.start_time)} → ${formatDate(r.end_time)}</div>
       <div class="res-time">💰 ¥${r.total_price ? Math.round(r.total_price).toLocaleString() : '—'}</div>
-      <div class="res-actions">
-        ${r.status === 'active'
-            ? `<a href="${wsBase}/workspace/" target="_blank" class="btn btn-success btn-sm">🖥 ワークスペースを開く</a>`
-            : (r.status === 'confirmed' || r.status === 'pending')
-                ? `<button class="btn btn-primary btn-sm" onclick="startPod(${r.id})" id="startBtn_${r.id}">🚀 今すぐ開始</button>
-                   <button class="btn btn-danger btn-sm" onclick="cancelReservation(${r.id})">キャンセル</button>`
-                : ''}
-      </div>
-    </div>
-  `).join('');
+      <div class="res-actions">${actions}</div>
+    </div>`;
+    }).join('');
 }
 
 // Pod を即時起動してワークスペースへ誘導
@@ -1019,10 +1032,14 @@ async function startPod(reservationId) {
         const result = await apiFetch(`/reservations/${reservationId}/start`, { method: 'POST' });
         showToast('🚀 GPUが起動しました！ワークスペースに接続します...', 'success');
 
-        // ワークスペースURL
+        // workspace_url には ?raid_job= / ?match= パラメータが含まれる場合がある
         const wsBase = API || location.origin;
+        const dest = result.pod?.workspace_url
+            || (result.workspace_url)
+            || `${wsBase}/workspace/`;
+
         setTimeout(() => {
-            window.open(`${wsBase}/workspace/`, '_blank');
+            window.open(dest, '_blank');
         }, 1500);
 
         // 予約リストを更新
@@ -1112,7 +1129,9 @@ function connectSocket() {
 
     socket.on('pod:started', (data) => {
         showToast(data.message, 'success');
-        setTimeout(() => window.location.href = '/workspace/', 1500);
+        // workspace_url には ?raid_job= / ?match= パラメータが含まれる場合がある
+        const dest = data.workspace_url || '/workspace/';
+        setTimeout(() => window.location.href = dest, 1500);
     });
 
     socket.on('pod:warning', (data) => {
