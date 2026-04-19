@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 const { getDb } = require('../db/database');
 const { authMiddleware, adminOnly } = require('../middleware/auth');
-const { getActivePods, stopPod, createPod, getPodContainerInfo } = require('../services/podManager');
+const { getActivePods, stopPod, createPod, getPodContainerInfo, getWorkspaceUrl } = require('../services/podManager');
 const { getCachedStats } = require('../services/gpuManager');
 const { mailProviderPodStarted, mailProviderPodEnded } = require('../services/email');
 
@@ -26,22 +26,24 @@ router.get('/', authMiddleware, (req, res) => {
 router.get('/active', authMiddleware, (req, res) => {
     const db = getDb();
     const pod = db.prepare(`
-        SELECT p.*, gn.name as gpu_name, gn.device_index, r.docker_template
+        SELECT p.*, gn.name as gpu_name, gn.device_index, r.docker_template,
+               r.sf_raid_job_id, r.sf_match_id
         FROM pods p
         JOIN gpu_nodes gn ON p.gpu_id = gn.id
         LEFT JOIN reservations r ON p.reservation_id = r.id
         WHERE p.renter_id = ? AND p.status = 'running'
         ORDER BY p.started_at DESC LIMIT 1
     `).get(req.user.id);
-    res.json(pod || null);
+    if (!pod) return res.json(null);
+    res.json({ ...pod, workspace_url: getWorkspaceUrl(pod.id) });
 });
 
-// ─── GET /api/pods/:id ─ Pod詳細 ──────────────────────────────────────────
+// ─── GET /api/pods/:id ─ Pod詳細 ───────────────────────────────────────────
 router.get('/:id', authMiddleware, (req, res) => {
     const db = getDb();
     const pod = db.prepare(`
         SELECT p.*, gn.name as gpu_name, gn.device_index, u.username as renter_name,
-               r.docker_template
+               r.docker_template, r.sf_raid_job_id, r.sf_match_id
         FROM pods p
         JOIN gpu_nodes gn ON p.gpu_id = gn.id
         JOIN users u ON p.renter_id = u.id
@@ -57,6 +59,7 @@ router.get('/:id', authMiddleware, (req, res) => {
         ...pod,
         gpuStats: getCachedStats(pod.device_index),
         minutesLeft: Math.max(0, Math.round((new Date(pod.expires_at) - new Date()) / 60000)),
+        workspace_url: getWorkspaceUrl(pod.id),
     });
 });
 

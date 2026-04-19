@@ -609,3 +609,53 @@ body {
     gap: 0.5rem;
     margin-top: 1rem;
 }
+/* ─── GPU SF / Raid Jobs — Admin Styles ───────────────────── */
+.sf-badge {
+    display: inline-flex; align-items: center; gap: 4px;
+    padding: 2px 9px; border-radius: 100px;
+    font-size: 0.7rem; font-weight: 700; letter-spacing: 0.05em;
+    text-transform: uppercase;
+}
+.sf-badge.payment_pending { background: rgba(255,179,0,.15); color: #ffb300; }
+.sf-badge.paid            { background: rgba(0,229,160,.15); color: #00e5a0; }
+.sf-badge.dispatched      { background: rgba(0,212,255,.15); color: #00d4ff; }
+.sf-badge.running         { background: rgba(255,71,87,.15);  color: #ff4757; }
+.sf-badge.completed       { background: rgba(0,229,160,.2);  color: #00e5a0; border: 1px solid rgba(0,229,160,.3); }
+.sf-badge.failed          { background: rgba(255,71,87,.2);  color: #ff6b6b; }
+.sf-badge.cancelled       { background: rgba(100,100,120,.2); color: #9898b8; }
+
+.sf-raid-card {
+    background: rgba(108,71,255,.04);
+    border: 1px solid rgba(108,71,255,.18);
+    border-radius: 10px;
+    padding: 0.9rem 1.1rem;
+    margin-bottom: 0.6rem;
+    transition: border-color 0.2s;
+}
+.sf-raid-card:hover { border-color: rgba(108,71,255,.4); }
+.sf-raid-card .raid-header {
+    display: flex; align-items: center; gap: 0.75rem; margin-bottom: 0.4rem;
+}
+.sf-raid-card .raid-id {
+    font-weight: 700; color: #6c47ff; font-size: 0.82rem;
+}
+.sf-raid-card .raid-meta {
+    font-size: 0.75rem; color: var(--text2, #9898b8); display: flex; gap: 1rem; flex-wrap: wrap;
+}
+.sf-stats-grid {
+    display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+    gap: 0.7rem; margin-bottom: 1rem;
+}
+.sf-stat-box {
+    background: rgba(108,71,255,.06);
+    border: 1px solid rgba(108,71,255,.2);
+    border-radius: 10px; padding: 0.7rem 0.9rem; text-align: center;
+}
+.sf-stat-box .sf-stat-val {
+    font-size: 1.25rem; font-weight: 800; color: #6c47ff;
+    line-height: 1.2; display: block;
+}
+.sf-stat-box .sf-stat-lbl {
+    font-size: 0.68rem; color: var(--text2, #9898b8);
+    text-transform: uppercase; letter-spacing: 0.05em; margin-top: 2px;
+}

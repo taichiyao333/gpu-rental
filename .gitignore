@@ -1,4 +1,4 @@
-# Dependencies
+﻿# Dependencies
 node_modules/
 npm-debug.log*
 yarn-debug.log*
@@ -46,8 +46,8 @@ build/
 tmp/
 temp/
 
-# GPU Rental Storage (F:ドライブのデータは除外)
-# F:/gpu-rental/ は .gitignore の対象外 (別ドライブのため)
+# GPU Rental Storage (F:繝峨Λ繧､繝悶・繝・・繧ｿ縺ｯ髯､螟・
+# F:/gpu-rental/ 縺ｯ .gitignore 縺ｮ蟇ｾ雎｡螟・(蛻･繝峨Λ繧､繝悶・縺溘ａ)
 
 agent/node_modules/
 
@@ -58,4 +58,18 @@ gpu-monitor/node_modules/
 
 # Temporary scripts
 fix*.js
-check_status.js
+reset_*.js
+
+# Cloudflare / SSL certs
+*.pem
+*.crt
+*.key
+
+# SF Agent runtime data
+agent/data/
+agent/logs/
+
+# DB backups (auto-generated)
+data/backups/
+backups/
+
