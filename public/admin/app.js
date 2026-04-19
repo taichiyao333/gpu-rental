@@ -616,7 +616,7 @@ async function loadSfNodes() {
     tbody.innerHTML = '<tr><td colspan="9" style="text-align:center;padding:2rem;color:var(--text3)">ロード中...</td></tr>';
 
     try {
-        const data  = await api('/sf/nodes');
+        const data  = await api('/admin/sf/nodes');
         const nodes = data.nodes || [];
         const stats = data.stats || {};
 
@@ -681,7 +681,7 @@ async function loadSfNodes() {
 async function setSfNodeStatus(nodeId, status) {
     if (!confirm(`ノード #${nodeId} のステータスを「${status}」に変更しますか？`)) return;
     try {
-        await api(`/sf/nodes/${nodeId}/status`, 'PATCH', { status });
+        await api(`/admin/sf/nodes/${nodeId}/status`, { method: 'PATCH', body: JSON.stringify({ status }) });
         showToast(`ノード #${nodeId} → ${status} に変更しました`, 'success');
         loadSfNodes();
     } catch (err) {
@@ -692,7 +692,7 @@ async function setSfNodeStatus(nodeId, status) {
 async function deleteSfNode(nodeId, hostname) {
     if (!confirm(`ノード #${nodeId} (${hostname}) を削除しますか？この操作は取り消せません。`)) return;
     try {
-        await api(`/sf/nodes/${nodeId}`, 'DELETE');
+        await api(`/admin/sf/nodes/${nodeId}`, { method: 'DELETE' });
         showToast(`ノード #${nodeId} を削除しました`, 'success');
         loadSfNodes();
     } catch (err) {
@@ -703,7 +703,7 @@ async function deleteSfNode(nodeId, hostname) {
 async function bulkOfflineSfNodes() {
     if (!confirm('heartbeat タイムアウトした全ノードをオフラインに変更しますか？')) return;
     try {
-        const d = await api('/sf/nodes/bulk-offline', 'POST');
+        const d = await api('/admin/sf/nodes/bulk-offline', { method: 'POST' });
         showToast(`${d.affected}件のノードをオフラインに変更しました`, 'success');
         loadSfNodes();
     } catch (err) {
