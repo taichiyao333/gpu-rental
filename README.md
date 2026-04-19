@@ -251,8 +251,12 @@ npm run migrate:sf       # SF カラム手動マイグレーション
 | `CLOUDFLARE_TUNNEL_TOKEN` | - | Named Tunnel トークン |
 | `SF_POINT_RATE` | 1 | 1 ポイント = N 円 |
 | `SF_NODE_HEARTBEAT_TIMEOUT` | 120000 | ノードオフライン判定 (ms) |
+| `SF_RAID_DISPATCH_TIMEOUT` | 300000 | レイドジョブ最大待機時間 (ms) |
 | `SF_BONUS_MULTIPLIER` | 1.15 | SF ノード収益ボーナス倍率 |
-| `MRP_ORCHESTRATOR_URL` | http://localhost:7860 | MRP Orchestrator 接続先 |
+| `SF_STATS_CACHE_TTL` | 15000 | SF 公開統計キャッシュ TTL (ms) |
+| `SF_RAID_MAX_NODES` | 50 | レイド最大参加ノード数 |
+| `SF_MATCH_TIMEOUT_MS` | 86400000 | 1on1 マッチ受付タイムアウト (ms) |
+| `MRP_ORCHESTRATOR_URL` | - | MRP Orchestrator 接続先 (未設定時はシミュレーション) |
 
 ---
 
@@ -270,6 +274,8 @@ npm run migrate:sf       # SF カラム手動マイグレーション
 | `npm run check:api` | API エンドポイント疎通確認 |
 | `npm run check:api:sf` | SF API 疎通確認のみ |
 | `npm run backup` | DB 手動バックアップ |
+| `npm run agent` | THE DOJO エージェント起動 (要 AGENT_TOKEN) |
+| `npm run agent:dev` | THE DOJO エージェント (localhost 向け) |
 
 ---
 
