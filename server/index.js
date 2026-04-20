@@ -177,6 +177,9 @@ app.get('/privacy', (req, res) => res.sendFile(path.join(__dirname, '../public/l
 app.get('/pricing', (req, res) => res.sendFile(path.join(__dirname, '../public/landing/pricing.html')));
 app.get('/pricing.html', (req, res) => res.sendFile(path.join(__dirname, '../public/landing/pricing.html')));
 
+// favicon
+app.get('/favicon.ico', (req, res) => res.sendFile(path.join(__dirname, '../public/favicon.ico')));
+
 // ─── Dynamic Password Gate ───────────────────────────────────────────────────
 // /password-gate.js → SITE_BETA_PASSWORD を .env から動的注入して配信
 app.get('/password-gate.js', (req, res) => {
@@ -258,9 +261,7 @@ app.use('/lobby', express.static(path.join(__dirname, '../public/lobby'), static
 // Root → landing page
 app.get('/', (req, res) => res.sendFile(path.join(__dirname, '../public/landing/index.html')));
 
-// /pricing → static のあとに配置（public/pricing.html を直接配信）
-app.get('/pricing', (req, res) => res.sendFile(path.join(__dirname, '../public/pricing.html')));
-app.get('/pricing.html', (req, res) => res.sendFile(path.join(__dirname, '../public/pricing.html')));
+// /pricing は L177-178 で定義済み (landing/pricing.html を配信)
 
 // SPA fallback routes
 app.get('/portal/*', (req, res) => res.sendFile(path.join(__dirname, '../public/portal/index.html')));
