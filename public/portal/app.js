@@ -92,7 +92,7 @@ document.getElementById('btnRegister').addEventListener('click', () => {
     openAuthModal('register');
 });
 document.getElementById('heroReserve').addEventListener('click', () => {
-    if (!state.user) { openAuthModal('login'); return; }
+    // ログイン不要でもGPUリストへスクロール
     document.getElementById('gpus').scrollIntoView({ behavior: 'smooth' });
 });
 document.getElementById('heroProvide').addEventListener('click', () => {

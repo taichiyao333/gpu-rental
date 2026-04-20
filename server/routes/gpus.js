@@ -47,6 +47,17 @@ router.get('/', (req, res) => {
     }
 });
 
+// GET /api/gpus/public - エイリアス (sfWidget等からの参照用)
+router.get('/public', (req, res) => {
+    try {
+        const nodes = memCache('gpuList', 10000, () => getGpuNodesWithStats());
+        res.setHeader('Cache-Control', 'public, max-age=10, stale-while-revalidate=30');
+        res.json(nodes);
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
 
 // GET /api/gpus/:id - GPU detail
 router.get('/:id', (req, res) => {
