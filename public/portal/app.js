@@ -1,4 +1,4 @@
-﻿/* 笏笏笏 State 笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏 */
+/* 笏笏笏 State 笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏 */
 const state = {
     token: localStorage.getItem('gpu_token') || null,
     user: JSON.parse(localStorage.getItem('gpu_user') || 'null'),
@@ -57,7 +57,7 @@ function fmtJpTime(d) {
 
 function formatMins(mins) {
     const h = Math.floor(mins / 60), m = mins % 60;
-    return h > 0 ? `${h}譎る俣${m}蛻・ : `${m}蛻・;
+    return h > 0 ? `${h}時間${m}分` : `${m}分`;
 }
 
 /* 笏笏笏 Auth 笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏 */
@@ -92,7 +92,7 @@ document.getElementById('btnRegister').addEventListener('click', () => {
     openAuthModal('register');
 });
 document.getElementById('heroReserve').addEventListener('click', () => {
-    // ログイン不要でもGPUリストへスクロール
+    // login guard removed
     document.getElementById('gpus').scrollIntoView({ behavior: 'smooth' });
 });
 document.getElementById('heroProvide').addEventListener('click', () => {
@@ -104,7 +104,7 @@ document.getElementById('btnLogout').addEventListener('click', () => {
     state.token = null;
     state.user = null;
     updateNavAuth();
-    showToast('繝ｭ繧ｰ繧｢繧ｦ繝医＠縺ｾ縺励◆', 'info');
+    showToast('ログアウトしました', 'info');
 });
 
 function openAuthModal(tab) {
@@ -163,7 +163,7 @@ document.getElementById('loginForm').addEventListener('submit', async (e) => {
         document.getElementById('authOverlay').classList.add('hidden');
         updateNavAuth();
         connectSocket();
-        showToast(`繧医≧縺薙◎縲・{data.user.username}縺輔ｓ・～, 'success');
+        showToast(`ようこそ！${data.user.username}さん`, 'success');
         loadMyReservations();
     } catch (err) {
         errEl.textContent = err.message;
@@ -200,7 +200,7 @@ document.getElementById('registerForm').addEventListener('submit', async (e) => 
         document.getElementById('authOverlay').classList.add('hidden');
         updateNavAuth();
         connectSocket();
-        showToast('逋ｻ骭ｲ螳御ｺ・ｼ√ｈ縺・％縺晢ｼ・, 'success');
+        showToast('登録しました！ようこそ！', 'success');
     } catch (err) {
         errEl.textContent = err.message;
         errEl.classList.remove('hidden');
@@ -269,9 +269,9 @@ document.getElementById('forgotForm').addEventListener('submit', async (e) => {
             method: 'POST',
             body: JSON.stringify({ email: document.getElementById('forgotEmail').value }),
         });
-        successEl.textContent = data.message || '繝ｪ繧ｻ繝・ヨ繝｡繝ｼ繝ｫ繧帝∽ｿ｡縺励∪縺励◆縲ゅΓ繝ｼ繝ｫ繧偵＃遒ｺ隱阪￥縺縺輔＞縲・;
+        successEl.textContent = data.message || 'リセットメールを送信しました。メールをご確認ください。';
         successEl.classList.remove('hidden');
-        btn.textContent = '騾∽ｿ｡貂医∩ 笨・;
+        btn.textContent = '送信済み';
     } catch (err) {
         errEl.textContent = err.message;
         errEl.classList.remove('hidden');
@@ -299,7 +299,7 @@ document.getElementById('resetPasswordForm').addEventListener('submit', async (e
     const urlParams = new URLSearchParams(window.location.search);
     const resetToken = urlParams.get('reset_token');
     if (!resetToken) {
-        errEl.textContent = '繝ｪ繧ｻ繝・ヨ繝医・繧ｯ繝ｳ縺瑚ｦ九▽縺九ｊ縺ｾ縺帙ｓ縲ゅΓ繝ｼ繝ｫ縺ｮ繝ｪ繝ｳ繧ｯ繧貞・蠎ｦ繧ｯ繝ｪ繝・け縺励※縺上□縺輔＞縲・;
+        errEl.textContent = 'リセットトークンが見つかりません。メールのリンクをクリックしてください。';
         errEl.classList.remove('hidden');
         return;
     }
@@ -309,7 +309,7 @@ document.getElementById('resetPasswordForm').addEventListener('submit', async (e
             method: 'POST',
             body: JSON.stringify({ token: resetToken, password: newPw }),
         });
-        successEl.textContent = data.message || '繝代せ繝ｯ繝ｼ繝峨ｒ螟画峩縺励∪縺励◆・・;
+        successEl.textContent = data.message || 'パスワードを変更しました。';
         successEl.classList.remove('hidden');
         // URL縺九ｉ繝医・繧ｯ繝ｳ繧帝勁蜴ｻ
         const url = new URL(window.location.href);
@@ -319,7 +319,7 @@ document.getElementById('resetPasswordForm').addEventListener('submit', async (e
         setTimeout(() => {
             document.getElementById('resetOverlay').classList.add('hidden');
             openAuthModal('login');
-            showToast('繝代せ繝ｯ繝ｼ繝峨ｒ螟画峩縺励∪縺励◆縲よ眠縺励＞繝代せ繝ｯ繝ｼ繝峨〒繝ｭ繧ｰ繧､繝ｳ縺励※縺上□縺輔＞縲・, 'success');
+            showToast('パスワードを変更しました。新しいパスワードでログインしてください。', 'success');
         }, 2500);
     } catch (err) {
         errEl.textContent = err.message;
@@ -346,7 +346,7 @@ async function loadGpus() {
         renderGpuGrid(gpus);
         // GPU逋ｻ骭ｲ謨ｰ繧呈峩譁ｰ・医ヵ繧ｩ繝ｼ繝ｫ繝舌ャ繧ｯ・・
         const el = document.getElementById('statGpus');
-        if (el && el.textContent === '窶・) el.textContent = gpus.length;
+        if (el && el.textContent === '-') el.textContent = gpus.length;
     } catch (err) {
         console.error('Failed to load GPUs:', err);
     }
@@ -392,14 +392,14 @@ function renderGpuGrid(gpus) {
         const temp = stats.temperature || 0;
         const tempPct = Math.min(100, Math.round((temp / 100) * 100));
         const statusClass = `status-${gpu.status}`;
-        const statusLabel = { available: '遨ｺ縺阪≠繧・, rented: '菴ｿ逕ｨ荳ｭ', maintenance: '繝｡繝ｳ繝・ｸｭ', offline: '繧ｪ繝輔Λ繧､繝ｳ' }[gpu.status] || gpu.status;
+        const statusLabel = { available: '空き有り', rented: '使用中', maintenance: 'メンテ中', offline: 'オフライン' }[gpu.status] || gpu.status;
         const vramGB = Math.round(gpu.vram_total / 1024);
 
         // 謗･邯夂紫 (uptime_rate)
         const uptime = gpu.uptime_rate !== undefined && gpu.uptime_rate !== null ? parseFloat(gpu.uptime_rate) : 100;
         const sessionCount = gpu.session_count || 0;
         const uptimeColor = uptime >= 99.5 ? '#00e5a0' : uptime >= 98 ? '#a3e635' : uptime >= 95 ? '#fbbf24' : '#ff4757';
-        const uptimeLabel = sessionCount === 0 ? '譁ｰ隕・ : uptime.toFixed(1) + '%';
+        const uptimeLabel = sessionCount === 0 ? '新規' : uptime.toFixed(1) + '%';
         const uptimeBar = sessionCount === 0 ? 100 : uptime;
 
         return `
@@ -526,8 +526,8 @@ const DOCKER_TEMPLATES = [
         id: 'pytorch',
         icon: '櫨',
         name: 'PyTorch 2.1',
-        desc: 'CUDA 12.1 + PyTorch 2.1\nTransformers / Diffusers 莉伜ｱ・,
-        purpose: 'AI/讖滓｢ｰ蟄ｦ鄙・,
+        desc: 'CUDA 12.1 + PyTorch 2.1\nTransformers / Diffusers included',
+        purpose: 'AI/ML',
         color: '#ee4c2c',
         tags: ['AI', 'LLM', 'SD'],
     },
@@ -536,25 +536,25 @@ const DOCKER_TEMPLATES = [
         icon: '耳',
         name: 'ComfyUI',
         desc: 'Stable Diffusion WebUI\nComfyUI + 荳ｻ隕√ヮ繝ｼ繝牙酔譴ｱ',
-        purpose: 'AI/讖滓｢ｰ蟄ｦ鄙・,
+        purpose: 'AI/ML',
         color: '#7c5cbf',
-        tags: ['逕ｻ蜒冗函謌・, 'SD'],
+        tags: ['画像生成', 'SD'],
     },
     {
         id: 'jupyter',
         icon: '涛',
         name: 'JupyterLab',
         desc: 'CUDA + JupyterLab 4.x\npandas / scikit-learn / matplotlib',
-        purpose: '遘大ｭｦ險育ｮ・,
+        purpose: '学習/教育',
         color: '#f37626',
         tags: ['蛻・梵', 'Python'],
     },
     {
         id: 'ollama',
-        icon: 'ｦ・,
+        icon: '🦙',
         name: 'Ollama LLM',
-        desc: 'Ollama + 繝｢繝・Ν閾ｪ蜍輔ム繧ｦ繝ｳ繝ｭ繝ｼ繝噂nllama3縲［istral遲峨ｒ縺吶＄螳溯｡・,
-        purpose: 'AI/讖滓｢ｰ蟄ｦ鄙・,
+        desc: 'Ollama + Model auto-download (llama3, mistral etc)',
+        purpose: 'AI/ML',
         color: '#00a67e',
         tags: ['LLM', 'Chat'],
     },
@@ -572,7 +572,7 @@ const DOCKER_TEMPLATES = [
         icon: '制',
         name: 'Ubuntu 22.04',
         desc: 'CUDA 12.1 + Python 3.11\n繧ｫ繧ｹ繧ｿ繝迺ｰ蠅・・繝ｼ繧ｹ',
-        purpose: '縺昴・莉・,
+        purpose: 'その他',
         color: '#4a90d9',
         tags: ['豎守畑'],
     },
@@ -631,7 +631,7 @@ function selectDockerTemplate(id) {
 
 /* 笏笏 Calendar rendering 笏笏 */
 function calRenderCalendar() {
-    const MONTHS = ['1譛・, '2譛・, '3譛・, '4譛・, '5譛・, '6譛・, '7譛・, '8譛・, '9譛・, '10譛・, '11譛・, '12譛・];
+    const MONTHS = ['1月', '2月', '3月', '4月', '5月', '6月', '7月', '8月', '9月', '10月', '11月', '12月'];
     document.getElementById('calMonthLabel').textContent =
         `${calState.year}蟷ｴ ${MONTHS[calState.month]}`;
 
@@ -787,7 +787,7 @@ function calRenderTimeGrid() {
         } else if (isBooked) {
             cls += ' booked';
             label = `${hh}:00<br><span class="slot-tag">莠育ｴ・ｸ・/span>`;
-            title = `${hh}:00 縺ｯ莠育ｴ・ｸ医∩縺ｧ縺兪;
+            title = `${hh}:00 は予約済みです`;
         } else if (isActive) {
             cls += ' active';
             onclick = `onclick="calSelectHour(${h})"`;
@@ -843,10 +843,10 @@ function calUpdateSummary() {
     const ready = calState.selectedDate !== null && calState.selectedHour !== null && gpu;
 
     if (!ready) {
-        document.getElementById('sumStart').textContent = '窶・;
-        document.getElementById('sumEnd').textContent = '窶・;
-        document.getElementById('sumHours').textContent = '窶・;
-        document.getElementById('sumTotal').textContent = '窶・;
+        document.getElementById('sumStart').textContent = '-';
+        document.getElementById('sumEnd').textContent = '-';
+        document.getElementById('sumHours').textContent = '-';
+        document.getElementById('sumTotal').textContent = '-';
         const btn = document.getElementById('submitReserve');
         btn.disabled = true;
         btn.textContent = calState.selectedDate
@@ -871,11 +871,11 @@ function calUpdateSummary() {
     document.getElementById('sumStart').textContent = fmtDt(startDt);
     document.getElementById('sumEnd').textContent = fmtDt(endDt);
     document.getElementById('sumHours').textContent = `${calState.duration}譎る俣`;
-    document.getElementById('sumTotal').textContent = `ﾂ･${total.toLocaleString()}・・{totalPt.toLocaleString()}pt・荏;
+    document.getElementById('sumTotal').textContent = `¥${total.toLocaleString()}`;{totalPt.toLocaleString()}pt・荏;
 
     const btn = document.getElementById('submitReserve');
     btn.disabled = false;
-    btn.textContent = `笨・莠育ｴ・ｒ遒ｺ螳壹☆繧具ｼ・{totalPt.toLocaleString()}pt・荏;
+    btn.textContent = `予約を確定する (${totalPt.toLocaleString()}pt)`;
 }
 
 /* 笏笏 Calendar nav 笏笏 */
@@ -952,7 +952,7 @@ document.getElementById('submitReserve').addEventListener('click', async () => {
             }),
         });
         document.getElementById('modalOverlay').classList.add('hidden');
-        showToast(`笨・${data.gpu_name} 縺ｮ莠育ｴ・′螳御ｺ・＠縺ｾ縺励◆・・ｼ・{calState.duration}譎る俣・荏, 'success');
+        showToast(`${data.gpu_name} の予約が完了しました (${calState.duration}時間)`, 'success');
         loadMyReservations();
         loadGpus();
     } catch (err) {
@@ -987,7 +987,7 @@ function renderReservations(list) {
         el.innerHTML = '<p style="color:var(--text2);padding:1rem;font-size:0.875rem">莠育ｴ・′縺ゅｊ縺ｾ縺帙ｓ</p>';
         return;
     }
-    const statusLabel = { pending: '遒ｺ隱堺ｸｭ', confirmed: '遒ｺ螳壽ｸ・, active: '遞ｼ蜒堺ｸｭ', completed: '螳御ｺ・, cancelled: '繧ｭ繝｣繝ｳ繧ｻ繝ｫ' };
+        const statusLabel = { pending: '確認中', confirmed: '確定済み', active: '稼働中', completed: '完了', cancelled: 'キャンセル' }[r.status] || r.status;
     // 繝ｯ繝ｼ繧ｯ繧ｹ繝壹・繧ｹURL: 螟夜Κ繧｢繧ｯ繧ｻ繧ｹ譎ゅ・API・医ヰ繝・け繧ｨ繝ｳ繝会ｼ峨・URL繧剃ｽｿ縺・
     const wsBase = API || location.origin;
 
@@ -1018,7 +1018,7 @@ function renderReservations(list) {
         <span class="status-badge status-${r.status === 'active' ? 'available' : r.status === 'completed' ? 'offline' : 'rented'}">${statusLabel[r.status] || r.status}</span>
       </div>
       <div class="res-time">套 ${formatDate(r.start_time)} 竊・${formatDate(r.end_time)}</div>
-      <div class="res-time">腸 ﾂ･${r.total_price ? Math.round(r.total_price).toLocaleString() : '窶・}</div>
+      <div class="res-time">📅 ¥${r.total_price ? Math.round(r.total_price).toLocaleString() : '-'}</div>
       <div class="res-actions">${actions}</div>
     </div>`;
     }).join('');
@@ -1046,7 +1046,7 @@ async function startPod(reservationId) {
         setTimeout(() => loadMyReservations(), 2000);
     } catch (err) {
         showToast('襍ｷ蜍輔お繝ｩ繝ｼ: ' + err.message, 'error');
-        if (btn) { btn.disabled = false; btn.textContent = '噫 莉翫☆縺宣幕蟋・; }
+    if (btn) { btn.disabled = false; btn.textContent = '▶ 今すぐ起動'; }
     }
 }
 
@@ -1091,8 +1091,8 @@ async function executeCancel(id) {
         const result = await apiFetch(`/reservations/${id}`, { method: 'DELETE' });
         document.getElementById('cancelResModal')?.remove();
         const msg = result.refunded > 0
-            ? `莠育ｴ・ｒ繧ｭ繝｣繝ｳ繧ｻ繝ｫ縺励∪縺励◆縲を汳ｰ ${result.refunded}pt 繧定ｿ秘≡縺励∪縺励◆・～
-            : '莠育ｴ・ｒ繧ｭ繝｣繝ｳ繧ｻ繝ｫ縺励∪縺励◆縲・;
+            ? `予約をキャンセルしました。${result.refunded}pt を返還しました。`
+            : '予約をキャンセルしました。';
         showToast(msg, 'info');
         loadMyReservations();
         loadGpus();
@@ -1189,8 +1189,8 @@ async function loadSfWidget() {
         const r = await fetch('/api/sf/stats/public');
         if (r.ok) {
             const d = await r.json();
-            if (raids) raids.textContent = d.active_raids    ?? '窶・;
-            if (done)  done.textContent  = d.completed_today ?? '窶・;
+            if (raids) raids.textContent = d.active_raids    ?? '-';
+            if (done)  done.textContent  = d.completed_today ?? '-';
             // 繝弱・繝画焚繧ゆｸ頑嶌縺榊庄閭ｽ (API 縺ｮ譁ｹ縺梧ｭ｣遒ｺ)
             if (nodeCnt && d.online_nodes != null) nodeCnt.textContent = d.online_nodes;
             if (nodeDot && d.online_nodes != null) {
@@ -1199,13 +1199,13 @@ async function loadSfWidget() {
             }
         }
     } catch (_) {
-        if (raids) raids.textContent = '窶・;
-        if (done)  done.textContent  = '窶・;
+    if (raids) raids.textContent = '-';
+    if (done)  done.textContent  = '-';
     }
 
     // 笏 繝ｦ繝ｼ繧ｶ繝ｼ繝昴う繝ｳ繝域ｮ矩ｫ・(繝ｭ繧ｰ繧､繝ｳ譎ゅ・縺ｿ)
     if (state.user && ptCard && ptVal) {
-        const bal = state.user.point_balance ?? state.user.wallet_balance ?? '窶・;
+    const bal = state.user.point_balance ?? state.user.wallet_balance ?? '-';
         ptVal.textContent = typeof bal === 'number' ? Math.floor(bal).toLocaleString() : bal;
         ptCard.style.display = 'block';
     }
@@ -1265,10 +1265,10 @@ function guideSetStep(n) {
     document.getElementById('guidePrev').disabled = n === 1;
     const nextBtn = document.getElementById('guideNext');
     if (n === GUIDE_TOTAL) {
-        nextBtn.textContent = '笨・螳御ｺ・;
+        nextBtn.textContent = '完了';
         nextBtn.onclick = closeGuidePanel;
     } else {
-        nextBtn.textContent = '谺｡縺ｸ 竊・;
+        nextBtn.textContent = '次へ →';
         nextBtn.onclick = () => guideNav(1);
     }
     // Step 2縺ｯ繝ｭ繧ｰ繧､繝ｳ迥ｶ諷九ｒ譖ｴ譁ｰ
@@ -1284,15 +1284,15 @@ function updateStep2Status() {
         const card = document.getElementById('step2Status');
         card.style.borderColor = 'rgba(0,229,160,0.3)';
         card.style.background = 'rgba(0,229,160,0.06)';
-        document.querySelector('#step2Status .gs-ac-icon').textContent = '笨・;
+        document.querySelector('#step2Status .gs-ac-icon').textContent = '✓';
         title.textContent = `繝ｭ繧ｰ繧､繝ｳ貂医∩: ${state.user.username}`;
-        desc.textContent = '繧｢繧ｫ繧ｦ繝ｳ繝医・貅門ｙ縺後〒縺阪※縺・∪縺吶よｬ｡縺ｮ繧ｹ繝・ャ繝励∈騾ｲ繧薙〒縺上□縺輔＞縲・;
-        btn.textContent = 'Step 3縺ｸ 竊・;
+    desc.textContent = 'アカウントの準備ができています。次のステップへ進んでください。';
+        btn.textContent = 'Step 3へ →';
         btn.onclick = () => guideNav(1);
     } else {
         document.querySelector('#step2Status .gs-ac-icon').textContent = '柏';
         title.textContent = '繝ｭ繧ｰ繧､繝ｳ縺励※縺上□縺輔＞';
-        desc.textContent = '繝励Ο繝舌う繝繝ｼ縺ｨ縺励※逋ｻ骭ｲ縺吶ｋ縺ｫ縺ｯ繧｢繧ｫ繧ｦ繝ｳ繝医′蠢・ｦ√〒縺吶・;
+    desc.textContent = 'プロバイダーとして登録するにはアカウントが必要です。';
         btn.textContent = '繝ｭ繧ｰ繧､繝ｳ / 逋ｻ骭ｲ';
         btn.onclick = openAuthFromGuide;
     }
@@ -1326,8 +1326,8 @@ async function checkGpuLocal() {
         result.classList.remove('hidden');
 
         if (!gl || !rendererRaw) {
-            result.innerHTML = `笶・<strong>WebGL 縺檎┌蜉ｹ縺ｧ縺・/strong><br>
-<span style="font-size:0.82rem;color:var(--text3)">WebGL繧呈怏蜉ｹ縺ｫ縺吶ｋ縺九∝ｯｾ蠢懊ヶ繝ｩ繧ｦ繧ｶ・・hrome / Edge・峨ｒ縺贋ｽｿ縺・￥縺縺輔＞縲・/span>`;
+        result.innerHTML = '<strong>WebGLが無効です</strong><br>';
+        result.innerHTML += '<span style="font-size:0.82rem;color:var(--text3)">ChromeまたはFirefoxを使用してください</span>';
             return;
         }
 
@@ -1370,14 +1370,14 @@ async function checkGpuLocal() {
 
         const supported = !!matchedEntry;
         const displayName = matchedEntry ? matchedEntry.name : gpuName;
-        const vramText = matchedEntry ? `${matchedEntry.vram} GB` : '窶・;
-        const priceText = matchedEntry ? `ﾂ･${matchedEntry.price.toLocaleString()}/譎る俣` : '窶・;
+        const vramText = matchedEntry ? `${matchedEntry.vram} GB` : '-';
+        const priceText = matchedEntry ? `¥${matchedEntry.price.toLocaleString()}/時間` : '-';
 
         const badge = supported
             ? `<span style="background:rgba(0,229,160,.15);color:var(--success);font-size:0.7rem;padding:1px 7px;border-radius:4px;font-weight:700">笨・蟇ｾ蠢懈ｸ医∩</span>`
             : `<span style="background:rgba(255,179,0,.15);color:var(--warning);font-size:0.7rem;padding:1px 7px;border-radius:4px;font-weight:700">笞・・隕∫｢ｺ隱・/span>`;
 
-        result.innerHTML = `笨・<strong>繝ｭ繝ｼ繧ｫ繝ｫPC縺ｮGPU繧呈､懷・縺励∪縺励◆・・/strong><br><br>
+        result.innerHTML = `✅ <strong>ローカルPCのGPUを検出しました！</strong><br><br>
 <div style="background:rgba(0,229,160,.06);border:1px solid rgba(0,229,160,.2);border-radius:8px;padding:0.75rem;margin-bottom:0.5rem">
   <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px"><strong>${displayName}</strong>${badge}</div>
   <div style="font-size:0.82rem;color:var(--text2)">
@@ -1386,20 +1386,20 @@ async function checkGpuLocal() {
   </div>
 </div>
 ${supported
-                ? `竊・Step 3縺ｸ騾ｲ縺ｿ縲∽ｸ願ｨ倥・GPU繧堤匳骭ｲ縺励※縺上□縺輔＞縲Ａ
-                : `笞・・繧ｫ繧ｿ繝ｭ繧ｰ縺ｫ隕九▽縺九ｊ縺ｾ縺帙ｓ縺ｧ縺励◆縺後∵焔蜍輔〒逋ｻ骭ｲ縺ｧ縺阪∪縺吶Ａ}`;
+                ? `↪️ Step 3へ進み、上記のGPUを登録してください。`
+                : `↪️ GPUカタログに見つかりませんでしたが、手動で登録できます。`}`;
 
         // 繝√ぉ繝・け繝ｪ繧ｹ繝医ｒ繝√ぉ繝・け貂医∩縺ｫ
         if (supported) {
             const chk = document.getElementById('chkGpu');
-            if (chk) chk.querySelector('.gs-check-icon').textContent = '笨・;
+            if (chk) chk.querySelector('.gs-check-icon').textContent = '✓';
         }
 
     } catch (e) {
         result.classList.remove('hidden');
-        result.innerHTML = `笞・・GPU讀懷・縺ｫ螟ｱ謨励＠縺ｾ縺励◆: ${e.message}`;
+    result.innerHTML = '❌ GPU検出に失敗しました: ' + e.message;
     }
-    btn.textContent = '剥 蜀肴､懷・縺吶ｋ';
+    btn.textContent = '🔍 再検出する';
     btn.disabled = false;
 }
 
@@ -1678,17 +1678,17 @@ async function renderTicketPlans() {
         // 繝昴う繝ｳ繝域ｮ矩ｫ倥ｂ譖ｴ譁ｰ
         const bal = await apiFetch('/points/balance');
         const balEl = document.getElementById('ticketCurrentBalance');
-        if (balEl) balEl.textContent = `迴ｾ蝨ｨ谿矩ｫ假ｼ・{bal.point_balance.toLocaleString()}pt (ﾂ･${bal.yen_value.toLocaleString()})`;
+    if (balEl) balEl.textContent = `現在残高：${bal.point_balance.toLocaleString()}pt`;
 
         container.innerHTML = _ticketPlans.map(p => `
           <div class="ticket-plan ${p.badge ? 'plan-featured' : ''}" onclick="selectTicketPlan('${p.id}')">
             ${p.badge ? `<span class="plan-badge">${p.badge}</span>` : ''}
             ${p.discount ? `<span class="plan-discount">-${p.discount}%OFF</span>` : ''}
             <div class="plan-name">${p.name}</div>
-            <div class="plan-hours">${p.hours}譎る俣蛻・/div>
-            <div class="plan-price">ﾂ･${p.amount_yen.toLocaleString()}</div>
+<div class="plan-hours">${p.hours}時間</div>
+<div class="plan-price">¥${p.amount_yen.toLocaleString()}</div>
             <div class="plan-points">= ${p.points.toLocaleString()} pt</div>
-            ${p.discount ? `<div class="plan-original">螳壻ｾ｡ ﾂ･${Math.round(p.hours * 800).toLocaleString()}</div>` : ''}
+            ${p.discount ? `<div class="plan-original">定価 ¥${Math.round(p.hours * 800).toLocaleString()}</div>` : ''}
             <button class="btn btn-primary btn-full" onclick="purchaseTicket('${p.id}',event)">雉ｼ蜈･縺吶ｋ</button>
           </div>
         `).join('');
@@ -1712,7 +1712,7 @@ async function purchaseTicket(planId, event) {
             body: JSON.stringify({ plan_id: planId, coupon_code: couponCode || undefined, return_to: 'portal' }),
         });
         if (result.test_mode) {
-            showToast(`笨・${result.points_added}pt 莉倅ｸ弱＆繧後∪縺励◆・・ｼ医ユ繧ｹ繝医Δ繝ｼ繝会ｼ荏, 'success');
+            showToast(`${result.points_added}pt 付与されました！（テストモード）`, 'success');
             loadPointBalance();
             renderTicketPlans();
         } else if (result.url || result.checkout_url || result.redirect_url) {
@@ -1791,8 +1791,8 @@ async function applyCoupon() {
         result.style.background = 'rgba(0,229,160,0.1)';
         result.style.border = '1px solid rgba(0,229,160,0.3)';
         result.style.color = '#00e5a0';
-        result.innerHTML = `笨・<strong>${data.code}</strong> 窶・${data.label} 縺碁←逕ｨ縺輔ｌ縺ｾ縺呻ｼ～;
-        showToast(`次・・繧ｯ繝ｼ繝昴Φ縲・{data.code}縲阪ｒ驕ｩ逕ｨ縺励∪縺励◆`, 'success');
+        result.innerHTML = `<strong>${data.code}</strong> — ${data.label} が適用されました！`;
+        showToast(`クーポン ${data.code} を適用しました`, 'success');
     } catch (e) {
         _appliedCoupon = null;
         result.style.display = 'block';
@@ -1815,7 +1815,7 @@ async function reconnectPod(podId) {
         setTimeout(() => loadMyReservations(), 2000);
     } catch (e) {
         showToast('蜀肴磁邯壹お繝ｩ繝ｼ: ' + e.message, 'error');
-        if (btn) { btn.disabled = false; btn.textContent = '売 蜀肴磁邯・; }
+    if (btn) { btn.disabled = false; btn.textContent = '振込申請'; }
     }
 }
 
@@ -1829,8 +1829,8 @@ function renderReservations(list) {
         return;
     }
     const statusLabel = {
-        pending: '遒ｺ隱堺ｸｭ', confirmed: '遒ｺ螳壽ｸ・, active: '遞ｼ蜒堺ｸｭ',
-        completed: '螳御ｺ・, cancelled: '繧ｭ繝｣繝ｳ繧ｻ繝ｫ', paused: '荳譎ょ●豁｢荳ｭ'
+        pending: '確認中', confirmed: '確定済み', active: '稼働中',
+    completed: '完了', cancelled: 'キャンセル', paused: '一時停止中'
     };
     const wsBase = API || location.origin;
 
@@ -1848,7 +1848,7 @@ function renderReservations(list) {
             </span>
           </div>
           <div class="res-time">套 ${formatDate(r.start_time)} 竊・${formatDate(r.end_time)}</div>
-          <div class="res-time">腸 ﾂ･${r.total_price ? Math.round(r.total_price).toLocaleString() : '窶・}
+          <div class="res-time">📅 ¥${r.total_price ? Math.round(r.total_price).toLocaleString() : '-'}</div>
             ${r.compensated_points ? `<span style="color:var(--success);font-size:0.75rem;margin-left:8px">+${r.compensated_points}pt 陬懷─貂・/span>` : ''}
           </div>
           <div class="res-actions">
@@ -1894,8 +1894,8 @@ async function loadMyReservations() {
         }).then(r => r.json()).then(d => {
             if (d.ok) {
                 const msg = d.already_granted
-                    ? '笨・繝昴う繝ｳ繝井ｻ倅ｸ取ｸ医∩縺ｧ縺・
-                    : `笨・${d.points_added.toLocaleString()}pt 縺御ｻ倅ｸ弱＆繧後∪縺励◆・～;
+                    ? '✓ 未付与ポイントが付与済みです'
+            : `✓ ${d.points_added.toLocaleString()}pt が付与されました！`;
                 showToast(msg, 'success');
                 loadPointBalance();
             } else {

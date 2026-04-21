@@ -1,4 +1,4 @@
-﻿# Dependencies
+# Dependencies
 node_modules/
 npm-debug.log*
 yarn-debug.log*
@@ -59,6 +59,32 @@ gpu-monitor/node_modules/
 # Temporary scripts
 fix*.js
 reset_*.js
+# Debug scripts (Mojibake repair session)
+*_fix.js
+*_scan.js
+find_*.js
+check_*.js
+scan_*.js
+binary_search*.js
+stepwise_fix.js
+iterative_*.js
+deploy_*.js
+targeted_*.js
+clean_targeted_fix.js
+byte_surgical_fix.js
+final_text_fix.js
+comprehensive_*.js
+convert_*.js
+detect_*.js
+nuclear_fix.js
+true_safe_fix.js
+ultimate_byte_fix.js
+# Intermediate portal app versions
+public/portal/app.v*.js
+public/portal/app.*.js
+public/portal/app.clean*.js
+public/portal/app.fixed.js
+public/portal/app.nuclear.js
 
 # Cloudflare / SSL certs
 *.pem

@@ -236,14 +236,17 @@ if (process.env.SITE_BETA_PASSWORD) {
 // Static files - serve each UI as a subdirectory
 // キャッシュ設定: CSS/JS/画像は7日間ブラウザキャッシュ, HTMLは毎回確認
 const staticOpts = {
-    maxAge: '7d',
+    maxAge: 0,
     setHeaders: (res, filePath) => {
         // HTMLは常に最新を取得（no-cache）
         if (filePath.endsWith('.html')) {
             res.setHeader('Cache-Control', 'no-cache, must-revalidate');
-        } else if (/\.(css|js)$/.test(filePath)) {
-            // CSS/JSは長期キャッシュ
-            res.setHeader('Cache-Control', 'public, max-age=604800, stale-while-revalidate=86400');
+        } else if (/\/lib\//.test(filePath) && /\.(js|css)$/.test(filePath)) {
+            // lib/ 配下 (socket.io.min.js等) は長期キャッシュ (変更しない)
+            res.setHeader('Cache-Control', 'public, max-age=2592000, immutable');
+        } else if (/\.(js|css)$/.test(filePath)) {
+            // app.js, style.css 等は no-cache (Cloudflare キャッシュを防ぐ)
+            res.setHeader('Cache-Control', 'no-cache, must-revalidate');
         } else if (/\.(png|jpg|jpeg|gif|svg|ico|webp|woff2|woff|ttf)$/.test(filePath)) {
             // 画像/フォントは30日キャッシュ
             res.setHeader('Cache-Control', 'public, max-age=2592000, immutable');
