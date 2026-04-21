@@ -263,7 +263,7 @@ document.getElementById('forgotForm').addEventListener('submit', async (e) => {
     errEl.classList.add('hidden');
     successEl.classList.add('hidden');
     btn.disabled = true;
-    btn.textContent = '騾∽ｿ｡荳ｭ...';
+        btn.textContent = '送信中...';
     try {
         const data = await apiFetch('/auth/forgot-password', {
             method: 'POST',
@@ -276,7 +276,7 @@ document.getElementById('forgotForm').addEventListener('submit', async (e) => {
         errEl.textContent = err.message;
         errEl.classList.remove('hidden');
         btn.disabled = false;
-        btn.textContent = '繝ｪ繧ｻ繝・ヨ繝｡繝ｼ繝ｫ繧帝∽ｿ｡';
+        btn.textContent = 'リセットメールを送信';
     }
 });
 
@@ -291,7 +291,7 @@ document.getElementById('resetPasswordForm').addEventListener('submit', async (e
     const newPw = document.getElementById('newPassword').value;
     const newPwConfirm = document.getElementById('newPasswordConfirm').value;
     if (newPw !== newPwConfirm) {
-        errEl.textContent = '繝代せ繝ｯ繝ｼ繝峨′荳閾ｴ縺励∪縺帙ｓ';
+        errEl.textContent = 'パスワードが一致しません';
         errEl.classList.remove('hidden');
         return;
     }
@@ -414,7 +414,7 @@ function renderGpuGrid(gpus) {
         <div class="card-specs">
           <div class="spec"><span class="spec-label">VRAM</span><span class="spec-val">${vramGB} GB</span></div>
           <div class="spec"><span class="spec-label">Driver</span><span class="spec-val">${gpu.driver_version || '-'}</span></div>
-          <div class="spec"><span class="spec-label">貂ｩ蠎ｦ</span><span class="spec-val">${temp ? temp + 'ﾂｰC' : '-'}</span></div>
+          <div class="spec"><span class="spec-label">温度</span><span class="spec-val">${temp ? temp + '°C' : '-'}</span></div>
           <div class="spec"><span class="spec-label">P-State</span><span class="spec-val">${stats.pstate || '-'}</span></div>
         </div>
         <div class="card-usage">
@@ -431,26 +431,26 @@ function renderGpuGrid(gpus) {
           <div class="usage-row">
             <span class="usage-label">Temp</span>
             <div class="usage-bar"><div class="usage-fill fill-temp" style="width:${tempPct}%"></div></div>
-            <span class="usage-val">${temp ? temp + 'ﾂｰ' : '-'}</span>
+            <span class="usage-val">${temp ? temp + '°C' : '-'}</span>
           </div>
         </div>
         <!-- 謗･邯夂紫繝舌・ -->
         <div class="uptime-section">
           <div class="uptime-header">
-            <span class="uptime-label-text">童 謗･邯夂紫</span>
+            <span class="uptime-label-text">🔗 稼働率</span>
             <span class="uptime-value" style="color:${uptimeColor}">${uptimeLabel}</span>
-            <span class="uptime-sessions">${sessionCount > 0 ? sessionCount + '繧ｻ繝・す繝ｧ繝ｳ螳溽ｸｾ' : '蛻晏屓'}</span>
+            <span class="uptime-sessions">${sessionCount > 0 ? sessionCount + 'セッション実績' : '初回'}</span>
           </div>
           <div class="uptime-bar">
             <div class="uptime-fill" style="width:${uptimeBar}%; background:${uptimeColor}"></div>
           </div>
-          ${uptime < 99.5 && sessionCount > 0 ? `<div class="uptime-warn">笞・・驕主悉縺ｫ謗･邯壹′騾泌・繧後◆縺薙→縺後≠繧翫∪縺・/div>` : ''}
+          ${uptime < 99.5 && sessionCount > 0 ? `<div class="uptime-warn">⚠️ 過去に接続が途切れたことがあります</div>` : ''}
         </div>
         <div class="card-footer">
-          <div class="card-price">ﾂ･${gpu.price_per_hour.toLocaleString()}<span>/譎る俣</span></div>
+          <div class="card-price">¥${gpu.price_per_hour.toLocaleString()}<span>/時間</span></div>
           ${gpu.status === 'available'
-                ? `<button class="btn btn-primary" onclick="event.stopPropagation(); openReserveModal(${gpu.id})">莠育ｴ・☆繧・/button>`
-                : `<button class="btn btn-ghost" disabled>蛻ｩ逕ｨ荳榊庄</button>`}
+                ? `<button class="btn btn-primary" onclick="event.stopPropagation(); openReserveModal(${gpu.id})">予約する</button>`
+                : `<button class="btn btn-ghost" disabled>利用不可</button>`}
         </div>
       </div>
     `;
@@ -633,7 +633,7 @@ function selectDockerTemplate(id) {
 function calRenderCalendar() {
     const MONTHS = ['1月', '2月', '3月', '4月', '5月', '6月', '7月', '8月', '9月', '10月', '11月', '12月'];
     document.getElementById('calMonthLabel').textContent =
-        `${calState.year}蟷ｴ ${MONTHS[calState.month]}`;
+        `${calState.year}年 ${MONTHS[calState.month]}`;
 
     const now = new Date();
     const todayStr = `${now.getFullYear()}-${now.getMonth()}-${now.getDate()}`;
@@ -677,7 +677,7 @@ function calRenderCalendar() {
         }
 
         const clickFn = (isPast || isFull) ? '' : `onclick="calSelectDay(${d})"`;
-        const title = isFull ? '莠育ｴ・ｺ蜩｡' : booked > 0 ? `${booked}譎る俣莠育ｴ・ｸ医∩` : '';
+        const title = isFull ? '予約満員' : booked > 0 ? `${booked}時間予約中` : '';
         html += `<div class="${cls}" ${clickFn} title="${title}">${d}${dots}</div>`;
     }
     // Next month padding
@@ -761,7 +761,7 @@ function calRenderTimeGrid() {
     // Show placeholder if no date selected
     if (!calState.selectedDate) {
         document.getElementById('calTimeGrid').innerHTML =
-            '<div style="grid-column:1/-1;text-align:center;color:var(--text3);font-size:0.78rem;padding:1.5rem 0.5rem">竊・縺ｾ縺壼ｷｦ縺ｮ繧ｫ繝ｬ繝ｳ繝繝ｼ縺ｧ譌･莉倥ｒ驕ｸ繧薙〒縺上□縺輔＞</div>';
+            '<div style="grid-column:1/-1;text-align:center;color:var(--text3);font-size:0.78rem;padding:1.5rem 0.5rem">← まず左のカレンダーで日付を選んでください</div>';
         return;
     }
 
@@ -786,7 +786,7 @@ function calRenderTimeGrid() {
             label = `${hh}:00`;
         } else if (isBooked) {
             cls += ' booked';
-            label = `${hh}:00<br><span class="slot-tag">莠育ｴ・ｸ・/span>`;
+            label = `${hh}:00<br><span class="slot-tag">予約済</span>`;
             title = `${hh}:00 は予約済みです`;
         } else if (isActive) {
             cls += ' active';
@@ -794,7 +794,7 @@ function calRenderTimeGrid() {
         } else {
             cls += ' free';
             onclick = `onclick="calSelectHour(${h})"`;
-            title = `${hh}:00 縺九ｉ莠育ｴ・庄閭ｽ`;
+            title = `${hh}:00 から予約可能`;
         }
 
         html += `<div class="${cls}" ${onclick} title="${title}">${label}</div>`;
@@ -802,9 +802,9 @@ function calRenderTimeGrid() {
 
     // Legend
     html += `<div class="cal-time-legend">
-        <span class="ctl-item"><span class="ctl-dot free"></span>遨ｺ縺・/span>
-        <span class="ctl-item"><span class="ctl-dot booked"></span>莠育ｴ・ｸ・/span>
-        <span class="ctl-item"><span class="ctl-dot past"></span>驕主悉</span>
+        <span class="ctl-item"><span class="ctl-dot free"></span>空き</span>
+        <span class="ctl-item"><span class="ctl-dot booked"></span>予約中</span>
+        <span class="ctl-item"><span class="ctl-dot past"></span>過去</span>
     </div>`;
 
     document.getElementById('calTimeGrid').innerHTML = html;
@@ -850,8 +850,8 @@ function calUpdateSummary() {
         const btn = document.getElementById('submitReserve');
         btn.disabled = true;
         btn.textContent = calState.selectedDate
-            ? '髢句ｧ区凾蛻ｻ繧帝∈繧薙〒縺上□縺輔＞'
-            : '譌･莉倥・譎ょ綾繧帝∈謚槭＠縺ｦ縺上□縺輔＞';
+            ? '開始時刻を選んでください'
+            : '日付と時刻を選択してください';
         return;
     }
 
@@ -1004,11 +1004,11 @@ function renderReservations(list) {
         };
 
         const actions = r.status === 'active'
-            ? `<a href="${buildWsUrl()}" target="_blank" class="btn btn-success btn-sm">箕 繝ｯ繝ｼ繧ｯ繧ｹ繝壹・繧ｹ繧帝幕縺・{
-                r.sf_raid_job_id || r.sf_match_id ? ' 笞｡' : ''}</a>`
+            ? `<a href="${buildWsUrl()}" target="_blank" class="btn btn-success btn-sm">▶ ワークスペースを開く${
+                r.sf_raid_job_id || r.sf_match_id ? ' 🎮' : ''}</a>`
             : (r.status === 'confirmed' || r.status === 'pending')
-                ? `<button class="btn btn-primary btn-sm" onclick="startPod(${r.id})" id="startBtn_${r.id}">噫 莉翫☆縺宣幕蟋・/button>
-                   <button class="btn btn-danger btn-sm" onclick="cancelReservation(${r.id})">繧ｭ繝｣繝ｳ繧ｻ繝ｫ</button>`
+                ? `<button class="btn btn-primary btn-sm" onclick="startPod(${r.id})" id="startBtn_${r.id}">▶ 今すぐ起動</button>
+                   <button class="btn btn-danger btn-sm" onclick="cancelReservation(${r.id})">キャンセル</button>`
                 : '';
 
         return `
@@ -1017,7 +1017,7 @@ function renderReservations(list) {
         <span class="res-gpu">${r.gpu_name}</span>
         <span class="status-badge status-${r.status === 'active' ? 'available' : r.status === 'completed' ? 'offline' : 'rented'}">${statusLabel[r.status] || r.status}</span>
       </div>
-      <div class="res-time">套 ${formatDate(r.start_time)} 竊・${formatDate(r.end_time)}</div>
+      <div class="res-time">📅 ${formatDate(r.start_time)} → ${formatDate(r.end_time)}</div>
       <div class="res-time">📅 ¥${r.total_price ? Math.round(r.total_price).toLocaleString() : '-'}</div>
       <div class="res-actions">${actions}</div>
     </div>`;
@@ -1689,7 +1689,7 @@ async function renderTicketPlans() {
 <div class="plan-price">¥${p.amount_yen.toLocaleString()}</div>
             <div class="plan-points">= ${p.points.toLocaleString()} pt</div>
             ${p.discount ? `<div class="plan-original">定価 ¥${Math.round(p.hours * 800).toLocaleString()}</div>` : ''}
-            <button class="btn btn-primary btn-full" onclick="purchaseTicket('${p.id}',event)">雉ｼ蜈･縺吶ｋ</button>
+            <button class="btn btn-primary btn-full" onclick="purchaseTicket('${p.id}',event)">購入する</button>
           </div>
         `).join('');
     } catch (e) {
@@ -1853,11 +1853,11 @@ function renderReservations(list) {
           </div>
           <div class="res-actions">
             ${r.status === 'active'
-                ? `<a href="${wsBase}/workspace/" target="_blank" class="btn btn-success btn-sm">箕 繝ｯ繝ｼ繧ｯ繧ｹ繝壹・繧ｹ繧帝幕縺・/a>
-                   ${podId ? `<button class="btn btn-ghost btn-sm" id="reconnectBtn_${podId}" onclick="reconnectPod(${podId})">売 蜀肴磁邯・/button>` : ''}`
+                ? `<a href="${wsBase}/workspace/" target="_blank" class="btn btn-success btn-sm">▶ ワークスペース</a>
+                   ${podId ? `<button class="btn btn-ghost btn-sm" id="reconnectBtn_${podId}" onclick="reconnectPod(${podId})">再接続</button>` : ''}`
                 : (r.status === 'confirmed' || r.status === 'pending')
-                    ? `<button class="btn btn-primary btn-sm" onclick="startPod(${r.id})" id="startBtn_${r.id}">噫 莉翫☆縺宣幕蟋・/button>
-                       <button class="btn btn-danger btn-sm" onclick="cancelReservation(${r.id})">繧ｭ繝｣繝ｳ繧ｻ繝ｫ</button>`
+                    ? `<button class="btn btn-primary btn-sm" onclick="startPod(${r.id})" id="startBtn_${r.id}">▶ 今すぐ起動</button>
+                       <button class="btn btn-danger btn-sm" onclick="cancelReservation(${r.id})">キャンセル</button>`
                     : ''}
           </div>
         </div>`;
