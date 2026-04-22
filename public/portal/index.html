@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="ja">
 
 <head>
@@ -905,8 +905,41 @@
         </div>
     </footer>
 
+    <!-- ═══ TICKET PURCHASE MODAL (static HTML) ═══════════════════════════ -->
+    <div id="ticketModal" class="hidden" role="dialog" aria-modal="true" aria-label="チケット購入">
+      <div class="ticket-modal-box">
+        <div class="modal-header">
+          <h2>🎟 チケット購入</h2>
+          <span class="modal-subtitle" id="ticketCurrentBalance">残高確認中...</span>
+          <button class="modal-close" onclick="closeTicketModal()" aria-label="閉じる">✕</button>
+        </div>
+        <div class="ticket-modal-body">
+          <div class="ticket-plans-note">
+            <span>📌 1pt = 10円相当。GPU予約時に自動消費されます。</span>
+          </div>
+          <!-- クーポンコード入力 -->
+          <div style="display:flex;gap:.4rem;align-items:center;margin-bottom:0.6rem;padding:0.5rem 0.75rem;background:rgba(108,71,255,0.08);border:1px solid rgba(108,71,255,0.2);border-radius:10px">
+            <span style="font-size:0.9rem">🏷️</span>
+            <input id="couponCodeInput" type="text" placeholder="クーポンコード（例: BETA2025）"
+              style="flex:1;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);border-radius:6px;padding:.35rem .6rem;color:var(--text);font-size:.8rem;outline:none"
+              oninput="couponInputChanged(this.value)" />
+            <button onclick="applyCoupon()" style="padding:.35rem .75rem;background:var(--primary);border:none;border-radius:6px;color:#fff;font-size:.75rem;cursor:pointer;white-space:nowrap;font-weight:600">適用</button>
+          </div>
+          <!-- クーポン適用結果 -->
+          <div id="couponResult" style="display:none;margin-bottom:0.5rem;padding:.45rem 0.75rem;border-radius:8px;font-size:.78rem"></div>
+          <!-- プラン一覧 -->
+          <div class="ticket-plans-grid" id="ticketPlansContainer">
+            <div style="text-align:center;padding:2rem;color:var(--text2);grid-column:1/-1">読み込み中...</div>
+          </div>
+        </div>
+        <div class="ticket-footer">
+          <a href="https://stripe.com/jp" target="_blank">🔒 Stripe（クレジットカード）で安全に決済</a>
+        </div>
+      </div>
+    </div>
+
     <script src="/lib/socket.io.min.js"></script>
-    <script src="app.v16.js"></script>
+    <script src="app.v17.js?cb=1776832867027"></script>
 
     <!-- Google Translate (非表示) -->
     <div id="google_translate_element" style="display:none"></div>

@@ -1,4 +1,4 @@
-﻿/* ─── Variables ─────────────────────────────────────────────────── */
+/* ─── Variables ─────────────────────────────────────────────────── */
 :root {
     --bg: #0a0a0f;
     --bg2: #0f0f1a;
@@ -2911,3 +2911,203 @@ button {
     to   { opacity: 1; transform: translateY(0); }
 }
 #sfWidget { animation: sfWidgetIn 0.4s ease; }
+
+/* ─── Ticket Purchase Modal ─────────────────────────────────────── */
+#ticketModal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 9999;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(0, 0, 0, 0.72);
+    padding: 1rem;
+    box-sizing: border-box;
+}
+#ticketModal.hidden { display: none !important; }
+
+.ticket-modal-box {
+    background: #13132b;
+    border: 1px solid rgba(108, 71, 255, 0.3);
+    border-radius: 18px;
+    box-shadow: 0 24px 64px rgba(0, 0, 0, 0.7);
+    width: min(680px, 96vw);
+    max-height: min(85vh, 700px);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+/* Header */
+.ticket-modal-box .modal-header {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 1rem 1.25rem 0.75rem;
+    border-bottom: 1px solid rgba(255,255,255,0.07);
+    flex-shrink: 0;
+}
+.ticket-modal-box .modal-header h2 {
+    font-size: 1rem;
+    font-weight: 800;
+    margin: 0;
+    flex: 1;
+}
+.ticket-modal-box .modal-header .modal-subtitle {
+    font-size: 0.75rem;
+    color: var(--accent, #00d4ff);
+    white-space: nowrap;
+}
+.ticket-modal-box .modal-close {
+    background: none;
+    border: none;
+    color: var(--text3);
+    font-size: 1.1rem;
+    cursor: pointer;
+    padding: 2px 6px;
+    border-radius: 6px;
+    line-height: 1;
+}
+.ticket-modal-box .modal-close:hover { background: rgba(255,255,255,0.08); }
+
+/* Scrollable body */
+.ticket-modal-body {
+    flex: 1;
+    overflow-y: auto;
+    padding: 0.75rem 1rem 0.75rem;
+    overscroll-behavior: contain;
+}
+
+/* Info note */
+.ticket-plans-note {
+    font-size: 0.72rem;
+    color: var(--text3);
+    padding: 0.5rem 0.25rem;
+    line-height: 1.5;
+    flex-shrink: 0;
+}
+
+/* Plans grid: 2 columns on desktop */
+.ticket-plans-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 0.6rem;
+    padding: 0 1rem 0.75rem;
+}
+
+/* Individual plan card */
+.ticket-plan {
+    background: rgba(255,255,255,0.03);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 12px;
+    padding: 0.75rem;
+    cursor: pointer;
+    position: relative;
+    transition: border-color 0.2s, background 0.2s;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+.ticket-plan:hover {
+    border-color: rgba(108,71,255,0.5);
+    background: rgba(108,71,255,0.07);
+}
+.ticket-plan.plan-featured {
+    border-color: rgba(108,71,255,0.4);
+    background: rgba(108,71,255,0.08);
+}
+
+/* Badges */
+.plan-badge {
+    position: absolute;
+    top: -8px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: linear-gradient(135deg,#6c47ff,#9333ea);
+    color: #fff;
+    font-size: 0.6rem;
+    font-weight: 700;
+    padding: 2px 10px;
+    border-radius: 100px;
+    white-space: nowrap;
+    letter-spacing: 0.04em;
+}
+.plan-discount {
+    position: absolute;
+    top: 6px;
+    right: 6px;
+    background: rgba(239,68,68,0.15);
+    border: 1px solid rgba(239,68,68,0.35);
+    color: #f87171;
+    font-size: 0.6rem;
+    font-weight: 700;
+    padding: 1px 6px;
+    border-radius: 100px;
+}
+
+/* Plan text */
+.plan-name {
+    font-size: 0.8rem;
+    font-weight: 700;
+    color: var(--text);
+    margin-top: 6px;
+}
+.plan-hours {
+    font-size: 0.7rem;
+    color: var(--text3);
+}
+.plan-price {
+    font-size: 1rem;
+    font-weight: 900;
+    color: var(--text);
+    font-family: 'JetBrains Mono', monospace;
+    margin-top: 4px;
+}
+.plan-points {
+    font-size: 0.72rem;
+    color: var(--accent, #00d4ff);
+    font-family: 'JetBrains Mono', monospace;
+}
+.plan-original {
+    font-size: 0.65rem;
+    color: var(--text3);
+    text-decoration: line-through;
+}
+
+/* Purchase button — compact */
+.ticket-plan .btn-full {
+    margin-top: 0.5rem;
+    padding: 0.45rem 0.75rem;
+    font-size: 0.8rem;
+    border-radius: 8px;
+}
+
+/* Footer strip */
+.ticket-footer {
+    padding: 0.6rem 1.25rem;
+    border-top: 1px solid rgba(255,255,255,0.06);
+    flex-shrink: 0;
+    font-size: 0.68rem;
+    color: var(--text3);
+    text-align: center;
+}
+.ticket-footer a { color: var(--text3); text-decoration: none; }
+.ticket-footer a:hover { color: var(--text2); }
+
+/* Mobile: single column */
+@media (max-width: 520px) {
+    .ticket-modal-box {
+        max-height: 90vh;
+        border-radius: 14px;
+    }
+    .ticket-plans-grid {
+        grid-template-columns: 1fr;
+        padding: 0 0.75rem 0.75rem;
+    }
+    .ticket-modal-box .modal-header {
+        padding: 0.875rem 0.875rem 0.6rem;
+    }
+}

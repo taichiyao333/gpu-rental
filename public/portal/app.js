@@ -1081,7 +1081,9 @@ function cancelReservation(id) {
             </div>
         </div>`;
     document.body.appendChild(modal);
-    modal.addEventListener('click', (e) => { if (e.target === modal) modal.remove(); });
+    modal.addEventListener('click', (e) => { if (e.target === modal) closeTicketModal(); });
+    modal.classList.remove('hidden');
+    renderTicketPlans();
 }
 
 async function executeCancel(id) {
@@ -1659,14 +1661,16 @@ async function loadPointBalance() {
     // チケット購入モーダルを開く
 async function openTicketModal() {
     const modal = document.getElementById('ticketModal');
-    if (!modal) return createTicketModal();
+    if (!modal) return;
     modal.classList.remove('hidden');
+    modal.style.display = 'flex';
+    document.body.style.overflow = 'hidden';
     await renderTicketPlans();
 }
 
 function closeTicketModal() {
     const modal = document.getElementById('ticketModal');
-    if (modal) modal.classList.add('hidden');
+    if (modal) { modal.style.display = 'none'; document.body.style.overflow = ''; }
 }
 
 async function renderTicketPlans() {
@@ -1728,36 +1732,32 @@ async function purchaseTicket(planId, event) {
 function createTicketModal() {
     const modal = document.createElement('div');
     modal.id = 'ticketModal';
-    modal.className = 'modal-overlay';
+    modal.className = 'hidden';
     modal.innerHTML = `
-      <div class="modal-box ticket-modal-box">
+      <div class="ticket-modal-box">
         <div class="modal-header">
-    <h2>🎟 レンタルチケット購入</h2>
-    <span class="modal-subtitle" id="ticketCurrentBalance">残高確認中...</span>
-          <button class="modal-close" onclick="closeTicketModal()">笨・/button>
+          <h2>🎟 チケット購入</h2>
+          <span class="modal-subtitle" id="ticketCurrentBalance">残高確認中...</span>
+          <button class="modal-close" onclick="closeTicketModal()">✕</button>
         </div>
-        <div class="ticket-plans-note">
-        <span>📌 1ポイント = 10円相当。ポイントはGPUレンタル予約時に自動消費されます。</span>
+        <div class="ticket-modal-body">
+          <div class="ticket-plans-note">
+            <span>📌 1pt = 10円相当。GPU予約時に自動消費されます。</span>
+          </div>
+          <div style="display:flex;gap:.4rem;align-items:center;margin-bottom:0.6rem;padding:0.5rem 0.75rem;background:rgba(108,71,255,0.08);border:1px solid rgba(108,71,255,0.2);border-radius:10px">
+            <span style="font-size:0.9rem">🏷️</span>
+            <input id="couponCodeInput" type="text" placeholder="クーポンコード（例: BETA2025）"
+              style="flex:1;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);border-radius:6px;padding:.35rem .6rem;color:var(--text);font-size:.8rem;outline:none"
+              oninput="couponInputChanged(this.value)" />
+            <button onclick="applyCoupon()" style="padding:.35rem .75rem;background:var(--primary);border:none;border-radius:6px;color:#fff;font-size:.75rem;cursor:pointer;white-space:nowrap;font-weight:600">適用</button>
+          </div>
+          <div id="couponResult" style="display:none;margin-bottom:0.5rem;padding:.45rem 0.75rem;border-radius:8px;font-size:.78rem"></div>
+          <div class="ticket-plans-grid" id="ticketPlansContainer">
+            <div style="text-align:center;padding:2rem;color:var(--text2);grid-column:1/-1">読み込み中...</div>
+          </div>
         </div>
-
-    <!-- クーポンコード入力 -->
-        <div style="display:flex;gap:.5rem;align-items:center;margin-bottom:1rem;padding:0.75rem;background:rgba(108,71,255,0.08);border:1px solid rgba(108,71,255,0.2);border-radius:10px">
-    <span style="font-size:1.1rem">🏷️</span>
-    <input id="couponCodeInput" type="text" placeholder="クーポンコードを入力（例: BETA2025）"
-            style="flex:1;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);border-radius:6px;padding:.5rem .75rem;color:var(--text);font-size:.875rem;outline:none"
-            oninput="couponInputChanged(this.value)" />
-          <button onclick="applyCoupon()" style="padding:.5rem .9rem;background:var(--primary);border:none;border-radius:6px;color:#fff;font-size:.85rem;cursor:pointer;white-space:nowrap">驕ｩ逕ｨ</button>
-        </div>
-    <!-- クーポン適用結果 -->
-        <div id="couponResult" style="display:none;margin-bottom:0.75rem;padding:.6rem 1rem;border-radius:8px;font-size:.85rem"></div>
-
-        <div class="ticket-plans-grid" id="ticketPlansContainer">
-    <div style="text-align:center;padding:2rem;color:var(--text2)">読み込み中...</div>
-        </div>
-        <div style="margin-top:1rem">
-          <a href="https://stripe.com/jp" target="_blank" style="font-size:0.72rem;color:var(--text3)">
-    🔒 Stripe（クレジットカード）で安全に決済
-          </a>
+        <div class="ticket-footer">
+          <a href="https://stripe.com/jp" target="_blank">🔒 Stripe（クレジットカード）で安全に決済</a>
         </div>
       </div>
     `;
