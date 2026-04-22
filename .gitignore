@@ -103,3 +103,16 @@ backups/
 # THE DOJO Agent
 provider/agent_state.json
 
+# Utility / one-off scripts (root level)
+add_cachebuster.js
+add_missing_fixes.js
+byte_fix_app.js
+deep_scan_mojibake.js
+identify_all_patterns.js
+rebuild_v*.js
+test_vm_script.js
+check_served.js
+check_stripe_webhooks.js
+deploy_now.js
+pm2-autostart.bat
+
