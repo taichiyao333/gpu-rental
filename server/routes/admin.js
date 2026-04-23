@@ -193,6 +193,21 @@ router.post('/reservations/:id/confirm', authMiddleware, adminOnly, (req, res) =
   res.json({ success: true });
 });
 
+// GET /api/admin/gpus — GPU一覧（管理者専用）
+router.get('/gpus', authMiddleware, adminOnly, (req, res) => {
+  const db = getDb();
+  const gpus = db.prepare(`
+    SELECT g.*,
+           u.username AS provider_name,
+           u.email    AS provider_email
+    FROM gpu_nodes g
+    LEFT JOIN users u ON g.provider_id = u.id
+    ORDER BY g.created_at DESC
+    LIMIT 200
+  `).all();
+  res.json(gpus);
+});
+
 // PATCH /api/admin/gpus/:id
 router.patch('/gpus/:id', authMiddleware, adminOnly, (req, res) => {
   const db = getDb();
@@ -1018,7 +1033,7 @@ router.get('/sf/nodes', authMiddleware, adminOnly, (req, res) => {
                   ELSE 'offline'
                 END AS heartbeat_status
             FROM sf_nodes n
-            LEFT JOIN users u ON n.provider_id = u.id
+            LEFT JOIN users u ON (n.provider_id = u.id OR (n.provider_id IS NULL AND n.user_id = u.id))
             ORDER BY n.last_seen DESC
         `).all();
 
@@ -1044,7 +1059,8 @@ router.get('/sf/nodes/:id', authMiddleware, adminOnly, (req, res) => {
     try {
         const node = db.prepare(`
             SELECT n.*, u.username as provider_name, u.email as provider_email
-            FROM sf_nodes n LEFT JOIN users u ON n.provider_id = u.id
+            FROM sf_nodes n
+            LEFT JOIN users u ON (n.provider_id = u.id OR (n.provider_id IS NULL AND n.user_id = u.id))
             WHERE n.id = ?
         `).get(req.params.id);
         if (!node) return res.status(404).json({ error: 'ノードが見つかりません' });
