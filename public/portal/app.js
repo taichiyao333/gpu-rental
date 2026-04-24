@@ -1,4 +1,4 @@
-/* 笏笏笏 State 笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏 */
+/* ─── State ─────────────────────────────────────────────────────── */
 const state = {
     token: localStorage.getItem('gpu_token') || null,
     user: JSON.parse(localStorage.getItem('gpu_user') || 'null'),
@@ -14,7 +14,7 @@ const API = (function () {
 })();
 let socket = null;
 
-/* 笏笏笏 Utilities 笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏 */
+/* ─── Utilities ─────────────────────────────────────────────────── */
 function showToast(msg, type = 'info') {
     let container = document.getElementById('toastContainer');
     if (!container) {
@@ -60,7 +60,7 @@ function formatMins(mins) {
     return h > 0 ? `${h}時間${m}分` : `${m}分`;
 }
 
-/* 笏笏笏 Auth 笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏 */
+/* ─── Auth ──────────────────────────────────────────────────────── */
 function updateNavAuth() {
     const auth = document.getElementById('navAuth');
     const user = document.getElementById('navUser');
@@ -72,7 +72,7 @@ function updateNavAuth() {
     if (state.user) {
         auth.classList.add('hidden');
         user.classList.remove('hidden');
-        username.textContent = `側 ${state.user.username}`;
+        username.textContent = `👤 ${state.user.username}`;
         if (state.user.role === 'admin') adminBtn.classList.remove('hidden');
         // THE LOBBY 繝懊ち繝ｳ: token繧痴essionStorage縺ｫ繧ょ酔譛・(THE LOBBY逕ｨ)
         if (state.token) sessionStorage.setItem('token', state.token);
@@ -207,7 +207,7 @@ document.getElementById('registerForm').addEventListener('submit', async (e) => 
     }
 });
 
-/* 笏笏笏 繝代せ繝ｯ繝ｼ繝峨Μ繧ｻ繝・ヨ 笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏 */
+/* ─── 繝代せ繝ｯ繝ｼ繝峨Μ繧ｻ繝・ヨ ───────────────────────────────────────────── */
 
 // 縲後ヱ繧ｹ繝ｯ繝ｼ繝峨ｒ縺雁ｿ倥ｌ縺ｮ譁ｹ縲阪Μ繝ｳ繧ｯ
 document.getElementById('forgotPasswordLink').addEventListener('click', (e) => {
@@ -327,7 +327,7 @@ document.getElementById('resetPasswordForm').addEventListener('submit', async (e
     }
 });
 
-// 繝壹・繧ｸ隱ｭ縺ｿ霎ｼ縺ｿ譎・ URL縺ｫ reset_token 縺後≠繧句ｴ蜷医・閾ｪ蜍輔〒Step2繧定｡ｨ遉ｺ
+// 繝壹・繧ｸ隱ｭ縺ｿ霎ｼ縺ｿ譎・ URL縺ｫ reset_token 縺後≠繧句ｴ蜷医・閾ｪ蜍輔〒Step2繧定｡ｨ遉ｺ
 (function checkResetToken() {
     const urlParams = new URLSearchParams(window.location.search);
     if (urlParams.has('reset_token')) {
@@ -338,7 +338,7 @@ document.getElementById('resetPasswordForm').addEventListener('submit', async (e
 })();
 
 
-/* 笏笏笏 GPU List 笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏 */
+/* ─── GPU List ──────────────────────────────────────────────────── */
 async function loadGpus() {
     try {
         const gpus = await apiFetch('/gpus');
@@ -352,7 +352,7 @@ async function loadGpus() {
     }
 }
 
-/* 笏笏笏 Hero Statistics (live counts) 笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏 */
+/* ─── Hero Statistics (live counts) ─────────────────────────────── */
 function animateCount(el, target, suffix = '') {
     if (!el) return;
     const start = 0;
@@ -407,7 +407,7 @@ function renderGpuGrid(gpus) {
         <div class="card-header">
           <div>
             <div class="card-name">${gpu.name}</div>
-            <div class="card-location">桃 ${gpu.location}</div>
+            <div class="card-location">📍 ${gpu.location}</div>
           </div>
           <span class="status-badge status-${gpu.status}">${statusLabel}</span>
         </div>
@@ -471,7 +471,7 @@ document.querySelectorAll('.filter-btn').forEach(btn => {
     });
 });
 
-/* 笏笏笏 Reserve Modal 窶・Calendar 笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏 */
+/* ─── Reserve Modal 窶・Calendar ──────────────────────────────────── */
 const calState = {
     year: null, month: null,   // currently displayed month
     selectedDate: null,        // Date object (year/month/day only)
@@ -520,11 +520,11 @@ function openReserveModal(gpuId) {
     renderDockerTemplates();
 }
 
-// 笏笏 Docker Templates 笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏
+// ── Docker Templates ─────────────────────────────────────────────
 const DOCKER_TEMPLATES = [
     {
         id: 'pytorch',
-        icon: '櫨',
+        icon: '🔥',
         name: 'PyTorch 2.1',
         desc: 'CUDA 12.1 + PyTorch 2.1\nTransformers / Diffusers included',
         purpose: 'AI/ML',
@@ -542,7 +542,7 @@ const DOCKER_TEMPLATES = [
     },
     {
         id: 'jupyter',
-        icon: '涛',
+        icon: '📓',
         name: 'JupyterLab',
         desc: 'CUDA + JupyterLab 4.x\npandas / scikit-learn / matplotlib',
         purpose: '学習/教育',
@@ -553,14 +553,14 @@ const DOCKER_TEMPLATES = [
         id: 'ollama',
         icon: '🦙',
         name: 'Ollama LLM',
-        desc: 'Ollama + Model auto-download (llama3, mistral etc)',
+        desc: 'Ollama + モデル自動ダウンロード\nllama3, mistral等をすぐ実行',
         purpose: 'AI/ML',
         color: '#00a67e',
         tags: ['LLM', 'Chat'],
     },
     {
         id: 'blender',
-        icon: '汐',
+        icon: '🎬',
         name: 'Blender',
         desc: 'Blender 4.x + EEVEE GPU\n動画・3DCGレンダリング',
         purpose: '動画レンダリング',
@@ -569,7 +569,7 @@ const DOCKER_TEMPLATES = [
     },
     {
         id: 'base',
-        icon: '制',
+        icon: '🐧',
         name: 'Ubuntu 22.04',
         desc: 'CUDA 12.1 + Python 3.11\nカスタム環境のベース',
         purpose: 'その他',
@@ -629,7 +629,7 @@ function selectDockerTemplate(id) {
     }
 }
 
-/* 笏笏 Calendar rendering 笏笏 */
+/* ── Calendar rendering ── */
 function calRenderCalendar() {
     const MONTHS = ['1月', '2月', '3月', '4月', '5月', '6月', '7月', '8月', '9月', '10月', '11月', '12月'];
     document.getElementById('calMonthLabel').textContent =
@@ -697,7 +697,7 @@ function calSelectDay(d) {
     calUpdateSummary();
 }
 
-/* 笏笏 Availability fetch 笏笏 */
+/* ── Availability fetch ── */
 async function calFetchAvailability() {
     if (!calState.gpu) return;
     const pad = n => String(n).padStart(2, '0');
@@ -756,7 +756,7 @@ function calBookedHoursCount(year, month, day) {
     return Math.min(24, count);
 }
 
-/* 笏笏 Time slot rendering (0:00 窶・23:00, 1h blocks) 笏笏 */
+/* ── Time slot rendering (0:00 窶・23:00, 1h blocks) ── */
 function calRenderTimeGrid() {
     // Show placeholder if no date selected
     if (!calState.selectedDate) {
@@ -816,7 +816,7 @@ function calSelectHour(h) {
     calUpdateSummary();
 }
 
-/* 笏笏 Duration 笏笏 */
+/* ── Duration ── */
 function calSetDuration(hrs) {
     calState.duration = Math.max(1, parseInt(hrs) || 1);
     // update duration buttons
@@ -837,7 +837,7 @@ document.getElementById('customDuration')?.addEventListener('input', function ()
     calSetDuration(parseInt(this.value) || 1);
 });
 
-/* 笏笏 Summary + Submit button 笏笏 */
+/* ── Summary + Submit button ── */
 function calUpdateSummary() {
     const gpu = calState.gpu;
     const ready = calState.selectedDate !== null && calState.selectedHour !== null && gpu;
@@ -878,7 +878,7 @@ function calUpdateSummary() {
     btn.textContent = `予約を確定する (${totalPt.toLocaleString()}pt)`;
 }
 
-/* 笏笏 Calendar nav 笏笏 */
+/* ── Calendar nav ── */
 document.getElementById('calPrev')?.addEventListener('click', () => {
     calState.month--;
     if (calState.month < 0) { calState.month = 11; calState.year--; }
@@ -894,7 +894,7 @@ document.getElementById('calNext')?.addEventListener('click', () => {
     calFetchAvailability();
 });
 
-/* 笏笏 Modal open/close 笏笏 */
+/* ── Modal open/close ── */
 document.getElementById('modalClose').addEventListener('click', () => {
     document.getElementById('modalOverlay').classList.add('hidden');
 });
@@ -903,7 +903,7 @@ document.getElementById('modalOverlay').addEventListener('click', e => {
         document.getElementById('modalOverlay').classList.add('hidden');
 });
 
-/* 笏笏 Submit reservation 笏笏 */
+/* ── Submit reservation ── */
 document.getElementById('submitReserve').addEventListener('click', async () => {
     if (!calState.selectedDate || calState.selectedHour === null) return;
 
@@ -971,7 +971,7 @@ document.getElementById('submitReserve').addEventListener('click', async () => {
 
 
 
-/* 笏笏笏 My Reservations 笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏 */
+/* ─── My Reservations ───────────────────────────────────────────── */
 async function loadMyReservations() {
     if (!state.user) return;
     try {
@@ -1059,14 +1059,14 @@ function cancelReservation(id) {
     modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.75);backdrop-filter:blur(4px);display:flex;align-items:center;justify-content:center;z-index:9999';
     modal.innerHTML = `
         <div style="background:#13132a;border:1px solid rgba(251,191,36,.35);border-radius:16px;padding:1.75rem;width:420px;max-width:95vw;text-align:center">
-            <div style="font-size:2rem;margin-bottom:0.75rem">笞・・/div>
+            <div style="font-size:2rem;margin-bottom:0.75rem">笞・・/div>
     <h3 style="font-size:1rem;font-weight:800;margin-bottom:0.5rem;color:#e8e8f0">キャンセルについて</h3>
             <p style="color:#9898b8;font-size:0.85rem;margin-bottom:1.25rem;line-height:1.7">
     予約後のキャンセル・返金は<strong style="color:#fbbf24">原則受け付けできません。</strong><br>
     どうしても問題が生じた場合は、<br>運営まで直接お問い合わせください。<br>
                 <a href="mailto:info@metadatalab.net"
                    style="color:#00d4ff;font-size:0.82rem;margin-top:0.5rem;display:inline-block">
-                    透 info@metadatalab.net
+                    📧 info@metadatalab.net
                 </a>
             </p>
             <div style="display:flex;gap:0.75rem;justify-content:center">
@@ -1115,7 +1115,7 @@ document.getElementById('panelClose').addEventListener('click', () => {
     document.getElementById('myPanel').classList.add('hidden');
 });
 
-/* 笏笏笏 WebSocket 笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏 */
+/* ─── WebSocket ─────────────────────────────────────────────────── */
 function connectSocket() {
     if (socket) socket.disconnect();
     socket = API ? io(API, { transports: ['polling', 'websocket'] }) : io();
@@ -1148,7 +1148,7 @@ function connectSocket() {
 }
 
 
-/* 笏笏笏 Init 笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏 */
+/* ─── Init ──────────────────────────────────────────────────────── */
 updateNavAuth();
 loadGpus();
 setInterval(loadGpus, 10000); // refresh GPU list every 10s
@@ -1158,7 +1158,7 @@ if (state.token) {
 }
 
 
-/* 笏笏笏 SF Widget 笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏 */
+/* ─── SF Widget ─────────────────────────────────────────────────── */
 async function loadSfWidget() {
     const widget   = document.getElementById('sfWidget');
     const nodeCnt  = document.getElementById('sfNodeCount');
@@ -1170,7 +1170,7 @@ async function loadSfWidget() {
 
     if (!widget) return;
 
-    // 笏 GPU 繝弱・繝画焚: /api/gpus/public 縺九ｉ蛻ｩ逕ｨ蜿ｯ閭ｽ謨ｰ繧堤ｮ怜・
+    // ─ GPU 繝弱・繝画焚: /api/gpus/public 縺九ｉ蛻ｩ逕ｨ蜿ｯ閭ｽ謨ｰ繧堤ｮ怜・
     try {
         const r = await fetch('/api/gpus/public');
         if (r.ok) {
@@ -1186,7 +1186,7 @@ async function loadSfWidget() {
         }
     } catch (_) {}
 
-    // 笏 Raid 邨ｱ險・ 蜈ｬ髢九お繝ｳ繝峨・繧､繝ｳ繝・(隱崎ｨｼ荳崎ｦ・
+    // ─ Raid 邨ｱ險・ 蜈ｬ髢九お繝ｳ繝峨・繧､繝ｳ繝・(隱崎ｨｼ荳崎ｦ・
     try {
         const r = await fetch('/api/sf/stats/public');
         if (r.ok) {
@@ -1205,14 +1205,14 @@ async function loadSfWidget() {
     if (done)  done.textContent  = '-';
     }
 
-    // 笏 繝ｦ繝ｼ繧ｶ繝ｼ繝昴う繝ｳ繝域ｮ矩ｫ・(繝ｭ繧ｰ繧､繝ｳ譎ゅ・縺ｿ)
+    // ─ 繝ｦ繝ｼ繧ｶ繝ｼ繝昴う繝ｳ繝域ｮ矩ｫ・(繝ｭ繧ｰ繧､繝ｳ譎ゅ・縺ｿ)
     if (state.user && ptCard && ptVal) {
     const bal = state.user.point_balance ?? state.user.wallet_balance ?? '-';
         ptVal.textContent = typeof bal === 'number' ? Math.floor(bal).toLocaleString() : bal;
         ptCard.style.display = 'block';
     }
 
-    // 笏 繧ｦ繧｣繧ｸ繧ｧ繝・ヨ繧定｡ｨ遉ｺ
+    // ─ 繧ｦ繧｣繧ｸ繧ｧ繝・ヨ繧定｡ｨ遉ｺ
     widget.style.display = 'block';
     widget.style.animation = 'fadeIn 0.4s ease';
 }
@@ -1292,7 +1292,7 @@ function updateStep2Status() {
         btn.textContent = 'Step 3へ →';
         btn.onclick = () => guideNav(1);
     } else {
-        document.querySelector('#step2Status .gs-ac-icon').textContent = '柏';
+        document.querySelector('#step2Status .gs-ac-icon').textContent = '🔐';
     title.textContent = 'ログインしてください';
     desc.textContent = 'プロバイダーとして登録するにはアカウントが必要です。';
     btn.textContent = 'ログイン / 登録';
@@ -1314,7 +1314,7 @@ async function checkGpuLocal() {
     result.classList.add('hidden');
 
     try {
-        // 笏笏 WebGL 縺ｧ繝悶Λ繧ｦ繧ｶ・医Ο繝ｼ繧ｫ繝ｫPC・峨・GPU繝ｬ繝ｳ繝繝ｩ繝ｼ蜷阪ｒ蜿門ｾ・笏笏
+        // ── WebGL 縺ｧ繝悶Λ繧ｦ繧ｶ・医Ο繝ｼ繧ｫ繝ｫPC・峨・GPU繝ｬ繝ｳ繝繝ｩ繝ｼ蜷阪ｒ蜿門ｾ・──
         const canvas = document.createElement('canvas');
         const gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl');
         let rendererRaw = '';
@@ -1333,14 +1333,14 @@ async function checkGpuLocal() {
             return;
         }
 
-        // 笏笏 GPU蜷阪ｒ謨ｴ蠖｢・・ANGLE (NVIDIA, NVIDIA GeForce RTX xxxx ...)" 竊・遏ｭ邵ｮ・・笏笏
+        // ── GPU蜷阪ｒ謨ｴ蠖｢・・ANGLE (NVIDIA, NVIDIA GeForce RTX xxxx ...)" 竊・遏ｭ邵ｮ・・──
         let gpuName = rendererRaw;
         const angleMatch = rendererRaw.match(/ANGLE\s*\([^,]+,\s*([^,\(]+)/i);
         if (angleMatch) gpuName = angleMatch[1].trim();
         // 譛ｫ蟆ｾ縺ｮ荳崎ｦ√↑譁・ｭ怜・繧帝勁蜴ｻ
         gpuName = gpuName.replace(/\s*\(.*\)$/, '').replace(/Direct3D.*$/i, '').trim();
 
-        // 笏笏 GPU繧ｫ繧ｿ繝ｭ繧ｰ縺ｨ辣ｧ蜷・笏笏
+        // ── GPU繧ｫ繧ｿ繝ｭ繧ｰ縺ｨ辣ｧ蜷・──
         const GPU_CATALOG = [
             { keywords: ['H100'], name: 'NVIDIA H100', vram: 80, price: 1800 },
             { keywords: ['A100'], name: 'NVIDIA A100', vram: 80, price: 1500 },
@@ -1642,9 +1642,9 @@ async function loadPayoutHistory() {
     } catch (e) { el.innerHTML = '<div class="wd-empty">Error: ' + e.message + '</div>'; }
 }
 
-/* 笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏 */
-/* 笏笏笏 POINTS & TICKETS 笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏 */
-/* 笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏 */
+/* ─────────────────────────────────────────────────────────────────── */
+/* ─── POINTS & TICKETS ───────────────────────────────────────────── */
+/* ─────────────────────────────────────────────────────────────────── */
 
 let _ticketPlans = [];
 
@@ -1875,7 +1875,7 @@ async function loadMyReservations() {
     } catch { }
 }
 
-/* 笏笏笏 Payment success/failed message from callback 笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏 */
+/* ─── Payment success/failed message from callback ──────────────── */
 (function checkPaymentReturn() {
     const params = new URLSearchParams(location.search);
     const payment = params.get('payment');
@@ -1967,7 +1967,7 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 
-/* 笏笏 MOBILE MENU 笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏 */
+/* ── MOBILE MENU ─────────────────────────────────────────────── */
 function toggleMobileMenu() {
     const drawer = document.getElementById('navDrawer');
     const btn    = document.getElementById('navHamburger');

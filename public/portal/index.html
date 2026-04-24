@@ -4,8 +4,8 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>GPURental — GPU計算クラウド | AI・機械学習・3DCG向けGPUレンタル</title>
-    <meta name="description" content="RTX 4090・A100・H100などのハイエンドGPUを時間単位でレンタル。AI開発・機械学習・動画レンダリングに。初期費用0円、¥200/時間から。" />
+    <title>GPURental - GPUレンタルクラウド・| AI・機械学習・3DCG向けGPUレンタル</title>
+    <meta name="description" content="RTX 4090・A100・H100などのハイエンドGPUを時間貸しでレンダル。AI開発・機械学習・動画レンタリングに。最安利用料¥200/時間から。" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link
         href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap"
@@ -15,14 +15,14 @@
     <!-- OG / Twitter Card -->
     <meta property="og:type"        content="website">
     <meta property="og:url"         content="https://gpurental.jp/portal/">
-    <meta property="og:title"       content="GPU検索 — GPURental">
-    <meta property="og:description" content="RTX 4090・A100・H100など豊富なGPUを時間単位でレンタル。AI学習・3D制作・映像処理に。">
+    <meta property="og:title"       content="GPU検索 - GPURental">
+    <meta property="og:description" content="RTX 4090・A100・H100など強力なGPUを時間貸しでレンタル。AI学習・3D制作・動画処理に。">
     <meta property="og:image"       content="https://gpurental.jp/favicon.ico">
     <meta property="og:locale"      content="ja_JP">
     <meta property="og:site_name"   content="GPURental">
     <meta name="twitter:card"       content="summary_large_image">
-    <meta name="twitter:title"      content="GPU検索 — GPURental">
-    <meta name="twitter:description" content="RTX 4090・A100・H100など豊富なGPUを時間単位でレンタル。AI学習・3D制作・映像処理に。">
+    <meta name="twitter:title"      content="GPU検索 - GPURental">
+    <meta name="twitter:description" content="RTX 4090・A100・H100など強力なGPUを時間貸しでレンタル。AI学習・3D制作・動画処理に。">
 
     <!-- PWA -->
     <link rel="manifest" href="/manifest.json">
@@ -31,17 +31,17 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="GPURental">
 
-    <!-- reCAPTCHA v3 (動的ロード - サイトキーが設定されている場合のみ) -->
+    <!-- reCAPTCHA v3 (遅延ロード - サイトキーが設定されている場合のみ) -->
     <script>
     (function() {
-        // /api/config からサイトキーを取得してreCAPTCHAを動的ロード
+        // /api/config からサイトキーを取得してreCAPTCHAを遅延ロード・
         fetch('/api/config/recaptcha').then(r => r.json()).then(d => {
             if (!d.site_key) return;
             window._recaptchaSiteKey = d.site_key;
             const s = document.createElement('script');
             s.src = 'https://www.google.com/recaptcha/api.js?render=' + d.site_key;
             document.head.appendChild(s);
-        }).catch(() => {}); // エラーは無視（CAPTCHAなしでも動作継続）
+        }).catch(() => {}); // エラーは無視（CAPTCHAなしでも機能する）・
     })();
     </script>
 </head>
@@ -51,7 +51,7 @@
     <!-- NAV -->
     <nav class="nav" id="nav">
         <div class="nav-brand">
-            <span class="nav-logo">⚡</span>
+            <span class="nav-logo">🎮</span>
             <span class="nav-title">GPU<span class="accent">Rental</span></span>
         </div>
         <div class="nav-links" id="navLinks">
@@ -61,31 +61,30 @@
         </div>
         <div class="nav-auth" id="navAuth">
             <button class="btn btn-ghost" id="btnLogin">ログイン</button>
-            <button class="btn btn-primary" id="btnRegister">無料登録</button>
+            <button class="btn btn-primary" id="btnRegister">無料新規登録</button>
         </div>
         <div class="nav-user hidden" id="navUser">
             <span class="nav-username" id="navUsername"></span>
-            <a href="https://gpurental.jp/provider/" class="btn btn-secondary" id="btnProvideGuide" title="自分のGPUを公開する手順">🏭 GPUを公開する</a>
+            <a href="https://gpurental.jp/provider/" class="btn btn-secondary" id="btnProvideGuide" title="自分のGPUを提供する手順">⚡ GPUを貸し出す</a>
             <button class="btn btn-ghost" id="btnWithdraw" title="出金管理" style="display:none">💰 出金管理</button>
-            <a href="/mypage/" class="btn btn-ghost" id="btnMyPage">👤 マイページ</a>
+            <a href="/mypage/" class="btn btn-ghost" id="btnMyPage">側 マイページ</a>
             <a href="/workspace/" class="btn btn-ghost" id="btnWorkspace">ワークスペース</a>
-            <a href="/lobby/" class="btn btn-ghost" id="btnLobby" title="GPU Street Fighter — マッチングマッチング" style="background:rgba(0,212,255,0.08);border:1px solid rgba(0,212,255,0.3);color:#00d4ff">🥊 THE LOBBY</a>
+            <a href="/lobby/" class="btn btn-ghost" id="btnLobby" title="GPU Street Fighter - マッチングマッチング" style="background:rgba(0,212,255,0.08);border:1px solid rgba(0,212,255,0.3);color:#00d4ff">🎮 THE LOBBY</a>
             <a href="/admin/" class="btn btn-ghost hidden" id="btnAdmin">管理画面</a>
             <button class="btn btn-ghost" id="btnLogout">ログアウト</button>
         </div>
-        <!-- ナビバー: ログイン不要でも表示するGPU公開ボタン -->
-        <a href="https://gpurental.jp/provider/" class="btn btn-provide" id="btnProvideGuidePublic" title="自分のPCのGPUを貸し出す" style="display:inline-flex;font-size:0.78rem;opacity:0.8">🏭 GPU貸出（パートナー）</a>
+        <!-- ナビバー: ログイン不要で表示するGPU公開のタン -->
+        <a href="https://gpurental.jp/provider/" class="btn btn-provide" id="btnProvideGuidePublic" title="自分のPCのGPUを貸し出す" style="display:inline-flex;font-size:0.78rem;opacity:0.8">⚡ GPU貸出</a>
     <!-- ハンバーガーボタン -->
         <div class="lang-switcher" id="langSwitcher">
-        <button class="lang-btn" onclick="toggleLangMenu(this)" aria-label="言語切り替え">
-            <span class="lang-flag">🇯🇵</span>日本語 <span style="opacity:.6;font-size:.7rem">▼</span>
+        <button class="lang-btn" onclick="toggleLangMenu(this)" aria-label="言語切替"><span class="lang-flag">🇯🇵</span>日本語<span style="opacity:.6;font-size:.7rem">▾</span>
         </button>
         <div class="lang-dropdown">
             <button class="lang-option active" data-lang="ja" onclick="selectLang('ja')">
                 <span class="lang-flag">🇯🇵</span><span class="lang-option-name">日本語</span>
             </button>
             <button class="lang-option" data-lang="en" onclick="selectLang('en')">
-                <span class="lang-flag">🇺🇸</span><span class="lang-option-name">English</span>
+                <span class="lang-flag">・・</span><span class="lang-option-name">English</span>
             </button>
             <button class="lang-option" data-lang="zh" onclick="selectLang('zh')">
                 <span class="lang-flag">🇨🇳</span><span class="lang-option-name">中文</span>
@@ -97,36 +96,35 @@
 
     <!-- モバイルドロワー -->
     <div class="nav-drawer" id="navDrawer">
-        <a href="#gpus" class="drawer-link" onclick="closeMobileMenu()">🖥️ GPU一覧</a>
-        <a href="#how" class="drawer-link" onclick="closeMobileMenu()">📖 使い方</a>
-        <a href="/pricing.html" class="drawer-link" target="_blank">💰 料金表</a>
+        <a href="#gpus" class="drawer-link" onclick="closeMobileMenu()">🖥 GPU一覧</a>
+        <a href="#how" class="drawer-link" onclick="closeMobileMenu()">📖 使い方</a>
+        <a href="/pricing.html" class="drawer-link" target="_blank">💰 料金表</a>
         <div class="drawer-divider"></div>
         <div style="padding:0.75rem 0"><div class="lang-switcher" id="langSwitcherDrawer">
-        <button class="lang-btn" onclick="toggleLangMenu(this)" aria-label="言語切り替え">
-            <span class="lang-flag">🇯🇵</span>日本語 <span style="opacity:.6;font-size:.7rem">▼</span>
+        <button class="lang-btn" onclick="toggleLangMenu(this)" aria-label="言語切替"lang-flag">・・</span>日本語<span style="opacity:.6;font-size:.7rem">笆ｼ</span>
         </button>
         <div class="lang-dropdown">
             <button class="lang-option active" data-lang="ja" onclick="selectLang('ja')">
-                <span class="lang-flag">🇯🇵</span><span class="lang-option-name">日本語</span>
+                <span class="lang-flag">・・</span><span class="lang-option-name">日本語</span>
             </button>
             <button class="lang-option" data-lang="en" onclick="selectLang('en')">
-                <span class="lang-flag">🇺🇸</span><span class="lang-option-name">English</span>
+                <span class="lang-flag">・・</span><span class="lang-option-name">English</span>
             </button>
             <button class="lang-option" data-lang="zh" onclick="selectLang('zh')">
-                <span class="lang-flag">🇨🇳</span><span class="lang-option-name">中文</span>
+                <span class="lang-flag">・・</span><span class="lang-option-name">中文</span>
             </button>
         </div>
     </div></div>
         <div class="drawer-divider"></div>
         <div id="drawerAuthSection" style="display:flex;flex-direction:column;gap:8px">
             <button class="btn btn-ghost drawer-btn" onclick="closeMobileMenu();document.getElementById('btnLogin').click()">ログイン</button>
-            <button class="btn btn-primary drawer-btn" onclick="closeMobileMenu();document.getElementById('btnRegister').click()">無料登録</button>
+            <button class="btn btn-primary drawer-btn" onclick="closeMobileMenu();document.getElementById('btnRegister').click()">無料新規登録</button>
         </div>
         <div id="drawerUserSection" style="display:none;flex-direction:column;gap:8px">
             <div class="drawer-section" id="drawerUsername"></div>
-            <a href="/mypage/" class="drawer-link">👤 マイページ</a>
-            <a href="/workspace/" class="drawer-link">🖥️ ワークスペース</a>
-            <a href="/admin/" class="drawer-link hidden" id="drawerAdmin">⚙️ 管理画面</a>
+            <a href="/mypage/" class="drawer-link">側 マイページ</a>
+            <a href="/workspace/" class="drawer-link">🖥 ワークスペース</a>
+            <a href="/admin/" class="drawer-link hidden" id="drawerAdmin">⚙️ カスタムコンテナ</a>
             <div class="drawer-divider"></div>
             <button class="btn btn-ghost drawer-btn" onclick="closeMobileMenu();document.getElementById('btnLogout').click()">ログアウト</button>
         </div>
@@ -162,7 +160,7 @@
         </div>
                 <div class="stat-div"></div>
                 <div class="stat">
-                    <span class="stat-val" id="statUsers">—</span>
+                    <span class="stat-val" id="statUsers">―</span>
                     <span class="stat-label">ユーザー数</span>
                 </div>
             </div>
@@ -210,60 +208,60 @@
         </div>
     </section>
 
-    <!-- ⚡ GPU STREET FIGHTER WIDGET -->
+    <!-- 🎮 GPU STREET FIGHTER WIDGET -->
     <section id="sfWidget" style="background:linear-gradient(135deg,rgba(245,158,11,0.06),rgba(99,102,241,0.04));border-top:1px solid rgba(245,158,11,0.12);border-bottom:1px solid rgba(245,158,11,0.12);padding:2rem 0;display:none">
         <div class="container" style="max-width:1100px">
             <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1.25rem;flex-wrap:wrap;gap:0.75rem">
                 <div style="display:flex;align-items:center;gap:10px">
-                    <span style="font-size:1.5rem">⚡</span>
+                    <span style="font-size:1.5rem">🎮</span>
                     <div>
                         <div style="font-size:0.68rem;font-weight:700;letter-spacing:0.12em;color:#fbbf24;text-transform:uppercase">GPU STREET FIGHTER</div>
-                        <div style="font-size:0.82rem;color:rgba(255,255,255,0.45)">分散GPUジョブ × マッチ対戦プラットフォーム</div>
+                        <div style="font-size:0.82rem;color:rgba(255,255,255,0.45)">次世代GPUジョブマッチ対戦プラットフォーム</div>
                     </div>
                 </div>
                 <a href="/lobby/"
                     style="display:inline-flex;align-items:center;gap:7px;padding:10px 22px;border-radius:12px;background:linear-gradient(135deg,#d97706,#f59e0b);color:#000;font-weight:800;font-size:0.88rem;text-decoration:none;box-shadow:0 0 20px rgba(245,158,11,0.3);transition:opacity 0.2s,transform 0.2s"
                     onmouseover="this.style.opacity='0.85';this.style.transform='translateY(-1px)'"
                     onmouseout="this.style.opacity='1';this.style.transform='translateY(0)'">
-                    🏟 THE LOBBY へ入場
+                    🎮 THE LOBBY へ入場
                 </a>
             </div>
             <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;margin-bottom:1.25rem">
                 <div style="background:rgba(255,255,255,0.04);border:1px solid rgba(245,158,11,0.15);border-radius:12px;padding:14px 16px">
                     <div style="font-size:0.68rem;color:rgba(255,255,255,0.35);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:6px">オンラインGPU</div>
                     <div style="display:flex;align-items:center;gap:8px">
-                        <span id="sfNodeCount" style="font-size:1.8rem;font-weight:900;color:#fbbf24;font-family:monospace">—</span>
+                        <span id="sfNodeCount" style="font-size:1.8rem;font-weight:900;color:#fbbf24;font-family:monospace">―</span>
                         <span style="font-size:0.78rem;color:rgba(255,255,255,0.3)">ノード</span>
                         <span id="sfNodeDot" style="width:8px;height:8px;border-radius:50%;background:#6b7280;margin-left:auto;flex-shrink:0"></span>
                     </div>
                 </div>
                 <div style="background:rgba(255,255,255,0.04);border:1px solid rgba(239,68,68,0.15);border-radius:12px;padding:14px 16px">
-                    <div style="font-size:0.68rem;color:rgba(255,255,255,0.35);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:6px">🔥 処理中レイド</div>
+                    <div style="font-size:0.68rem;color:rgba(255,255,255,0.35);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:6px">櫨 処理中レイド</div>
                     <div style="display:flex;align-items:center;gap:8px">
-                        <span id="sfActiveRaids" style="font-size:1.8rem;font-weight:900;color:#f87171;font-family:monospace">—</span>
+                        <span id="sfActiveRaids" style="font-size:1.8rem;font-weight:900;color:#f87171;font-family:monospace">―</span>
                         <span style="font-size:0.78rem;color:rgba(255,255,255,0.3)">バトル</span>
                     </div>
                 </div>
                 <div style="background:rgba(255,255,255,0.04);border:1px solid rgba(16,185,129,0.15);border-radius:12px;padding:14px 16px">
-                    <div style="font-size:0.68rem;color:rgba(255,255,255,0.35);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:6px">✅ 本日完了</div>
+                    <div style="font-size:0.68rem;color:rgba(255,255,255,0.35);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:6px">笨・譛ｬ譌･螳御ｺ・</div>
                     <div style="display:flex;align-items:center;gap:8px">
-                        <span id="sfCompletedToday" style="font-size:1.8rem;font-weight:900;color:#34d399;font-family:monospace">—</span>
+                        <span id="sfCompletedToday" style="font-size:1.8rem;font-weight:900;color:#34d399;font-family:monospace">―</span>
                         <span style="font-size:0.78rem;color:rgba(255,255,255,0.3)">ジョブ</span>
                     </div>
                 </div>
                 <div id="sfPointCard" style="background:rgba(99,102,241,0.08);border:1px solid rgba(99,102,241,0.2);border-radius:12px;padding:14px 16px;display:none">
-                    <div style="font-size:0.68rem;color:rgba(255,255,255,0.35);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:6px">💎 ポイント残高</div>
+                    <div style="font-size:0.68rem;color:rgba(255,255,255,0.35);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:6px">💫 ポイント残高</div>
                     <div style="display:flex;align-items:center;gap:6px">
-                        <span id="sfUserPoints" style="font-size:1.8rem;font-weight:900;color:#a5b4fc;font-family:monospace">—</span>
+                        <span id="sfUserPoints" style="font-size:1.8rem;font-weight:900;color:#a5b4fc;font-family:monospace">―</span>
                         <span style="font-size:0.78rem;color:rgba(255,255,255,0.3)">pt</span>
                     </div>
                 </div>
             </div>
             <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
                 <span style="font-size:0.7rem;color:rgba(255,255,255,0.25)">対応AIモデル:</span>
-                <span style="font-size:0.72rem;padding:3px 10px;border-radius:20px;background:rgba(99,102,241,0.15);border:1px solid rgba(99,102,241,0.3);color:#a5b4fc">✨ Real-ESRGAN</span>
-                <span style="font-size:0.72rem;padding:3px 10px;border-radius:20px;background:rgba(124,58,237,0.15);border:1px solid rgba(124,58,237,0.3);color:#c4b5fd">🔮 Jasmy Upscaler</span>
-                <span style="font-size:0.72rem;padding:3px 10px;border-radius:20px;background:rgba(219,39,119,0.1);border:1px solid rgba(219,39,119,0.25);color:#f9a8d4">🎯 Topaz Video AI</span>
+                <span style="font-size:0.72rem;padding:3px 10px;border-radius:20px;background:rgba(99,102,241,0.15);border:1px solid rgba(99,102,241,0.3);color:#a5b4fc">🎨 Real-ESRGAN</span>
+                <span style="font-size:0.72rem;padding:3px 10px;border-radius:20px;background:rgba(124,58,237,0.15);border:1px solid rgba(124,58,237,0.3);color:#c4b5fd">🔮 Jasmy Upscaler</span>
+                <span style="font-size:0.72rem;padding:3px 10px;border-radius:20px;background:rgba(219,39,119,0.1);border:1px solid rgba(219,39,119,0.25);color:#f9a8d4">🎯 Topaz Video AI</span>
                 <span style="font-size:0.72rem;padding:3px 10px;border-radius:20px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);color:rgba(255,255,255,0.3)">⚙️ カスタムコンテナ</span>
                 <a href="/workspace/?tab=enhance" style="font-size:0.72rem;color:#fbbf24;opacity:0.6;text-decoration:none;margin-left:auto">MRP AI Enhancer →</a>
             </div>
@@ -276,76 +274,76 @@
             <h2 class="section-title">3&#x30B9;&#x30C6;&#x30C3;&#x30D7;&#x3067;&#x3059;&#x3050;&#x4F7F;&#x3048;&#x308B;</h2>
             <div class="steps">
                 <div class="step">
-                    <div class="step-icon">📅</div>
+                    <div class="step-icon">套</div>
                     <h3>1. GPU&#x3092;&#x9078;&#x3093;&#x3067;&#x4E88;&#x7D04;</h3>
-                    <p>GPUを選んで利用時間を予約。カレンダーで空き状況を確認。</p>
+<p>GPUを選んで利用時間を確定。カレンダーで空き状況を確認。</p>
                 </div>
-                <div class="step-arrow">→</div>
+                <div class="step-arrow">›</div>
                 <div class="step">
-                    <div class="step-icon">🔌</div>
-                    <h3>2. 接続</h3>
-                    <p>予約時間になると自動でPodが起動。ブラウザからターミナルに接続。</p>
+                    <div class="step-icon">⚡</div>
+                    <h3>2. 接続・</h3>
+<p>予約時間になると自動でPodが起動。ブラウザからターミナルに接続。</p>
                 </div>
-                <div class="step-arrow">→</div>
+                <div class="step-arrow">›</div>
                 <div class="step">
-                    <div class="step-icon">⚡</div>
+                    <div class="step-icon">🎮</div>
                     <h3>3. GPU利用</h3>
-                    <p>AI学習・レンダリング・計算処理を自由に実行。ファイルもアップ可能。</p>
+                    <p>AI蟄ｦ鄙偵・繝ｬ繝ｳ繝繝ｪ繝ｳ繧ｰ繝ｻ險育ｮ怜・逅・ｒ閾ｪ逕ｱ縺ｫ実行後ゅヵ繧｡繧､繝ｫ繧ゅい繝🇯🇵蜿ｯ閭ｽ縲・</p>
                 </div>
-                <div class="step-arrow">→</div>
+                <div class="step-arrow">›</div>
                 <div class="step">
-                    <div class="step-icon">📦</div>
-                    <h3>4. ダウンロード</h3>
-                    <p>処理完了後、成果物をダウンロード。データは一定期間保持。</p>
+                    <div class="step-icon">🐧</div>
+                    <h3>4. 繝繧ｦ繝ｳ繝ｭ繝ｼ繝・</h3>
+<p>処理の完了後に成果物をダウンロード。データは一定期間保持。</p>
                 </div>
             </div>
         </div>
     </section>
 
-    <!-- RESERVATION MODAL — Calendar + Time Slot -->
+    <!-- RESERVATION MODAL ―Calendar + Time Slot -->
     <div class="modal-overlay hidden" id="modalOverlay">
         <div class="modal modal-cal" id="reserveModal">
-            <button class="modal-close" id="modalClose">✕</button>
+            <button class="modal-close" id="modalClose">笨・</button>
 
             <!-- GPU Info Header -->
             <div class="cal-modal-header">
-                <div class="cal-gpu-icon">🖥</div>
+                <div class="cal-gpu-icon">箕</div>
                 <div>
-                    <div class="cal-gpu-name" id="modalGpuName">—</div>
-                    <div class="cal-gpu-meta" id="modalGpuMeta">—</div>
+                    <div class="cal-gpu-name" id="modalGpuName">―</div>
+                    <div class="cal-gpu-meta" id="modalGpuMeta">―</div>
                 </div>
-                <div class="cal-gpu-price" id="modalGpuPrice">—</div>
+                <div class="cal-gpu-price" id="modalGpuPrice">―</div>
             </div>
 
             <div class="cal-body">
                 <!-- LEFT: Calendar -->
                 <div class="cal-col">
-                    <div class="cal-section-title">📅 日付を選ぶ</div>
+                    <div class="cal-section-title">📅 日付を選ぶ</div>
                     <div class="cal-nav">
                         <button class="cal-nav-btn" id="calPrev">‹</button>
                         <span class="cal-month-label" id="calMonthLabel"></span>
                         <button class="cal-nav-btn" id="calNext">›</button>
                     </div>
                     <div class="cal-grid">
-                                                <div class="cal-day-hdr">木</div>
-                        <div class="cal-day-hdr">金</div>
-                        <div class="cal-day-hdr">土</div>
+                                                <div class="cal-day-hdr">日</div>
+                        <div class="cal-day-hdr">月</div>
+                        <div class="cal-day-hdr">火</div>
                         <div id="calDays" style="display:contents"></div>
                     </div>
 
                     <!-- Docker Template -->
-                    <div class="cal-section-title" style="margin-top:1.25rem">🐳 環境テンプレート</div>
+                    <div class="cal-section-title" style="margin-top:1.25rem">⚙️ 環境テンプレート</div>
                     <div id="dockerTemplates" style="display:grid;grid-template-columns:1fr 1fr;gap:.4rem;margin-bottom:.5rem"></div>
                     <div id="templateDetail" style="display:none;background:rgba(108,71,255,.08);border:1px solid rgba(108,71,255,.2);border-radius:8px;padding:.5rem .75rem;font-size:.78rem;color:var(--text2);margin-bottom:.5rem"></div>
 
                     <!-- Purpose -->
-                    <div class="cal-section-title" style="margin-top:.75rem">🎯 利用目的</div>
+                    <div class="cal-section-title" style="margin-top:.75rem">🎯 利用目的：</div>
                     <select id="notes" class="cal-select">
-                        <option value="AI/機械学習">🤖 AI / 機械学習</option>
+                        <option value="AI/讖滓｢ｰ蟄ｦ鄙・>､・AI / 讖滓｢ｰ蟄ｦ鄙・/option>
                         <option value="動画レンダリング">🎬 動画レンダリング</option>
-                        <option value="3DCG">🎨 3DCG / VFX</option>
-                        <option value="科学計算">🔬 科学計算</option>
-                        <option value="その他">📦 その他</option>
+                        <option value="3DCG">耳 3DCG / VFX</option>
+                        <option value="遘大ｭｦ險育ｮ・>溌 遘大ｭｦ險育ｮ・/option>
+                        <option value="その他>🐧 その他/option>
                     </select>
                 </div>
 
@@ -368,7 +366,7 @@
                         <button class="cal-dur-btn" data-dur="24">24h</button>
                     </div>
                     <div class="cal-custom-dur">
-                        <label>カスタム: </label>
+                        <label>カスタム: </label>
                         <input type="number" id="customDuration" min="1" max="168" value="1" class="cal-dur-input">
                         <span>時間</span>
                     </div>
@@ -378,26 +376,26 @@
             <!-- Summary / Confirm -->
             <div class="cal-summary" id="calSummary">
                 <div class="cal-summary-row">
-                    <span class="cal-sum-label">📅 開始</span>
-                    <span class="cal-sum-val" id="sumStart">—</span>
+                    <span class="cal-sum-label">📅 開始：</span>
+                    <span class="cal-sum-val" id="sumStart">―</span>
                 </div>
                 <div class="cal-summary-row">
-                    <span class="cal-sum-label">🏁 終了</span>
-                    <span class="cal-sum-val" id="sumEnd">—</span>
+                    <span class="cal-sum-label">🔚 終了</span>
+                    <span class="cal-sum-val" id="sumEnd">―</span>
                 </div>
                 <div class="cal-summary-row">
                     <span class="cal-sum-label">⏱ 時間</span>
-                    <span class="cal-sum-val" id="sumHours">—</span>
+                    <span class="cal-sum-val" id="sumHours">―</span>
                 </div>
                 <div class="cal-summary-row cal-sum-total">
-                    <span class="cal-sum-label">💰 合計</span>
-                    <span class="cal-sum-price" id="sumTotal">—</span>
+                    <span class="cal-sum-label">💰 合計：</span>
+                    <span class="cal-sum-price" id="sumTotal">―</span>
                 </div>
             </div>
 
             <div class="form-error hidden" id="formError"></div>
             <button class="btn btn-primary btn-full" id="submitReserve" disabled>
-                日付・時刻を選択してください
+                日付と時刻を選択してください
             </button>
         </div>
     </div>
@@ -407,7 +405,7 @@
     <!-- AUTH MODAL -->
     <div class="modal-overlay hidden" id="authOverlay">
         <div class="modal modal-sm" id="authModal">
-            <button class="modal-close" id="authClose">✕</button>
+            <button class="modal-close" id="authClose">笨・</button>
             <div class="auth-tabs">
                 <button class="auth-tab active" id="tabLogin">ログイン</button>
                 <button class="auth-tab" id="tabRegister">新規登録</button>
@@ -420,13 +418,13 @@
                 </div>
                 <div class="form-group">
                     <label>パスワード</label>
-                    <input type="password" id="loginPassword" placeholder="••••••••" required />
+                    <input type="password" id="loginPassword" placeholder="窶｢窶｢窶｢窶｢窶｢窶｢窶｢窶｢" required />
                 </div>
                 <div class="form-error hidden" id="loginError"></div>
                 <button type="submit" class="btn btn-primary btn-full">ログイン</button>
                 <p style="text-align:center;margin-top:0.75rem;font-size:0.8rem">
                     <a href="#" id="forgotPasswordLink" style="color:var(--primary);text-decoration:underline">
-                        パスワードをお忘れの方？
+                        パスワードをお忘れの方🇯🇵
                     </a>
                 </p>
             </form>
@@ -442,7 +440,7 @@
                 </div>
                 <div class="form-group">
                     <label>パスワード</label>
-                    <input type="password" id="regPassword" placeholder="6文字以上" required minlength="6" />
+                    <input type="password" id="regPassword" placeholder="6文字以上 required minlength="6" />
                 </div>
                 <div class="form-error hidden" id="regError"></div>
                 <button type="submit" class="btn btn-primary btn-full">登録する</button>
@@ -453,13 +451,13 @@
     <!-- PASSWORD RESET MODAL -->
     <div class="modal-overlay hidden" id="resetOverlay">
         <div class="modal modal-sm" id="resetModal" style="max-width:400px">
-            <button class="modal-close" id="resetClose">✕</button>
-            <h3 style="font-size:1.1rem;font-weight:700;margin-bottom:1.25rem">🔑 パスワードのリセット</h3>
+            <button class="modal-close" id="resetClose">笨・</button>
+            <h3 style="font-size:1.1rem;font-weight:700;margin-bottom:1.25rem">🔑 パスワードリセット</h3>
 
-            <!-- Step 1: メールアドレス入力 -->
+            <!-- Step 1: メールアドレス入力-->
             <div id="resetStep1">
                 <p style="font-size:0.85rem;color:var(--text2);margin-bottom:1rem">
-                    登録済みのメールアドレスを入力してください。<br>パスワードリセット用のリンクをお送りします。
+                    パスワードリセット用のリンクをお送りします。
                 </p>
                 <form id="forgotForm">
                     <div class="form-group">
@@ -471,12 +469,12 @@
                         style="background:rgba(0,229,160,0.1);border:1px solid rgba(0,229,160,0.3);border-radius:8px;padding:0.75rem;font-size:0.85rem;color:#00e5a0;margin-bottom:0.75rem">
                     </div>
                     <button type="submit" class="btn btn-primary btn-full" id="forgotSubmitBtn">
-                        リセットメールを送信
+                        リセット繝｡繝ｼ繝ｫ繧帝∽ｿ｡
                     </button>
                 </form>
             </div>
 
-            <!-- Step 2: 新しいパスワード設定（URLトークンがある場合に表示） -->
+            <!-- Step 2: 新しいパスワード芽ｨｭ螳夲ｼ・RL繝医・繧ｯ繝ｳがあ繧句ｴ蜷医↓陦ｨ遉ｺ🇯🇵-->
             <div id="resetStep2" class="hidden">
                 <p style="font-size:0.85rem;color:var(--text2);margin-bottom:1rem">
                     新しいパスワードを入力してください。
@@ -484,11 +482,11 @@
                 <form id="resetPasswordForm">
                     <div class="form-group">
                         <label>新しいパスワード</label>
-                        <input type="password" id="newPassword" placeholder="6文字以上" required minlength="6" />
+                        <input type="password" id="newPassword" placeholder="6文字以上 required minlength="6" />
                     </div>
                     <div class="form-group">
                         <label>パスワード（確認）</label>
-                        <input type="password" id="newPasswordConfirm" placeholder="もう一度入力" required minlength="6" />
+                        <input type="password" id="newPasswordConfirm" placeholder="繧ゅ≧荳蠎ｦ蜈･蜉・ required minlength="6" />
                     </div>
                     <div class="form-error hidden" id="resetError"></div>
                     <div class="form-success hidden" id="resetSuccess"
@@ -508,20 +506,20 @@
     <div class="side-panel hidden" id="myPanel">
         <div class="side-panel-header">
             <h3>マイ予約</h3>
-            <button class="modal-close" id="panelClose">✕</button>
+            <button class="modal-close" id="panelClose">笨・</button>
         </div>
         <div id="myReservationsList" class="reservations-list"></div>
     </div>
 
-    <!-- GPU公開ガイド パネル -->
+    <!-- GPU公開ガイドパネル -->
     <div class="guide-overlay hidden" id="guideOverlay"></div>
     <div class="guide-panel hidden" id="guidePanel">
         <div class="guide-header">
             <div>
-                <div class="guide-title">🏭 GPUを公開する</div>
-                <div class="guide-sub">自分のPCのGPUをレンタル市場に登録する手順</div>
+                <div class="guide-title">⚡ GPUを貸し出す</div>
+                <div class="guide-sub">閾ｪ蛻🇯🇵PC縺ｮGPU繧偵Ξ繝ｳ繧ｿ繝ｫ蟶ょｴ縺ｫ登録する謇矩・</div>
             </div>
-            <button class="guide-close" id="guideClose">✕</button>
+            <button class="guide-close" id="guideClose">笨・</button>
         </div>
 
         <!-- ステップインジケーター -->
@@ -538,108 +536,108 @@
             <div class="gsn-item" data-step="5"><span class="gsn-num">5</span><span class="gsn-label">収益受取</span></div>
         </div>
 
-        <!-- ステップコンテンツ -->
+        <!-- ステップコンテント-->
         <div class="guide-content" id="guideContent">
 
             <!-- STEP 1 -->
             <div class="guide-step active" data-step="1">
-                <h3 class="gs-title">⚙️ 必要な環境・条件</h3>
-                <p class="gs-desc">以下の条件を満たしているか確認してください。</p>
+                <h3 class="gs-title">⚙️ カスタムコンテナ</h3>
+                <p class="gs-desc">莉･荳九・譚｡莉ｶ繧呈ｺ縺溘＠てく・ｋ縺狗｢ｺ隱阪＠てく上□縺輔＞縲・</p>
                 <div class="gs-checklist">
                     <div class="gs-check" id="chkGpu">
-                        <span class="gs-check-icon">⬜</span>
+                        <span class="gs-check-icon">筮・</span>
                         <div>
-                            <div class="gs-check-title">NVIDIA GPU（GTX 1060以上推奨）</div>
-                            <div class="gs-check-desc">RTX 3090・4090・A4500・A100など。AMD GPUは非対応。</div>
+                            <div class="gs-check-title">NVIDIA GPU🇯🇵TX 1060莉･荳頑耳螂ｨ🇯🇵</div>
+                            <div class="gs-check-desc">RTX 3090繝ｻ4090繝ｻA4500繝ｻA100縺ｪ縺ｩ縲・MD GPU縺ｯ髱槫ｯｾ蠢懊・</div>
                         </div>
                     </div>
                     <div class="gs-check">
-                        <span class="gs-check-icon">✅</span>
+                        <span class="gs-check-icon">笨・</span>
                         <div>
-                            <div class="gs-check-title">Windows 10/11 または Ubuntu 20.04+</div>
-                            <div class="gs-check-desc">64bit OS。macOSは非対応。</div>
+                            <div class="gs-check-title">Windows 10/11 縺ｾ縺溘・ Ubuntu 20.04+</div>
+                            <div class="gs-check-desc">64bit OS縲ＮacOS縺ｯ髱槫ｯｾ蠢懊・</div>
                         </div>
                     </div>
                     <div class="gs-check">
-                        <span class="gs-check-icon">⬜</span>
+                        <span class="gs-check-icon">筮・</span>
                         <div>
                             <div class="gs-check-title">NVIDIA Driver 520以上</div>
-                            <div class="gs-check-desc"><code>nvidia-smi</code> で確認できる状態。</div>
+                            <div class="gs-check-desc"><code>nvidia-smi</code> 縺ｧ確認阪〒縺阪ｋ迥ｶ諷九・</div>
                         </div>
                     </div>
                     <div class="gs-check">
-                        <span class="gs-check-icon">⬜</span>
+                        <span class="gs-check-icon">筮・</span>
                         <div>
                             <div class="gs-check-title">Node.js 18以上インストール済み</div>
                             <div class="gs-check-desc"><a href="https://nodejs.org" target="_blank">nodejs.org</a>
-                                からダウンロード。</div>
+                                縺九ｉ繝繧ｦ繝ｳ繝ｭ繝ｼ繝峨・</div>
                         </div>
                     </div>
                     <div class="gs-check">
-                        <span class="gs-check-icon">⬜</span>
+                        <span class="gs-check-icon">筮・</span>
                         <div>
                             <div class="gs-check-title">常時接続インターネット環境</div>
-                            <div class="gs-check-desc">上り帯域10Mbps以上推奨。光回線が理想的。</div>
+                            <div class="gs-check-desc">荳翫ｊ蟶ｯ蝓・0Mbps莉･荳頑耳螂ｨ縲ょ・蝗樒ｷ壹′逅・Φ逧・・</div>
                         </div>
                     </div>
                 </div>
-                <button class="gs-check-btn" onclick="checkGpuLocal()">🔍 GPUを自動検出する</button>
+                <button class="gs-check-btn" onclick="checkGpuLocal()">🔍 GPUを自動検出する</button>
                 <div id="gpuDetectResult" class="gs-detect-result hidden"></div>
             </div>
 
             <!-- STEP 2 -->
             <div class="guide-step" data-step="2">
-                <h3 class="gs-title">👤 アカウント登録・ログイン</h3>
-                <p class="gs-desc">GPU Rental Platformのアカウントが必要です。</p>
+                <h3 class="gs-title">👤 アカウント登録・ログイン</h3>
+                <p class="gs-desc">GPU Rental Platform縺ｮ繧｢繧ｫ繧ｦ繝ｳ繝医′必要√〒縺吶・</p>
                 <div class="gs-action-card" id="step2Status">
-                    <div class="gs-ac-icon">🔐</div>
+                    <div class="gs-ac-icon">柏</div>
                     <div class="gs-ac-body">
                         <div class="gs-ac-title" id="step2Title">ログインしてください</div>
-                        <div class="gs-ac-desc" id="step2Desc">プロバイダーとして登録するにはアカウントが必要です。</div>
+                        <div class="gs-ac-desc" id="step2Desc">繝励Ο繝舌う繝繝ｼ縺ｨして登録する縺ｫ縺ｯ繧｢繧ｫ繧ｦ繝ｳ繝医′必要√〒縺吶・</div>
                     </div>
                     <button class="btn btn-primary" id="step2Btn" onclick="openAuthFromGuide()">ログイン / 登録</button>
                 </div>
                 <div class="gs-info">
-                    <div class="gs-info-item">📧 登録はメールアドレスのみで完結</div>
-                    <div class="gs-info-item">🔐 パスワードはbcryptで安全に保護</div>
-                    <div class="gs-info-item">💰 プロバイダー登録後、収益80%があなたの取り分</div>
+                    <div class="gs-info-item">✅ 登録はメールアドレスのみで完結</div>
+                    <div class="gs-info-item">🔒 パスワードはbcryptで安全に保存</div>
+                    <div class="gs-info-item">腸 繝励Ο繝舌う繝繝ｼ登録蠕後∝庶逶・0%があなたの取り分</div>
                 </div>
             </div>
 
             <!-- STEP 3 -->
             <div class="guide-step" data-step="3">
-                <h3 class="gs-title">🖥 GPUを登録する</h3>
-                <p class="gs-desc">プロバイダーポータルでGPUの情報と価格を設定します。</p>
+                <h3 class="gs-title">🖥 GPUを登録する</h3>
+                <p class="gs-desc">繝励Ο繝舌う繝繝ｼ繝昴・繧ｿ繝ｫ縺ｧGPU縺ｮ諠・ｱ縺ｨ料金繧定ｨｭ螳壹＠縺ｾ縺吶・</p>
                 <div class="gs-terminal">
                     <div class="gs-terminal-bar"><span>GPU登録ページ</span></div>
                     <div class="gs-terminal-body">
-                        <div class="gt-line gt-comment"># プロバイダーポータルで以下を設定:</div>
+                        <div class="gt-line gt-comment"># 繝励Ο繝舌う繝繝ｼ繝昴・繧ｿ繝ｫ縺ｧ莉･荳九ｒ險ｭ螳・</div>
                         <div class="gt-line"><span class="gt-key">GPU名</span> : NVIDIA RTX A4500</div>
                         <div class="gt-line"><span class="gt-key">VRAM</span> : 20 GB</div>
-                        <div class="gt-line"><span class="gt-key">価格</span> : ¥800 / 時間 (自由設定)</div>
-                        <div class="gt-line"><span class="gt-key">場所</span> : Home PC</div>
-                        <div class="gt-line"><span class="gt-key">温度閾値</span> : 85°C (超えると自動停止)</div>
+                        <div class="gt-line"><span class="gt-key">料金</span> : ﾂ･800 / 時間 (自由設定</div>
+                        <div class="gt-line"><span class="gt-key">蝣ｴ謇</span> : Home PC</div>
+                        <div class="gt-line"><span class="gt-key">貂ｩ蠎ｦ髢ｾ蛟､</span> : 85ﾂｰC (超えると自動停止)</div>
                     </div>
                 </div>
                 <a href="/provider/" target="_blank" class="btn btn-primary"
                     style="display:block;text-align:center;margin-top:1rem">
-                    🏭 プロバイダーポータルを開く →
+                    少 繝励Ο繝舌う繝繝ｼ繝昴・繧ｿ繝ｫ繧帝幕縺・›
                 </a>
-                <p class="gs-note">※ ログインが必要です。Step 2を先に完了してください。</p>
+                <p class="gs-note">窶ｻ ログイン縺悟ｿ・ｦ√〒縺吶４tep 2繧貞・縺ｫ螳御ｺ・＠てく上□縺輔＞縲・</p>
             </div>
 
             <!-- STEP 4 -->
             <div class="guide-step" data-step="4">
-                <h3 class="gs-title">🌐 インターネットに公開する</h3>
-                <p class="gs-desc">Cloudflare Tunnelを使って自宅PCを外部から安全にアクセス可能にします。</p>
+                <h3 class="gs-title">🌐 インターネットに公開する</h3>
+                <p class="gs-desc">Cloudflare Tunnel繧剃ｽｿ縺｣縺ｦ閾ｪ螳・C繧貞､夜Κ縺九ｉ安全縺ｫアクセス蜿ｯ閭ｽ縺ｫします縺吶・</p>
 
                 <div class="gs-steps-mini">
                     <div class="gs-mini-step">
                         <div class="gs-mini-num">A</div>
                         <div>
-                            <div class="gs-mini-title">cloudflared をインストール</div>
+                            <div class="gs-mini-title">cloudflaredをインストール</div>
                             <div class="gs-terminal" style="margin-top:0.5rem">
-                                <div class="gs-terminal-bar"><span>PowerShell (管理者)</span></div>
+                                <div class="gs-terminal-bar"><span>PowerShell (邂｡逅・・</span></div>
                                 <div class="gs-terminal-body">
                                     <div class="gt-line"><span class="gt-cmd">winget install
                                             Cloudflare.cloudflared</span></div>
@@ -668,60 +666,60 @@
                     <div class="gs-mini-step">
                         <div class="gs-mini-num">C</div>
                         <div>
-                            <div class="gs-mini-title">公開URLをプラットフォームに登録</div>
-                            <div class="gs-desc">自動発行されるURLを管理者に連絡するか、固定ドメインを設定してください。</div>
+                            <div class="gs-mini-title">蜈ｬ髢偽RL繧偵・ラットフォーム縺ｫ登録</div>
+                            <div class="gs-desc">自動発行後＆繧後ｋURL繧堤ｮ｡逅・・↓騾｣邨｡する縺九∝崋螳壹ラ繝｡繧､繝ｳ繧定ｨｭ螳壹＠てく上□縺輔＞縲・</div>
                         </div>
                     </div>
                 </div>
 
                 <div class="gs-warn">
-                    ⚠️ <strong>セキュリティ注意:</strong> Cloudflare Tunnelは暗号化されますが、サーバーのJWT_SECRETを必ず変更してください。
+                    笞🇯🇵<strong>セキュリティ豕ｨ諢・</strong> Cloudflare Tunnel縺ｯ證怜捷蛹悶＆繧後∪縺吶′縲√し繝ｼ繝舌・縺ｮJWT_SECRET繧貞ｿ・★螟画峩してください縲・
                 </div>
             </div>
 
             <!-- STEP 5 -->
             <div class="guide-step" data-step="5">
-                <h3 class="gs-title">💰 収益を受け取る</h3>
-                <p class="gs-desc">GPU貸し出し後、自動的に報酬が積算されます。</p>
+                <h3 class="gs-title">💰 収益を受け取る</h3>
+                <p class="gs-desc">GPU雋ｸ縺怜・縺怜ｾ後∬・蜍慕噪縺ｫ蝣ｱり込まれ檎ｩ咲ｮ励＆繧後∪縺吶・</p>
 
                 <div class="gs-earn-flow">
                     <div class="gs-earn-box">
-                        <div class="gs-earn-icon">⏱</div>
+                        <div class="gs-earn-icon">竢ｱ</div>
                         <div class="gs-earn-label">GPU稼働</div>
-                        <div class="gs-earn-val">¥800/時間</div>
+                        <div class="gs-earn-val">ﾂ･800/時間</div>
                     </div>
-                    <div class="gs-earn-arrow">→</div>
+                    <div class="gs-earn-arrow">›</div>
                     <div class="gs-earn-box">
-                        <div class="gs-earn-icon">🏦</div>
-                        <div class="gs-earn-label">ウォレット積算</div>
+                        <div class="gs-earn-icon">嘗</div>
+                        <div class="gs-earn-label">ウォレット残高</div>
                         <div class="gs-earn-val">80% = ¥640</div>
                     </div>
-                    <div class="gs-earn-arrow">→</div>
+                    <div class="gs-earn-arrow">›</div>
                     <div class="gs-earn-box gs-earn-highlight">
-                        <div class="gs-earn-icon">💴</div>
+                        <div class="gs-earn-icon">超</div>
                         <div class="gs-earn-label">出金申請</div>
-                        <div class="gs-earn-val">振込</div>
+                        <div class="gs-earn-val">振込済</div>
                     </div>
                 </div>
 
                 <div class="gs-earn-calc">
-                    <div class="gs-ec-title">📈 月収シミュレーション</div>
+                    <div class="gs-ec-title">📊 収益シミュレーション</div>
                     <div class="gs-ec-row"><span>稼働時間</span><input type="range" id="earnHours" min="1" max="24"
                             value="8" oninput="calcEarnings()"><span id="earnHoursVal">8h/日</span></div>
-                    <div class="gs-ec-row"><span>価格</span><input type="range" id="earnPrice" min="300" max="5000"
+                    <div class="gs-ec-row"><span>料金</span><input type="range" id="earnPrice" min="300" max="5000"
                             step="100" value="800" oninput="calcEarnings()"><span id="earnPriceVal">¥800/h</span></div>
-                    <div class="gs-ec-result">月収見込み: <span id="earnResult">¥153,600</span></div>
+                    <div class="gs-ec-result">月間見込み: <span id="earnResult">¥153,600</span></div>
                 </div>
 
                 <div class="gs-info">
-                    <div class="gs-info-item">✅ 最低出金額なし（1円から申請可）</div>
-                    <div class="gs-info-item">✅ プロバイダー取り分は <strong>80%</strong></div>
-                    <div class="gs-info-item">✅ プロバイダーポータルでリアルタイム収益確認</div>
+                    <div class="gs-info-item">笨・譛菴主・驥鷹｡阪↑縺暦ｼ・蜀・°繧臥筏隲句庄🇯🇵</div>
+                    <div class="gs-info-item">笨・繝励Ο繝舌う繝繝ｼ取り蛻🇯🇵 <strong>80%</strong></div>
+                    <div class="gs-info-item">笨・繝励Ο繝舌う繝繝ｼ繝昴・繧ｿ繝ｫ縺ｧリアルタイム収益確認・</div>
                 </div>
 
                 <a href="/provider/" target="_blank" class="btn btn-primary"
                     style="display:block;text-align:center;margin-top:1.5rem">
-                    🚀 今すぐプロバイダーに登録する
+                    噫 莉翫☆縺舌・繝ｭ繝舌う繝繝ｼ縺ｫ登録する
                 </a>
             </div>
         </div>
@@ -735,50 +733,50 @@
     </div>
 
     <!-- ====================================================
-         出金管理モーダル  #withdrawModal
+         出金管理Δ繝ｼ繝繝ｫ  #withdrawModal
     ===================================================== -->
     <div id="withdrawOverlay" class="modal-overlay hidden" onclick="closeWithdrawModal()"></div>
     <div id="withdrawModal" class="withdraw-modal hidden">
         <div class="withdraw-header">
             <div>
-                <div class="withdraw-title">💰 出金管理</div>
-                <div class="withdraw-sub" id="walletBalanceLabel">残高: ¥—</div>
+                <div class="withdraw-title">腸 出金管理</div>
+                <div class="withdraw-sub" id="walletBalanceLabel">残高: ¥―</div>
             </div>
-            <button class="modal-close" onclick="closeWithdrawModal()">✕</button>
+            <button class="modal-close" onclick="closeWithdrawModal()">笨・</button>
         </div>
 
-        <!-- タブ -->
+        <!-- タブ-->
         <div class="withdraw-tabs">
-            <button class="wd-tab active" id="wdTab0" onclick="switchWdTab(0)">🏦 口座管理</button>
-            <button class="wd-tab" id="wdTab1" onclick="switchWdTab(1)">💸 出金申請</button>
-            <button class="wd-tab" id="wdTab2" onclick="switchWdTab(2)">📋 申請履歴</button>
+            <button class="wd-tab active" id="wdTab0" onclick="switchWdTab(0)">🏦 口座管理</button>
+            <button class="wd-tab" id="wdTab1" onclick="switchWdTab(1)">頂 出金申請</button>
+            <button class="wd-tab" id="wdTab2" onclick="switchWdTab(2)">📋 申請履歴</button>
         </div>
 
-        <!-- ───── TAB 0: 口座管理 ───── -->
+        <!-- 笏笏笏笏笏 TAB 0: 口座邂｡逅・笏笏笏笏笏 -->
         <div id="wdPane0" class="wd-pane">
             <div id="bankAccountList" class="bank-account-list">
                 <div class="wd-empty">読み込み中...</div>
             </div>
-            <button class="btn btn-primary" style="margin-top:1rem;width:100%" onclick="openAddAccountForm()">＋
-                口座を追加する</button>
+            <button class="btn btn-primary" style="margin-top:1rem;width:100%" onclick="openAddAccountForm()">🇯🇵
+                口座繧定ｿｽ蜉する</button>
 
-            <!-- 口座追加フォーム -->
+            <!-- 口座霑ｽ蜉繝輔か繝ｼ繝 -->
             <div id="addAccountForm" class="bank-form hidden">
-                <div class="bank-form-title">🏦 新規口座登録</div>
+                <div class="bank-form-title">🏦 新規口座登録</div>
                 <div class="bank-form-row">
                     <div class="bank-form-group">
-                        <label>銀行名 <span class="req">*</span></label>
-                        <input type="text" id="bfBankName" placeholder="例: 三菱UFJ銀行" />
+                        <label>驫陦悟錐 <span class="req">*</span></label>
+                        <input type="text" id="bfBankName" placeholder="萓・ 荳芽廠UFJ驫陦・ />
                     </div>
                     <div class="bank-form-group">
-                        <label>銀行コード</label>
+                        <label>驫陦後さ繝ｼ繝・</label>
                         <input type="text" id="bfBankCode" placeholder="例: 0005" maxlength="4" />
                     </div>
                 </div>
                 <div class="bank-form-row">
                     <div class="bank-form-group">
                         <label>支店名 <span class="req">*</span></label>
-                        <input type="text" id="bfBranchName" placeholder="例: 渋谷支店" />
+                        <input type="text" id="bfBranchName" placeholder="例: 渋谷支店 />
                     </div>
                     <div class="bank-form-group">
                         <label>支店コード</label>
@@ -787,9 +785,9 @@
                 </div>
                 <div class="bank-form-row">
                     <div class="bank-form-group">
-                        <label>口座種類 <span class="req">*</span></label>
+                        <label>口座種別<span class="req">*</span></label>
                         <select id="bfAccountType">
-                            <option value="ordinary">普通</option>
+                            <option value="ordinary">普通/option>
                             <option value="checking">当座</option>
                         </select>
                     </div>
@@ -799,70 +797,70 @@
                     </div>
                 </div>
                 <div class="bank-form-group">
-                    <label>口座名義（カタカナ） <span class="req">*</span></label>
-                    <input type="text" id="bfAccountHolder" placeholder="例: ヤマダ タロウ" />
+                    <label>口座蜷咲ｾｩ・医き繧ｿ繧ｫ繝奇ｼ・<span class="req">*</span></label>
+                    <input type="text" id="bfAccountHolder" placeholder="萓・ 繝､繝槭ム 繧ｿ繝ｭ繧ｦ" />
                 </div>
                 <div class="bank-form-check">
                     <input type="checkbox" id="bfIsDefault" />
-                    <label for="bfIsDefault">この口座をデフォルトに設定する</label>
+                    <label for="bfIsDefault">縺薙・口座繧偵ョ繝輔か繝ｫ繝医↓設定☆繧・</label>
                 </div>
                 <div style="display:flex;gap:10px;margin-top:1rem">
-                    <button class="btn btn-ghost" style="flex:1" onclick="closeAddAccountForm()">キャンセル</button>
-                    <button class="btn btn-primary" style="flex:2" onclick="submitAddAccount()">💾 口座を登録する</button>
+                    <button class="btn btn-ghost" style="flex:1" onclick="closeAddAccountForm()">繧ｭ繝｣繝ｳ繧ｻ繝ｫ</button>
+                    <button class="btn btn-primary" style="flex:2" onclick="submitAddAccount()">沈 口座繧堤匳骭ｲする</button>
                 </div>
             </div>
         </div>
 
-        <!-- ───── TAB 1: 出金申請 ───── -->
+        <!-- 笏笏笏笏笏 TAB 1: 出金申請笏笏笏笏笏 -->
         <div id="wdPane1" class="wd-pane hidden">
 
-            <!-- 申請フォーム -->
+            <!-- 逕ｳ隲九ヵ繧ｩ繝ｼ繝 -->
             <div id="payoutForm">
                 <div class="payout-balance-card">
-                    <div class="pbc-label">出金可能残高</div>
-                    <div class="pbc-amount" id="payoutAvailAmt">¥—</div>
+                    <div class="pbc-label">蜃ｺ驥大庄閭ｽ谿矩ｫ・</div>
+                    <div class="pbc-amount" id="payoutAvailAmt">ﾂ･―</div>
                 </div>
 
                 <div class="bank-form-group" style="margin-top:1.25rem">
-                    <label>振込先口座を選択 <span class="req">*</span></label>
+                    <label>振込済蜈亥哨蠎ｧ繧帝∈謚・<span class="req">*</span></label>
                     <select id="payoutBankSelect">
-                        <option value="">口座を選択してください</option>
+                        <option value="">口座繧帝∈謚槭＠てく上□縺輔＞</option>
                     </select>
                 </div>
 
                 <div class="bank-form-group">
-                    <label>出金金額（¥） <span class="req">*</span></label>
-                    <input type="number" id="payoutAmount" placeholder="例: 5000" min="1000" step="100" />
-                    <div class="field-hint">最低出金額: ¥1,000</div>
+                    <label>蜃ｺ驥鷹≡鬘搾ｼ按･🇯🇵<span class="req">*</span></label>
+                    <input type="number" id="payoutAmount" placeholder="萓・ 5000" min="1000" step="100" />
+                    <div class="field-hint">譛菴主・驥鷹｡・ ﾂ･1,000</div>
                 </div>
 
                 <div class="bank-form-group">
-                    <label>備考（任意）</label>
-                    <input type="text" id="payoutNotes" placeholder="任意のメモ" />
+                    <label>蛯呵・ｼ井ｻｻ諢擾ｼ・</label>
+                    <input type="text" id="payoutNotes" placeholder="莉ｻ諢上・繝｡繝｢" />
                 </div>
 
                 <button class="btn btn-primary" style="width:100%;margin-top:1.25rem;padding:14px"
                     onclick="submitPayout()">
-                    💸 出金を申請する
+                    頂 蜃ｺ驥代ｒ逕ｳ隲九☆繧・
                 </button>
-                <div class="payout-note">申請完了後 3〜5 営業日以内にお振込みします</div>
+                <div class="payout-note">逕ｳ隲句ｮ御ｺ・ｾ・3縲・ 蝟ｶ讌ｭ譌･莉･蜀・↓縺頑険霎ｼ縺ｿします縺・</div>
             </div>
 
-            <!-- 申請完了画面 -->
+            <!-- 逕ｳ隲句ｮ御ｺ・判髱｢ -->
             <div id="payoutSuccess" class="hidden" style="text-align:center;padding:2rem 1rem">
-                <div style="font-size:3rem;margin-bottom:1rem">✅</div>
-                <div style="font-size:1.3rem;font-weight:700;color:var(--success);margin-bottom:0.5rem">申請完了！</div>
+                <div style="font-size:3rem;margin-bottom:1rem">笨・</div>
+                <div style="font-size:1.3rem;font-weight:700;color:var(--success);margin-bottom:0.5rem">逕ｳ隲句ｮ御ｺ・ｼ・</div>
                 <div style="color:var(--text2);font-size:0.9rem;line-height:1.7;margin-bottom:1.5rem">
-                    出金申請を受け付けました。<br>
-                    <strong>3〜5 営業日以内</strong>に登録口座へお振込みします。<br>
-                    申請確認メールをご登録のアドレスへ送信しました。
+                    蜃ｺ驥醍筏隲九ｒ蜿励￠莉倥￠縺ｾ縺励◆縲・br>
+                    <strong>3縲・ 蝟ｶ讌ｭ譌･莉･蜀・/strong>縺ｫ登録口座縺ｸ縺頑険霎ｼ縺ｿします縺吶・br>
+                    逕ｳ隲狗｢ｺ隱阪Γ繝ｼ繝ｫ繧偵＃登録縺ｮ繧｢繝峨Ξ繧ｹ縺ｸ送信します縺励◆縲・
                 </div>
                 <div id="payoutSuccessDetail" class="payout-success-detail"></div>
-                <button class="btn btn-ghost" style="margin-top:1rem" onclick="resetPayoutForm()">← 出金申請に戻る</button>
+                <button class="btn btn-ghost" style="margin-top:1rem" onclick="resetPayoutForm()">›蜃ｺ驥醍筏隲九↓謌ｻ繧・</button>
             </div>
         </div>
 
-        <!-- ───── TAB 2: 申請履歴 ───── -->
+        <!-- 笏笏笏笏笏 TAB 2: 申請履歴 笏笏笏笏笏 -->
         <div id="wdPane2" class="wd-pane hidden">
             <div id="payoutHistoryList">
                 <div class="wd-empty">読み込み中...</div>
@@ -882,66 +880,66 @@
 <footer class="footer site-footer">
         <div class="sf-inner">
             <div class="sf-brand">
-                <div class="sf-logo">⚡ GPU<span style="color:var(--primary)">Rental</span></div>
-                <p class="sf-desc">日本初の個人・法人GPU貸出プラットフォーム。<br>アイドルGPUリソースをAI開発者・クリエイターへ。</p>
+                <div class="sf-logo">🎮 GPU<span style="color:var(--primary)">Rental</span></div>
+                <p class="sf-desc">譌･譛ｬ蛻昴・蛟倶ｺｺ繝ｻ豕穂ｺｺGPU雋ｸ蜃ｺプラットフォーム縲・br>繧｢繧､繝峨ΝGPU繝ｪ繧ｽ繝ｼ繧ｹ繧但I髢狗匱閠🇯🇵繧ｯ繝ｪ繧ｨ繧､繧ｿ繝ｼ縺ｸ縲・</p>
             </div>
             <div class="sf-col">
-                <h4>サービス</h4>
-                <a href="/portal/">GPU利用（ポータル）</a>
-                <a href="/provider/">GPU貸出（プロバイダー）</a>
+                <h4>繧ｵ繝ｼ繝薙せ</h4>
+                <a href="/portal/">GPU利用・医・繝ｼ繧ｿ繝ｫ🇯🇵</a>
+                <a href="/provider/">GPU雋ｸ蜃ｺ・医・繝ｭ繝舌う繝繝ｼ🇯🇵</a>
                 <a href="/workspace/">ワークスペース</a>
-                <a href="/landing/">🏠 トップページへ</a>
+                <a href="/landing/">匠 繝医ャ繝励・繝ｼ繧ｸ縺ｸ</a>
             </div>
             <div class="sf-col">
-                <h4>サポート</h4>
-                <a href="/landing/terms.html">利用規約</a>
-                <a href="/landing/privacy.html">プライバシーポリシー</a>
-                <a href="mailto:info@metadatalab.net">お問い合わせ</a>
+                <h4>繧ｵ繝昴・繝・/h4>
+                <a href="/landing/terms.html">利用隕冗ｴ・</a>
+                <a href="/landing/privacy.html">繝励Λ繧､繝舌す繝ｼ繝昴Μ繧ｷ繝ｼ</a>
+                <a href="mailto:info@metadatalab.net">縺雁撫縺・粋繧上○</a>
             </div>
         </div>
         <div class="sf-bottom">
-            <span>© 2026 GPURental by METADATALAB.INC. All rights reserved.</span>
-            <span>Made with ⚡ in Japan</span>
+            <span>ﾂｩ 2026 GPURental by METADATALAB.INC. All rights reserved.</span>
+            <span>Made with 🎮 in Japan</span>
         </div>
     </footer>
 
-    <!-- ═══ TICKET PURCHASE MODAL (static HTML) ═══════════════════════════ -->
-    <div id="ticketModal" class="hidden" role="dialog" aria-modal="true" aria-label="チケット購入">
+    <!-- 笊絶武笊・TICKET PURCHASE MODAL (static HTML) 笊絶武笊絶武笊絶武笊絶武笊絶武笊絶武笊絶武笊絶武笊絶武笊絶武笊絶武笊絶武笊絶武笊・-->
+    <div id="ticketModal" class="hidden" role="dialog" aria-modal="true" aria-label="繝√こ繝・ヨ雉ｼ蜈･">
       <div class="ticket-modal-box">
         <div class="modal-header">
-          <h2>🎟 チケット購入</h2>
-          <span class="modal-subtitle" id="ticketCurrentBalance">残高確認中...</span>
-          <button class="modal-close" onclick="closeTicketModal()" aria-label="閉じる">✕</button>
+          <h2>次 繝√こ繝・ヨ雉ｼ蜈･</h2>
+          <span class="modal-subtitle" id="ticketCurrentBalance">谿矩ｫ倡｢ｺ隱堺ｸｭ...</span>
+          <button class="modal-close" onclick="closeTicketModal()" aria-label="髢峨§繧・>笨・</button>
         </div>
         <div class="ticket-modal-body">
           <div class="ticket-plans-note">
-            <span>📌 1pt = 10円相当。GPU予約時に自動消費されます。</span>
+            <span>東 1pt = 10蜀・嶌蠖薙・PU莠育ｴ・凾縺ｫ閾ｪ蜍墓ｶ郁ｲｻ縺輔ｌ縺ｾ縺吶・</span>
           </div>
-          <!-- クーポンコード入力 -->
+          <!-- クーポンコード牙・蜉・-->
           <div style="display:flex;gap:.4rem;align-items:center;margin-bottom:0.6rem;padding:0.5rem 0.75rem;background:rgba(108,71,255,0.08);border:1px solid rgba(108,71,255,0.2);border-radius:10px">
-            <span style="font-size:0.9rem">🏷️</span>
-            <input id="couponCodeInput" type="text" placeholder="クーポンコード（例: BETA2025）"
+            <span style="font-size:0.9rem">捷🇯🇵</span>
+            <input id="couponCodeInput" type="text" placeholder="クーポンコード会ｼ井ｾ・ BETA2025🇯🇵
               style="flex:1;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);border-radius:6px;padding:.35rem .6rem;color:var(--text);font-size:.8rem;outline:none"
               oninput="couponInputChanged(this.value)" />
-            <button onclick="applyCoupon()" style="padding:.35rem .75rem;background:var(--primary);border:none;border-radius:6px;color:#fff;font-size:.75rem;cursor:pointer;white-space:nowrap;font-weight:600">適用</button>
+            <button onclick="applyCoupon()" style="padding:.35rem .75rem;background:var(--primary);border:none;border-radius:6px;color:#fff;font-size:.75rem;cursor:pointer;white-space:nowrap;font-weight:600">驕ｩ逕ｨ</button>
           </div>
-          <!-- クーポン適用結果 -->
+          <!-- クーポン驕ｩ逕ｨ邨先棡 -->
           <div id="couponResult" style="display:none;margin-bottom:0.5rem;padding:.45rem 0.75rem;border-radius:8px;font-size:.78rem"></div>
-          <!-- プラン一覧 -->
+          <!-- 繝励Λ繝ｳ荳隕ｧ -->
           <div class="ticket-plans-grid" id="ticketPlansContainer">
             <div style="text-align:center;padding:2rem;color:var(--text2);grid-column:1/-1">読み込み中...</div>
           </div>
         </div>
         <div class="ticket-footer">
-          <a href="https://stripe.com/jp" target="_blank">🔒 Stripe（クレジットカード）で安全に決済</a>
+          <a href="https://stripe.com/jp" target="_blank">白 Stripe・医け繝ｬ繧ｸ繝・ヨ繧ｫ繝ｼ繝会ｼ峨〒安全縺ｫ豎ｺ貂・</a>
         </div>
       </div>
     </div>
 
     <script src="/lib/socket.io.min.js"></script>
-    <script src="app.v17.js?cb=1776832867027"></script>
+    <script src="app.v17.js?cb=1776948200084"></script>
 
-    <!-- Google Translate (非表示) -->
+    <!-- Google Translate (髱櫁｡ｨ遉ｺ) -->
     <div id="google_translate_element" style="display:none"></div>
 
 
@@ -949,9 +947,9 @@
     <script>
     (function(){
         var LANGS = {
-            ja: { flag: '🇯🇵', name: '日本語' },
-            en: { flag: '🇺🇸', name: 'English' },
-            zh: { flag: '🇨🇳', name: '中文' }
+            ja: { flag: '・・', name: '日本語 },
+            en: { flag: '・・', name: 'English' },
+            zh: { flag: '・・', name: '中文 }
         };
         var GT_LANG = { en: 'en', zh: 'zh-CN', ja: 'ja' };
 
@@ -978,7 +976,7 @@
             });
         }
 
-        /* Google Translate コールバック: cookieが既にセットされていれば自動翻訳 */
+        /* Google Translate 繧ｳ繝ｼ繝ｫ繝舌ャ繧ｯ: cookie縺梧里縺ｫ繧ｻ繝・ヨ縺輔ｌてく・ｌ縺ｰ閾ｪ蜍慕ｿｻ險ｳ */
         window.googleTranslateElementInit = function() {
             new google.translate.TranslateElement({
                 pageLanguage: 'ja',
@@ -987,7 +985,7 @@
             }, 'google_translate_element');
         };
 
-        /* 言語選択: cookieセット → リロード（1回のみ） */
+        /* 險隱樣∈謚・ cookie繧ｻ繝・ヨ ›繝ｪ繝ｭ繝ｼ繝会ｼ・蝗槭・縺ｿ🇯🇵*/
         window.selectLang = function(lang) {
             var current = localStorage.getItem('site_lang') || 'ja';
             document.querySelectorAll('.lang-switcher').forEach(function(s){ s.classList.remove('open'); });
@@ -1032,7 +1030,7 @@
         links.classList.toggle('open');
         if (btn) btn.classList.toggle('open');
     }
-    // ESCで閉じる
+    // ESC縺ｧ髢峨§繧・
     document.addEventListener('keydown', function(e) {
         if (e.key === 'Escape') {
             var links = document.getElementById('navLinks');
@@ -1044,26 +1042,26 @@
 
 
 
-    // ─── Portal Stripe ポイント購入 ─────────────────────────────
+    // 笏笏笏 Portal Stripe 繝昴う繝ｳ繝郁ｳｼ蜈･ 笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏
     function openStripeModal() {
         document.getElementById('stripeBuyModal').style.display = 'flex';
     }
     function closeStripeModal() {
         document.getElementById('stripeBuyModal').style.display = 'none';
     }
-    // ESCで閉じる
+    // ESC縺ｧ髢峨§繧・
     document.addEventListener('keydown', function(e) {
         if (e.key === 'Escape') closeStripeModal();
     });
 
     async function stripeCheckoutPortal() {
         var token = localStorage.getItem('token');
-        if (!token) { alert('ログインが必要です'); return; }
+        if (!token) { alert('ログイン縺悟ｿ・ｦ√〒縺・); return; }
         var planId   = document.getElementById('portalPlanSelect')?.value || 'plan_1h';
         var coupon   = document.getElementById('portalCouponInput')?.value?.trim() || '';
         var btn      = document.getElementById('btnPortalStripe');
         try {
-            if(btn){ btn.disabled=true; btn.textContent='処理中...'; }
+            if(btn){ btn.disabled=true; btn.textContent='処理ｸｭ...'; }
             var body = { plan_id: planId };
             if (coupon) body.coupon_code = coupon;
             var r = await fetch('/api/stripe/checkout/points', {
@@ -1072,16 +1070,16 @@
                 body: JSON.stringify(body)
             });
             var d = await r.json();
-            if (!r.ok) { alert('エラー: ' + (d.error || 'Stripe未設定')); return; }
+            if (!r.ok) { alert('繧ｨ繝ｩ繝ｼ: ' + (d.error || 'Stripe譛ｪ險ｭ螳・)); return; }
             if (d.url) window.location.href = d.url;
         } catch(e) {
-            alert('接続エラー: ' + e.message);
+            alert('接続壹お繝ｩ繝ｼ: ' + e.message);
         } finally {
-            if(btn){ btn.disabled=false; btn.textContent='💳 Stripeで安全決済'; }
+            if(btn){ btn.disabled=false; btn.textContent='諜 Stripe縺ｧ安全豎ｺ貂・; }
         }
     }
 
-    // ログイン後にフローティングボタンを表示
+    // ログイン蠕後↓繝輔Ο繝ｼ繝・ぅ繝ｳ繧ｰ繝懊ち繝ｳ繧定｡ｨ遉ｺ
     var _origSetUser = typeof setUserInfo === 'function' ? setUserInfo : null;
     function showStripeBuyBtn() {
         var token = localStorage.getItem('token');
@@ -1092,17 +1090,17 @@
     }
     setTimeout(showStripeBuyBtn, 800);
 
-    // 購入完了URLチェック  
+    // 雉ｼ蜈･螳御ｺ・RL繝√ぉ繝・け  
     (function(){
         var p = new URLSearchParams(location.search);
         if (p.get('payment') === 'success') {
             var pid = p.get('purchase');
             if (typeof showToast === 'function') {
-                showToast('✅ ポイント購入完了！' + (pid ? ' #' + pid : ''), 'success');
+                showToast('笨・繝昴う繝ｳ繝郁ｳｼ蜈･螳御ｺ・ｼ・ + (pid ? ' #' + pid : ''), 'success');
             }
             history.replaceState(null, '', '/portal/');
         } else if (p.get('payment') === 'cancelled') {
-            if (typeof showToast === 'function') showToast('決済がキャンセルされました', 'info');
+            if (typeof showToast === 'function') showToast('豎ｺ貂医′繧ｭ繝｣繝ｳ繧ｻ繝ｫ縺輔ｌ縺ｾ縺励◆', 'info');
             history.replaceState(null, '', '/portal/');
         }
     })();
@@ -1110,38 +1108,38 @@
 </script>
 
 
-    <!-- Stripe ポイント購入フローティングボタン -->
+    <!-- Stripe 繝昴う繝ｳ繝郁ｳｼ蜈･繝輔Ο繝ｼ繝・ぅ繝ｳ繧ｰ繝懊ち繝ｳ -->
     <div id="stripeBuyBtn" style="position:fixed;bottom:24px;right:24px;z-index:8000;display:none">
         <button onclick="openStripeModal()" style="background:linear-gradient(135deg,#6c47ff,#00d4ff);border:none;border-radius:50px;padding:14px 22px;color:#fff;font-size:0.9rem;font-weight:700;cursor:pointer;box-shadow:0 4px 20px rgba(108,71,255,0.5);display:flex;align-items:center;gap:8px">
-            💳 ポイント購入
+            諜 繝昴う繝ｳ繝郁ｳｼ蜈･
         </button>
     </div>
 
-    <!-- Stripe Checkout モーダル -->
+    <!-- Stripe Checkout 繝｢繝ｼ繝繝ｫ -->
     <div id="stripeBuyModal" style="display:none;position:fixed;inset:0;z-index:9000;background:rgba(0,0,0,0.75);backdrop-filter:blur(8px);align-items:center;justify-content:center">
         <div style="background:#16162a;border:1px solid rgba(108,71,255,0.3);border-radius:20px;padding:2rem;width:min(420px,92vw);max-height:90vh;overflow-y:auto">
             <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.5rem">
-                <h3 style="font-size:1.1rem;font-weight:700">💳 ポイント購入</h3>
-                <button onclick="closeStripeModal()" style="background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);border-radius:8px;padding:4px 10px;color:#e8e8f0;cursor:pointer;font-size:1rem">✕</button>
+                <h3 style="font-size:1.1rem;font-weight:700">諜 繝昴う繝ｳ繝郁ｳｼ蜈･</h3>
+                <button onclick="closeStripeModal()" style="background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);border-radius:8px;padding:4px 10px;color:#e8e8f0;cursor:pointer;font-size:1rem">笨・</button>
             </div>
-            <!-- プラン選択 -->
+            <!-- 繝励Λ繝ｳ選択・-->
             <div style="display:flex;flex-direction:column;gap:0.6rem;margin-bottom:1.25rem">
-                <label style="font-size:0.8rem;color:#9898b8;text-transform:uppercase;letter-spacing:0.5px">プランを選択</label>
+                <label style="font-size:0.8rem;color:#9898b8;text-transform:uppercase;letter-spacing:0.5px">繝励Λ繝ｳ繧帝∈謚・</label>
                 <select id="portalPlanSelect" style="padding:0.75rem 1rem;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.12);border-radius:10px;color:#e8e8f0;font-size:0.9rem">
-                    <option value="plan_1h">1時間チケット  — ¥800 / 80pt</option>
-                    <option value="plan_3h">3時間チケット  — ¥2,400 / 240pt</option>
-                    <option value="plan_10h" selected>10時間チケット — ¥7,500 / 750pt ⭐ 6%OFF</option>
-                    <option value="plan_30h">30時間チケット — ¥21,000 / 2,100pt 🔥 12%OFF</option>
-                    <option value="plan_100h">100時間チケット — ¥65,000 / 6,500pt 🏆 18%OFF</option>
+                    <option value="plan_1h">1時間繝√こ繝・ヨ  ―ﾂ･800 / 80pt</option>
+                    <option value="plan_3h">3時間繝√こ繝・ヨ  ―ﾂ･2,400 / 240pt</option>
+                    <option value="plan_10h" selected>10時間繝√こ繝・ヨ ―ﾂ･7,500 / 750pt 箝・6%OFF</option>
+                    <option value="plan_30h">30時間繝√こ繝・ヨ ―ﾂ･21,000 / 2,100pt 櫨 12%OFF</option>
+                    <option value="plan_100h">100時間繝√こ繝・ヨ ―ﾂ･65,000 / 6,500pt 醇 18%OFF</option>
                 </select>
-                <input type="text" id="portalCouponInput" placeholder="クーポンコード（任意）"
+                <input type="text" id="portalCouponInput" placeholder="クーポンコード会ｼ井ｻｻ諢擾ｼ・
                     style="padding:0.65rem 1rem;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.12);border-radius:10px;color:#e8e8f0;font-size:0.875rem">
             </div>
             <button id="btnPortalStripe" onclick="stripeCheckoutPortal()" style="width:100%;padding:0.9rem;background:linear-gradient(135deg,#6c47ff,#00d4ff);border:none;border-radius:12px;color:#fff;font-size:1rem;font-weight:700;cursor:pointer;margin-bottom:1rem">
-                💳 Stripeで安全決済
+                諜 Stripe縺ｧ安全豎ｺ貂・
             </button>
             <p style="font-size:0.75rem;color:#5a5a7a;text-align:center;line-height:1.6">
-                ✅ Visa・Mastercard・JCB・Amex &nbsp;|&nbsp; 🔒 Stripe暗号化決済 &nbsp;|&nbsp; ⚡ 即時付与
+                笨・Visa繝ｻMastercard繝ｻJCB繝ｻAmex &nbsp;|&nbsp; 白 Stripe證怜捷蛹匁ｱｺ貂・&nbsp;|&nbsp; 🎮 蜊ｳ譎ゆｻ倅ｸ・
             </p>
         </div>
     </div>
@@ -1156,13 +1154,13 @@
 
             <!-- Header -->
             <div style="text-align:center;margin-bottom:2rem;position:relative;z-index:1">
-                <div style="font-size:2.5rem;margin-bottom:0.5rem">🎨</div>
+                <div style="font-size:2.5rem;margin-bottom:0.5rem">耳</div>
                 <h2 style="font-size:1.6rem;font-weight:800;background:linear-gradient(135deg,#fff,#c4b5fd);-webkit-background-clip:text;-webkit-text-fill-color:transparent;margin-bottom:0.5rem">
-                    Blender クラウドレンダリング
+                    Blender 繧ｯ繝ｩ繧ｦ繝峨Ξ繝ｳ繝繝ｪ繝ｳ繧ｰ
                 </h2>
                 <p style="color:rgba(255,255,255,0.6);font-size:0.95rem;max-width:600px;margin:0 auto;line-height:1.6">
-                    自分のPCのBlenderから直接クラウドGPUでレンダリング。<br>
-                    GPUのないMacBookでも、RTX 4090クラスの高速レンダリングが可能です。
+                    閾ｪ蛻🇯🇵PC縺ｮBlender縺九ｉ逶ｴ謗･繧ｯ繝ｩ繧ｦ繝烏PU縺ｧ繝ｬ繝ｳ繝繝ｪ繝ｳ繧ｰ縲・br>
+                    GPU縺ｮ縺ｪ縺МacBook縺ｧ繧ゅヽTX 4090繧ｯ繝ｩ繧ｹ縺ｮ鬮倬溘Ξ繝ｳ繝繝ｪ繝ｳ繧ｰ縺悟庄閭ｽ縺ｧ縺吶・
                 </p>
             </div>
 
@@ -1170,63 +1168,63 @@
             <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:1rem;margin-bottom:2rem">
                 <div style="background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.07);border-radius:14px;padding:1.2rem;text-align:center">
                     <div style="width:36px;height:36px;background:linear-gradient(135deg,#6c47ff,#00e5a0);border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:0.9rem;color:#fff;margin:0 auto 10px">1</div>
-                    <div style="font-size:0.88rem;font-weight:600;margin-bottom:4px">Addonをダウンロード</div>
-                    <div style="font-size:0.75rem;color:rgba(255,255,255,0.5)">ワークスペースの「🎨 Blender」タブから1クリックでDL</div>
+                    <div style="font-size:0.88rem;font-weight:600;margin-bottom:4px">Addon繧偵ム繧ｦ繝ｳ繝ｭ繝ｼ繝・</div>
+                    <div style="font-size:0.75rem;color:rgba(255,255,255,0.5)">ワークスペース縺ｮ縲交沁ｨ Blender縲阪ち繝悶°繧・繧ｯ繝ｪ繝・け縺ｧDL</div>
                 </div>
                 <div style="background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.07);border-radius:14px;padding:1.2rem;text-align:center">
                     <div style="width:36px;height:36px;background:linear-gradient(135deg,#6c47ff,#00e5a0);border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:0.9rem;color:#fff;margin:0 auto 10px">2</div>
-                    <div style="font-size:0.88rem;font-weight:600;margin-bottom:4px">Blenderにインストール</div>
-                    <div style="font-size:0.75rem;color:rgba(255,255,255,0.5)">編集 → プリファレンス → アドオン → インストール</div>
+                    <div style="font-size:0.88rem;font-weight:600;margin-bottom:4px">Blender縺ｫインストール</div>
+                    <div style="font-size:0.75rem;color:rgba(255,255,255,0.5)">邱ｨ髮・›繝励Μ繝輔ぃ繝ｬ繝ｳ繧ｹ ›繧｢繝峨が繝ｳ ›インストール</div>
                 </div>
                 <div style="background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.07);border-radius:14px;padding:1.2rem;text-align:center">
                     <div style="width:36px;height:36px;background:linear-gradient(135deg,#6c47ff,#00e5a0);border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:0.9rem;color:#fff;margin:0 auto 10px">3</div>
-                    <div style="font-size:0.88rem;font-weight:600;margin-bottom:4px">GPUを選んでレンダリング</div>
-                    <div style="font-size:0.75rem;color:rgba(255,255,255,0.5)">サイドバー → GPURental → GPU選択 → ☁ 開始</div>
+                    <div style="font-size:0.88rem;font-weight:600;margin-bottom:4px">GPU繧帝∈繧薙〒繝ｬ繝ｳ繝繝ｪ繝ｳ繧ｰ</div>
+                    <div style="font-size:0.75rem;color:rgba(255,255,255,0.5)">繧ｵ繧､繝峨ヰ繝ｼ ›GPURental ›GPU選択・›笘・開始・</div>
                 </div>
                 <div style="background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.07);border-radius:14px;padding:1.2rem;text-align:center">
                     <div style="width:36px;height:36px;background:linear-gradient(135deg,#6c47ff,#00e5a0);border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:0.9rem;color:#fff;margin:0 auto 10px">4</div>
-                    <div style="font-size:0.88rem;font-weight:600;margin-bottom:4px">結果を自動ダウンロード</div>
-                    <div style="font-size:0.75rem;color:rgba(255,255,255,0.5)">レンダリング完了後、結果画像をワンクリックでDL</div>
+                    <div style="font-size:0.88rem;font-weight:600;margin-bottom:4px">邨先棡繧定・蜍輔ム繧ｦ繝ｳ繝ｭ繝ｼ繝・</div>
+                    <div style="font-size:0.75rem;color:rgba(255,255,255,0.5)">繝ｬ繝ｳ繝繝ｪ繝ｳ繧ｰ螳御ｺ・ｾ後∫ｵ先棡逕ｻ蜒上ｒ繝ｯ繝ｳ繧ｯ繝ｪ繝・け縺ｧDL</div>
                 </div>
             </div>
 
             <!-- Features row -->
             <div style="display:flex;flex-wrap:wrap;justify-content:center;gap:1rem;margin-bottom:1.5rem">
                 <div style="display:flex;align-items:center;gap:6px;font-size:0.82rem;color:rgba(255,255,255,0.6);padding:6px 12px;background:rgba(255,255,255,0.03);border-radius:8px">
-                    ✅ <span>Cycles/Eevee 対応</span>
+                    笨・<span>Cycles/Eevee 蟇ｾ蠢・</span>
                 </div>
                 <div style="display:flex;align-items:center;gap:6px;font-size:0.82rem;color:rgba(255,255,255,0.6);padding:6px 12px;background:rgba(255,255,255,0.03);border-radius:8px">
-                    ✅ <span>進捗リアルタイム表示</span>
+                    笨・<span>騾ｲ謐励Μ繧｢繝ｫ繧ｿ繧､繝陦ｨ遉ｺ</span>
                 </div>
                 <div style="display:flex;align-items:center;gap:6px;font-size:0.82rem;color:rgba(255,255,255,0.6);padding:6px 12px;background:rgba(255,255,255,0.03);border-radius:8px">
-                    ✅ <span>アニメーション一括レンダリング</span>
+                    笨・<span>繧｢繝九Γ繝ｼ繧ｷ繝ｧ繝ｳ荳諡ｬ繝ｬ繝ｳ繝繝ｪ繝ｳ繧ｰ</span>
                 </div>
                 <div style="display:flex;align-items:center;gap:6px;font-size:0.82rem;color:rgba(255,255,255,0.6);padding:6px 12px;background:rgba(255,255,255,0.03);border-radius:8px">
-                    ✅ <span>GPU選択可能</span>
+                    笨・<span>GPU選択槫庄閭ｽ</span>
                 </div>
                 <div style="display:flex;align-items:center;gap:6px;font-size:0.82rem;color:rgba(255,255,255,0.6);padding:6px 12px;background:rgba(255,255,255,0.03);border-radius:8px">
-                    ✅ <span>Blender 3.6〜4.x 対応</span>
+                    笨・<span>Blender 3.6縲・.x 蟇ｾ蠢・</span>
                 </div>
             </div>
 
             <!-- Use Case -->
             <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:1rem;margin-bottom:1.5rem">
                 <div style="background:rgba(255,255,255,0.03);border-radius:12px;padding:1rem">
-                    <div style="font-size:0.82rem;font-weight:600;margin-bottom:6px;color:#c4b5fd">🖥 こんな方におすすめ</div>
+                    <div style="font-size:0.82rem;font-weight:600;margin-bottom:6px;color:#c4b5fd">箕 縺薙ｓ縺ｪ譁ｹ縺ｫ縺翫☆縺吶ａ</div>
                     <ul style="font-size:0.78rem;color:rgba(255,255,255,0.55);line-height:1.8;padding-left:1rem;margin:0">
-                        <li>MacBookなどGPUのないPCでBlenderを使っている</li>
-                        <li>レンダリングに何時間もかかってPCが使えない</li>
-                        <li>高品質なCyclesレンダリングをスピーディに仕上げたい</li>
-                        <li>RunPodのような海外サービスは英語で不安</li>
+                        <li>MacBook縺ｪ縺ｩGPU縺ｮ縺ｪ縺ПC縺ｧBlender繧剃ｽｿ縺｣てく・ｋ</li>
+                        <li>繝ｬ繝ｳ繝繝ｪ繝ｳ繧ｰ縺ｫ菴墓凾髢薙ｂ縺九°縺｣縺ｦPC縺御ｽｿ縺医↑縺・/li>
+                        <li>鬮伜刀雉ｪ縺ｪCycles繝ｬ繝ｳ繝繝ｪ繝ｳ繧ｰ繧偵せ繝斐・繝・ぅ縺ｫ莉穂ｸ翫￡縺溘＞</li>
+                        <li>RunPod縺ｮ繧医≧縺ｪ豬ｷ螟悶し繝ｼ繝薙せ縺ｯ闍ｱ隱槭〒荳榊ｮ・/li>
                     </ul>
                 </div>
                 <div style="background:rgba(255,255,255,0.03);border-radius:12px;padding:1rem">
-                    <div style="font-size:0.82rem;font-weight:600;margin-bottom:6px;color:#86efac">⚡ RunPodとの違い</div>
+                    <div style="font-size:0.82rem;font-weight:600;margin-bottom:6px;color:#86efac">🎮 RunPod縺ｨ縺ｮ驕輔＞</div>
                     <ul style="font-size:0.78rem;color:rgba(255,255,255,0.55);line-height:1.8;padding-left:1rem;margin:0">
-                        <li>🇯🇵 完全日本語対応（UI・サポート・決済）</li>
-                        <li>🎨 Blender専用Addonで簡単操作</li>
-                        <li>💳 クレジットカード + 日本円決済</li>
-                        <li>🔰 初心者でも5分でセットアップ完了</li>
+                        <li>・・ 螳悟・譌･譛ｬ隱槫ｯｾ蠢懶ｼ・I繝ｻ繧ｵ繝昴・繝医・豎ｺ貂茨ｼ・/li>
+                        <li>耳 Blender蟆ら畑Addon縺ｧ邁｡蜊俶桃菴・/li>
+                        <li>諜 繧ｯ繝ｬ繧ｸ繝・ヨ繧ｫ繝ｼ繝・+ 譌･譛ｬ蜀・ｱｺ貂・/li>
+                        <li>伐 蛻晏ｿ・・〒繧・蛻・〒繧ｻ繝・ヨ繧｢繝🇯🇵螳御ｺ・/li>
                     </ul>
                 </div>
             </div>
@@ -1237,45 +1235,45 @@
                     style="display:inline-flex;align-items:center;gap:8px;padding:12px 28px;background:linear-gradient(135deg,#6c47ff,#00d4ff);border-radius:12px;color:#fff;font-weight:700;font-size:0.95rem;text-decoration:none;box-shadow:0 4px 20px rgba(108,71,255,0.4);transition:transform 0.2s,box-shadow 0.2s"
                     onmouseover="this.style.transform='translateY(-2px)';this.style.boxShadow='0 8px 30px rgba(108,71,255,0.6)'"
                     onmouseout="this.style.transform='';this.style.boxShadow='0 4px 20px rgba(108,71,255,0.4)'">
-                    ⬇ Blender Addon をダウンロード
+                    筮・Blender Addon 繧偵ム繧ｦ繝ｳ繝ｭ繝ｼ繝・
                 </a>
-                <p style="font-size:0.72rem;color:rgba(255,255,255,0.35);margin-top:8px">gpurental_addon.py — Python標準ライブラリのみで動作（依存関係なし）</p>
+                <p style="font-size:0.72rem;color:rgba(255,255,255,0.35);margin-top:8px">gpurental_addon.py ―Python讓呎ｺ悶Λ繧､繝悶Λ繝ｪのみ縺ｧ蜍穂ｽ懶ｼ井ｾ晏ｭ倬未菫ゅ↑縺暦ｼ・</p>
             </div>
         </div>
     </section>
 
     <!-- Legal Footer -->
     <div style="text-align:center;padding:1.5rem;font-size:0.78rem;color:#3a3a5a;border-top:1px solid rgba(120,120,200,0.1);margin-top:2rem">
-        <a href="/terms/" style="color:#5a5a7a;margin:0 0.5rem">利用規約</a> ·
-        <a href="/privacy/" style="color:#5a5a7a;margin:0 0.5rem">プライバシーポリシー</a> ·
-        <a href="/tokushoho/" style="color:#5a5a7a;margin:0 0.5rem">特定商取引法</a> ·
-        <a href="/downloads/gpurental_addon.py" download style="color:#6c47ff;margin:0 0.5rem">🎨 Blender Addon</a> ·
-        © 2026 METADATALAB.INC
+        <a href="/terms/" style="color:#5a5a7a;margin:0 0.5rem">利用隕冗ｴ・</a> ﾂｷ
+        <a href="/privacy/" style="color:#5a5a7a;margin:0 0.5rem">繝励Λ繧､繝舌す繝ｼ繝昴Μ繧ｷ繝ｼ</a> ﾂｷ
+        <a href="/tokushoho/" style="color:#5a5a7a;margin:0 0.5rem">迚ｹ螳壼膚蜿門ｼ墓ｳ・</a> ﾂｷ
+        <a href="/downloads/gpurental_addon.py" download style="color:#6c47ff;margin:0 0.5rem">耳 Blender Addon</a> ﾂｷ
+        ﾂｩ 2026 METADATALAB.INC
     </div>
 
-    <!-- ⚡ THE DOJO エージェントトークン管理 (プロバイダー専用) -->
+    <!-- 🎮 THE DOJO 繧ｨ繝ｼ繧ｸ繧ｧ繝ｳ繝医ヨ繝ｼ繧ｯ繝ｳ邂｡逅・(繝励Ο繝舌う繝繝ｼ蟆ら畑) -->
     <div id="theDojoSection" style="display:none;margin:2rem auto;max-width:640px;padding:0 1rem">
         <div style="background:rgba(10,10,25,0.8);border:1px solid rgba(108,71,255,0.35);border-radius:16px;padding:1.5rem;backdrop-filter:blur(12px)">
             <div style="display:flex;align-items:center;gap:0.75rem;margin-bottom:1rem">
-                <span style="font-size:1.4rem">⚡</span>
+                <span style="font-size:1.4rem">🎮</span>
                 <div>
-                    <div style="font-weight:700;color:#e8e8f0;font-size:0.95rem">THE DOJO — エージェント設定</div>
-                    <div style="font-size:0.73rem;color:#6c47ff">GPU Street Fighter ノード登録</div>
+                    <div style="font-weight:700;color:#e8e8f0;font-size:0.95rem">THE DOJO ―繧ｨ繝ｼ繧ｸ繧ｧ繝ｳ繝郁ｨｭ螳・</div>
+                    <div style="font-size:0.73rem;color:#6c47ff">GPU Street Fighter 繝弱・繝臥匳骭ｲ</div>
                 </div>
             </div>
             <div style="font-size:0.78rem;color:#7a7a9a;margin-bottom:1rem">
-                このトークンを THE DOJO エージェントの <code style="color:#00d4ff;background:rgba(0,212,255,0.08);padding:2px 6px;border-radius:4px">X-Agent-Token</code> ヘッダーに設定してください。
+                縺薙・繝医・繧ｯ繝ｳ繧・THE DOJO 繧ｨ繝ｼ繧ｸ繧ｧ繝ｳ繝医・ <code style="color:#00d4ff;background:rgba(0,212,255,0.08);padding:2px 6px;border-radius:4px">X-Agent-Token</code> 繝倥ャ繝繝ｼ縺ｫ設定＠てく上□縺輔＞縲・
             </div>
             <div style="display:flex;gap:0.5rem;align-items:center;margin-bottom:1rem">
                 <code id="agentTokenValue" style="flex:1;background:rgba(0,0,0,0.4);border:1px solid rgba(108,71,255,0.2);border-radius:8px;padding:0.6rem 0.75rem;font-size:0.72rem;color:#a0a0c8;word-break:break-all;font-family:monospace">
                     読み込み中...
                 </code>
                 <button onclick="copyAgentToken()" style="flex-shrink:0;background:rgba(108,71,255,0.15);border:1px solid rgba(108,71,255,0.3);border-radius:8px;color:#9c7cff;cursor:pointer;padding:0.6rem 0.9rem;font-size:0.78rem;transition:all 0.2s" onmouseover="this.style.background='rgba(108,71,255,0.3)'" onmouseout="this.style.background='rgba(108,71,255,0.15)'">
-                    📋 コピー
+                    搭 繧ｳ繝斐・
                 </button>
             </div>
             <details style="margin-bottom:1rem">
-                <summary style="font-size:0.78rem;color:#5a5a8a;cursor:pointer;margin-bottom:0.5rem">📖 使い方</summary>
+                <summary style="font-size:0.78rem;color:#5a5a8a;cursor:pointer;margin-bottom:0.5rem">📖 使い方</summary>
                 <pre style="font-size:0.68rem;color:#6c47ff;background:rgba(108,71,255,0.06);border-radius:8px;padding:0.75rem;margin:0.5rem 0;overflow-x:auto">curl -X POST https://gpurental.jp/api/sf/nodes/heartbeat \
   -H "X-Agent-Token: &lt;YOUR_TOKEN&gt;" \
   -H "Content-Type: application/json" \
@@ -1283,10 +1281,10 @@
             </details>
             <div style="display:flex;gap:0.5rem">
                 <button onclick="regenerateAgentToken()" style="background:rgba(239,68,68,0.12);border:1px solid rgba(239,68,68,0.25);border-radius:8px;color:#f87171;cursor:pointer;padding:0.5rem 1rem;font-size:0.78rem;transition:all 0.2s" onmouseover="this.style.background='rgba(239,68,68,0.2)'" onmouseout="this.style.background='rgba(239,68,68,0.12)'">
-                    🔄 再生成
+                    売 蜀咲函謌・
                 </button>
                 <a href="/provider/" style="display:inline-flex;align-items:center;background:rgba(0,212,255,0.08);border:1px solid rgba(0,212,255,0.2);border-radius:8px;color:#00d4ff;padding:0.5rem 1rem;font-size:0.78rem;text-decoration:none;transition:all 0.2s" onmouseover="this.style.background='rgba(0,212,255,0.15)'" onmouseout="this.style.background='rgba(0,212,255,0.08)'">
-                    🏠 プロバイダーダッシュボード →
+                    匠 繝励Ο繝舌う繝繝ｼ繝繝・す繝･繝懊・繝・›
                 </a>
             </div>
         </div>
