@@ -92,7 +92,7 @@ function initCharts() {
         data: {
             labels: utilHistory.labels,
             datasets: [
-                { label: 'GPU菴ｿ逕ｨ邇・, data: utilHistory.gpu, borderColor: '#6c47ff', backgroundColor: 'rgba(108,71,255,0.1)', fill: true, tension: 0.4, pointRadius: 0, borderWidth: 2 },
+                { label: 'GPU使用率', data: utilHistory.gpu, borderColor: '#6c47ff', backgroundColor: 'rgba(108,71,255,0.1)', fill: true, tension: 0.4, pointRadius: 0, borderWidth: 2 },
                 { label: 'VRAM', data: utilHistory.vram, borderColor: '#00d4ff', backgroundColor: 'rgba(0,212,255,0.07)', fill: true, tension: 0.4, pointRadius: 0, borderWidth: 2 },
             ],
         },
@@ -104,7 +104,7 @@ function initCharts() {
     chartStatus = new Chart(ctx2, {
         type: 'doughnut',
         data: {
-            labels: ['遨ｺ縺阪≠繧・, '菴ｿ逕ｨ荳ｭ', '繝｡繝ｳ繝・, '繧ｪ繝輔Λ繧､繝ｳ'],
+            labels: ['空きあり', '使用中', 'メンテ', 'オフライン'],
             datasets: [{ data: [0, 0, 0, 0], backgroundColor: ['#00e5a0', '#6c47ff', '#ffb300', '#5a5a7a'], borderWidth: 0, hoverOffset: 4 }],
         },
         options: { plugins: { legend: { position: 'bottom', labels: { boxWidth: 12, font: { size: 11 } } } }, cutout: '65%' },
@@ -117,11 +117,11 @@ function initCharts() {
         data: {
             labels: [],
             datasets: [
-                { label: '邱丞庶逶・, data: [], backgroundColor: 'rgba(108,71,255,0.6)', borderColor: '#6c47ff', borderWidth: 1, borderRadius: 4 },
+                { label: '総収益', data: [], backgroundColor: 'rgba(108,71,255,0.6)', borderColor: '#6c47ff', borderWidth: 1, borderRadius: 4 },
                 { label: '繝励Ο繝舌う繝繝ｼ', data: [], backgroundColor: 'rgba(0,229,160,0.4)', borderColor: '#00e5a0', borderWidth: 1, borderRadius: 4 },
             ],
         },
-        options: { plugins: { legend: { labels: { boxWidth: 12, font: { size: 11 } } } }, scales: { y: { ticks: { callback: v => 'ﾂ･' + v.toLocaleString() } } } },
+        options: { plugins: { legend: { labels: { boxWidth: 12, font: { size: 11 } } } }, scales: { y: { ticks: { callback: v => '¥' + v.toLocaleString() } } } },
     });
 }
 
@@ -133,7 +133,7 @@ async function refreshAll() {
         document.getElementById('kActivePods').textContent = ovr.activePods ?? 0;
         document.getElementById('kAvailGpus').textContent = (ovr.gpus || []).filter(g => g.status === 'available').length;
         document.getElementById('kTotalUsers').textContent = ovr.totalUsers ?? 0;
-        document.getElementById('kMonthRevenue').textContent = 'ﾂ･' + Math.round(ovr.monthRevenue || 0).toLocaleString();
+        document.getElementById('kMonthRevenue').textContent = '¥' + Math.round(ovr.monthRevenue || 0).toLocaleString();
         document.getElementById('kTotalRes').textContent = ovr.totalReservations ?? 0;
 
         // GPU stats
@@ -185,7 +185,7 @@ function renderGpuMonitorCards(gpus) {
         const pwr = s.powerDraw || 0;
         const pwrPct = s.powerLimit ? Math.round((pwr / s.powerLimit) * 100) : 0;
         const hot = temp > (gpu.temp_threshold || 85);
-        const statusLabel = { available: '遨ｺ縺阪≠繧・, rented: '菴ｿ逕ｨ荳ｭ', maintenance: '繝｡繝ｳ繝・ｸｭ', offline: '繧ｪ繝輔Λ繧､繝ｳ' }[gpu.status] || gpu.status;
+        const statusLabel = { available: '空きあり', rented: '使用中', maintenance: 'メンテ'ｸｭ', offline: 'オフライン' }[gpu.status] || gpu.status;
         const badgeCls = { available: 'b-success', rented: 'b-primary', maintenance: 'b-warning', offline: 'b-muted' }[gpu.status];
         return `
         <div class="gpu-card">
@@ -199,7 +199,7 @@ function renderGpuMonitorCards(gpus) {
 </span></div><div class="gauge-track"><div class="gauge-fill gf-temp${hot ? ' hot' : ''}" style="width:${Math.min(100, temp)}%"></div></div></div>
           <div class="gauge"><div class="gauge-hd"><span class="gauge-label">髮ｻ蜉・/span><span class="gauge-val">${Math.round(pwr)}W / ${Math.round(s.powerLimit || 0)}W</span></div><div class="gauge-track"><div class="gauge-fill gf-pwr" style="width:${pwrPct}%"></div></div></div>
           <div class="gpu-meta">
-            <div class="gpu-meta-item">P-State: <span>${s.pstate || '-'}</span></div>
+            <div class="gpu-meta-item">P-State: <span>${(s && s.pstate) || '-'}</span></div>
             <div class="gpu-meta-item">Driver: <span>${gpu.driver_version || '-'}</span></div>
             <div class="gpu-meta-item">ﾂ･: <span>${gpu.price_per_hour?.toLocaleString() || '-'}/h</span></div>
             <div class="gpu-meta-item" style="margin-left:auto"><button class="btn btn-ghost btn-sm" onclick="openGpuModal(${gpu.id})">險ｭ螳・/button></div>
@@ -235,7 +235,7 @@ async function loadGpus() {
         const statsMap = {};
         (stat.gpus || []).forEach(g => statsMap[g.id] = g.stats);
 
-        const statusLabel = { available: '遨ｺ縺阪≠繧・, rented: '菴ｿ逕ｨ荳ｭ', maintenance: '繝｡繝ｳ繝・ｸｭ', offline: '繧ｪ繝輔Λ繧､繝ｳ' };
+        const statusLabel = { available: '空きあり', rented: '使用中', maintenance: 'メンテ'ｸｭ', offline: 'オフライン' };
         const badgeCls = { available: 'b-success', rented: 'b-primary', maintenance: 'b-warning', offline: 'b-muted' };
 
         document.getElementById('gpuTableBody').innerHTML = gpus.map(g => {
@@ -246,7 +246,7 @@ async function loadGpus() {
               <td><span class="badge ${badgeCls[g.status] || 'b-muted'}">${statusLabel[g.status] || g.status}</span></td>
               <td class="mono">${s.gpuUtil || 0}%</td>
               <td class="mono" style="color:${(s.temperature || 0) > 85 ? 'var(--danger)' : 'inherit'}">${s.temperature || 0}ﾂｰC</td>
-              <td class="mono">ﾂ･${g.price_per_hour?.toLocaleString()}</td>
+              <td class="mono">¥${g.price_per_hour?.toLocaleString()}</td>
               <td>${g.location}</td>
               <td><button class="btn btn-ghost btn-sm" onclick="openGpuModal(${g.id})">邱ｨ髮・/button></td>
             </tr>`;
@@ -267,7 +267,7 @@ async function loadPods() {
               <td>${p.gpu_name}</td>
               <td>${new Date(p.started_at).toLocaleString('ja-JP')}</td>
               <td>${new Date(p.expires_at).toLocaleString('ja-JP')}</td>
-              <td class="mono" style="color:var(--success)">ﾂ･${Math.round(cost).toLocaleString()}</td>
+              <td class="mono" style="color:var(--success)">¥${Math.round(cost).toLocaleString()}</td>
               <td><button class="btn btn-danger btn-sm" onclick="stopPod(${p.id})">蛛懈ｭ｢</button></td>
             </tr>`;
         }).join('') || '<tr><td colspan="7" style="text-align:center;color:var(--text3);padding:2rem">遞ｼ蜒堺ｸｭPod縺ｪ縺・/td></tr>';
@@ -283,7 +283,7 @@ async function stopPod(podId) {
 async function loadReservations() {
     try {
         const list = await api('/admin/reservations');
-        const statusLabel = { pending: '遒ｺ隱堺ｸｭ', confirmed: '遒ｺ螳壽ｸ・, active: '遞ｼ蜒堺ｸｭ', completed: '螳御ｺ・, cancelled: '繧ｭ繝｣繝ｳ繧ｻ繝ｫ', paid: '謾ｯ謇墓ｸ・ };
+        const statusLabel = { pending: '遒ｺ隱堺ｸｭ', confirmed: '遒ｺ螳壽ｸ・, active: '遞ｼ蜒堺ｸｭ', completed: '完了', cancelled: '繧ｭ繝｣繝ｳ繧ｻ繝ｫ', paid: '謾ｯ謇墓ｸ・ };
         const badgeCls = { pending: 'b-warning', confirmed: 'b-primary', active: 'b-success', completed: 'b-muted', cancelled: 'b-muted', paid: 'b-success' };
         document.getElementById('reservTableBody').innerHTML = (list || []).map(r => `<tr>
           <td class="mono">#${r.id}</td>
@@ -292,7 +292,7 @@ async function loadReservations() {
           <td>${new Date(r.start_time).toLocaleString('ja-JP')}</td>
           <td>${new Date(r.end_time).toLocaleString('ja-JP')}</td>
           <td><span class="badge ${badgeCls[r.status] || 'b-muted'}">${statusLabel[r.status] || r.status}</span></td>
-          <td class="mono">ﾂ･${r.total_price ? Math.round(r.total_price).toLocaleString() : '窶・}</td>
+          <td class="mono">¥${r.total_price ? Math.round(r.total_price).toLocaleString() : '窶・}</td>
           <td>${r.status === 'pending' ? `<button class="btn btn-ghost btn-sm" onclick="confirmRes(${r.id})">遒ｺ螳・/button>` : ''}</td>
         </tr>`).join('') || '<tr><td colspan="8" style="text-align:center;color:var(--text3);padding:2rem">莠育ｴ・↑縺・/td></tr>';
     } catch (err) { console.error(err); }
@@ -313,8 +313,8 @@ async function loadEarnings() {
         const totMins = data.reduce((s, d) => s + (d.total_minutes || 0), 0);
         const totSess = data.reduce((s, d) => s + (d.sessions || 0), 0);
 
-        document.getElementById('eTotalRev').textContent = 'ﾂ･' + Math.round(totRev).toLocaleString();
-        document.getElementById('eProvPayout').textContent = 'ﾂ･' + Math.round(totProv).toLocaleString();
+        document.getElementById('eTotalRev').textContent = '¥' + Math.round(totRev).toLocaleString();
+        document.getElementById('eProvPayout').textContent = '¥' + Math.round(totProv).toLocaleString();
         document.getElementById('eTotalHours').textContent = Math.round(totMins / 60) + 'h';
         document.getElementById('eSessions').textContent = totSess;
 
@@ -335,9 +335,9 @@ async function loadEarnings() {
           <td>${d.gpu_name}</td>
           <td>${d.sessions}</td>
           <td>${Math.round(d.total_minutes / 60 * 10) / 10}h</td>
-          <td class="mono">ﾂ･${Math.round(d.gross_revenue || 0).toLocaleString()}</td>
-          <td class="mono" style="color:var(--success)">ﾂ･${Math.round(d.net_payout || 0).toLocaleString()}</td>
-          <td class="mono" style="color:var(--accent)">ﾂ･${Math.round((d.gross_revenue || 0) * 0.2).toLocaleString()}</td>
+          <td class="mono">¥${Math.round(d.gross_revenue || 0).toLocaleString()}</td>
+          <td class="mono" style="color:var(--success)">¥${Math.round(d.net_payout || 0).toLocaleString()}</td>
+          <td class="mono" style="color:var(--accent)">¥${Math.round((d.gross_revenue || 0) * 0.2).toLocaleString()}</td>
         </tr>`).join('') || '<tr><td colspan="7" style="text-align:center;color:var(--text3);padding:2rem">繝・・繧ｿ縺ｪ縺・/td></tr>';
     } catch (err) { console.error(err); }
 }
@@ -349,7 +349,7 @@ async function loadPayouts() {
         document.getElementById('payoutTableBody').innerHTML = (list || []).map(p => `<tr>
           <td class="mono">#${p.id}</td>
           <td>${p.provider_name || p.provider_id}</td>
-          <td class="mono" style="color:var(--success)">ﾂ･${Math.round(p.amount).toLocaleString()}</td>
+          <td class="mono" style="color:var(--success)">¥${Math.round(p.amount).toLocaleString()}</td>
           <td><span class="badge ${p.status === 'paid' ? 'b-success' : 'b-warning'}">${p.status === 'paid' ? '謾ｯ謇墓ｸ・ : '逕ｳ隲倶ｸｭ'}</span></td>
           <td>${new Date(p.created_at).toLocaleString('ja-JP')}</td>
           <td>${p.status === 'pending' ? `<button class="btn btn-primary btn-sm" onclick="markPaid(${p.id})">謾ｯ謇輔＞螳御ｺ・/button>` : '窶・}</td>
@@ -377,14 +377,14 @@ async function loadUsers() {
           <td><strong>${u.username}</strong></td>
           <td style="color:var(--text2)">${u.email}</td>
           <td><span class="badge ${roleBadge[u.role] || 'b-muted'}">${roleLabel[u.role] || u.role}</span></td>
-          <td><span class="badge ${u.status === 'active' ? 'b-success' : 'b-danger'}">${u.status === 'active' ? '譛牙柑' : '蛛懈ｭ｢'}</span></td>
-          <td class="mono">ﾂ･${Math.round(u.wallet_balance || 0).toLocaleString()}</td>
+          <td><span class="badge ${u.status === 'active' ? 'b-success' : 'b-danger'}">${u.status === 'active' ? '有効' : '蛛懈ｭ｢'}</span></td>
+          <td class="mono">¥${Math.round(u.wallet_balance || 0).toLocaleString()}</td>
           <td class="mono" style="color:var(--accent)">${Math.round(u.point_balance || 0).toLocaleString()} pt</td>
           <td style="color:var(--text3)">${new Date(u.created_at).toLocaleDateString('ja-JP')}</td>
           <td style="display:flex;gap:6px;align-items:center">
             ${u.role !== 'admin'
                 ? `<button class="btn btn-ghost btn-sm" onclick="toggleUser(${u.id},'${u.status}')">${u.status === 'active' ? '蛛懈ｭ｢' : '譛牙柑蛹・}</button>
-                 <button class="btn btn-danger btn-sm" onclick="confirmDeleteUser(${u.id},'${u.username}','${u.email}')">卵 蜑企勁</button>`
+                 <button class="btn btn-danger btn-sm" onclick="confirmDeleteUser(${u.id},'${u.username}','${u.email}')">卵 削除</button>`
                 : '<span style="color:var(--text3);font-size:0.8rem">菫晁ｭｷ</span>'
             }
           </td>
@@ -718,7 +718,7 @@ async function loadMaintenanceStatus() {
         _maintEnabled = data.enabled;
         updateMaintUI(data);
     } catch (e) {
-        showToast('繝｡繝ｳ繝・Δ繝ｼ繝臥憾諷九・蜿門ｾ励↓螟ｱ謨励＠縺ｾ縺励◆', 'error');
+        showToast('メンテ'Δ繝ｼ繝臥憾諷九・蜿門ｾ励↓螟ｱ謨励＠縺ｾ縺励◆', 'error');
     }
 }
 
@@ -739,12 +739,12 @@ function updateMaintUI(data) {
         card.style.background = 'rgba(255,71,87,.12)';
         card.style.borderColor = 'rgba(255,71,87,.5)';
         icon.textContent = '閥';
-        title.textContent = '繝｡繝ｳ繝・リ繝ｳ繧ｹ荳ｭ';
-        sub.textContent = `繝｡繝・そ繝ｼ繧ｸ: ${data.message || ''} / 險ｭ螳夊・ ${data.updated_by || '窶・}`;
+        title.textContent = 'メンテ'リ繝ｳ繧ｹ荳ｭ';
+        sub.textContent = `メッセージ: ${data.message || ''} / 險ｭ螳夊・ ${data.updated_by || '窶・}`;
         badge.style.background = '#ff4757';
         badge.style.color = '#fff';
         badge.textContent = 'MAINTENANCE';
-        togLabel.textContent = '繝｡繝ｳ繝・リ繝ｳ繧ｹ繝｢繝ｼ繝峨′ON縺ｧ縺・;
+        togLabel.textContent = 'メンテ'リ繝ｳ繧ｹ繝｢繝ｼ繝峨′ON縺ｧ縺・;
         track.style.background = '#ff4757';
         thumb.style.marginLeft = '32px';
         thumb.style.background = '#fff';
@@ -758,12 +758,12 @@ function updateMaintUI(data) {
         card.style.background = 'rgba(0,229,160,.06)';
         card.style.borderColor = 'rgba(0,229,160,.3)';
         icon.textContent = '泙';
-        title.textContent = '騾壼ｸｸ遞ｼ蜒堺ｸｭ';
-        sub.textContent = '繧ｵ繝ｼ繝薙せ縺ｯ豁｣蟶ｸ縺ｫ遞ｼ蜒阪＠縺ｦ縺・∪縺・;
+        title.textContent = '正常稼働中';
+        sub.textContent = 'サービスは正常に稼働しています';
         badge.style.background = '#00e5a0';
         badge.style.color = '#000';
         badge.textContent = 'ONLINE';
-        togLabel.textContent = '繝｡繝ｳ繝・リ繝ｳ繧ｹ繝｢繝ｼ繝峨ｒON縺ｫ縺吶ｋ';
+        togLabel.textContent = 'メンテ'リ繝ｳ繧ｹ繝｢繝ｼ繝峨ｒON縺ｫ縺吶ｋ';
         track.style.background = '#2a2a4a';
         thumb.style.marginLeft = '2px';
         thumb.style.background = '#5a5a7a';
@@ -782,7 +782,7 @@ async function applyMaintenance(enable) {
 
     const confirmMsg = enable
         ? '笞・・繝｡繝ｳ繝・リ繝ｳ繧ｹ繝｢繝ｼ繝峨ｒON縺ｫ縺励∪縺吶・n繝ｦ繝ｼ繧ｶ繝ｼ縺ｯ繧ｵ繝ｼ繝薙せ縺ｫ繧｢繧ｯ繧ｻ繧ｹ縺ｧ縺阪↑縺上↑繧翫∪縺吶・n譛ｬ蠖薙↓繧医ｍ縺励＞縺ｧ縺吶°・・
-        : '繝｡繝ｳ繝・リ繝ｳ繧ｹ繝｢繝ｼ繝峨ｒOFF縺ｫ縺励※繧ｵ繝ｼ繝薙せ繧貞・髢九＠縺ｾ縺吶・n繧医ｍ縺励＞縺ｧ縺吶°・・;
+        : 'メンテ'リ繝ｳ繧ｹ繝｢繝ｼ繝峨ｒOFF縺ｫ縺励※繧ｵ繝ｼ繝薙せ繧貞・髢九＠縺ｾ縺吶・n繧医ｍ縺励＞縺ｧ縺吶°・・;
 
     if (!confirm(confirmMsg)) return;
 
@@ -798,7 +798,7 @@ async function applyMaintenance(enable) {
             enable ? 'warning' : 'success'
         );
     } catch (e) {
-        showToast('繧ｨ繝ｩ繝ｼ: ' + e.message, 'error');
+        showToast('エラー: ' + e.message, 'error');
     }
 }
 
@@ -818,10 +818,10 @@ async function loadCoupons() {
     try {
         const stats = await api('/admin/coupons/stats');
         document.getElementById('couponStats').innerHTML = [
-            { label: '譛牙柑繧ｯ繝ｼ繝昴Φ', value: stats.active_coupons, color: 'var(--success)' },
-            { label: '邱冗匱陦梧焚', value: stats.total_coupons, color: 'var(--accent)' },
-            { label: '邱丈ｽｿ逕ｨ蝗樊焚', value: stats.total_uses, color: 'var(--primary)' },
-            { label: '邱丞牡蠑暮｡・, value: 'ﾂ･' + (stats.total_discount_yen || 0).toLocaleString(), color: 'var(--warning)' },
+            { label: '有効クーポン', value: stats.active_coupons, color: 'var(--success)' },
+            { label: '発行数', value: stats.total_coupons, color: 'var(--accent)' },
+            { label: '総使用回数', value: stats.total_uses, color: 'var(--primary)' },
+            { label: '総割引額', value: '¥' + (stats.total_discount_yen || 0).toLocaleString(), color: 'var(--warning)' },
         ].map(s => `<div class="stat-card" style="border-left:3px solid ${s.color}">
             <div style="font-size:1.6rem;font-weight:700;color:${s.color}">${s.value}</div>
             <div style="font-size:.8rem;color:var(--text2);margin-top:.25rem">${s.label}</div>
@@ -833,33 +833,33 @@ async function loadCoupons() {
         const coupons = await api('/coupons');
         const tbody = coupons.map(c => {
             const expired = c.valid_until && new Date(c.valid_until) < new Date();
-            const status = !c.is_active ? '辟｡蜉ｹ' : expired ? '譛滄剞蛻・ｌ' : '譛牙柑';
+            const status = !c.is_active ? '無効' : expired ? '期限切れ' : '有効';
             const stColor = !c.is_active ? 'var(--danger)' : expired ? 'var(--warning)' : 'var(--success)';
             return `<tr>
                 <td><code style="background:rgba(108,71,255,.15);padding:.2rem .6rem;border-radius:4px;font-size:.9rem">${c.code}</code></td>
-                <td>${c.discount_type === 'percent' ? c.discount_value + '%OFF' : 'ﾂ･' + c.discount_value.toLocaleString() + '蜑ｲ蠑・}</td>
+                <td>${c.discount_type === 'percent' ? c.discount_value + '%OFF' : '¥' + c.discount_value.toLocaleString() + '円引き'}</td>
                 <td>${c.description || '窶・}</td>
                 <td>${c.used_count}${c.max_uses ? ' / ' + c.max_uses : ' / 辟｡髯・}</td>
-                <td>${c.valid_until ? c.valid_until.split('T')[0] : '辟｡譛滄剞'}</td>
+                <td>${c.valid_until ? c.valid_until.split('T')[0] : '無期限'}</td>
                 <td><span style="color:${stColor};font-weight:600">${status}</span></td>
                 <td>
                     <button class="btn btn-ghost" style="font-size:.8rem;padding:.3rem .6rem" onclick="toggleCoupon(${c.id})">
-                        ${c.is_active ? '辟｡蜉ｹ蛹・ : '譛牙柑蛹・}
+                        ${c.is_active ? '無効化' : '有効化'}
                     </button>
-                    <button class="btn btn-ghost" style="font-size:.8rem;padding:.3rem .6rem;color:var(--danger)" onclick="deleteCoupon(${c.id})">蜑企勁</button>
+                    <button class="btn btn-ghost" style="font-size:.8rem;padding:.3rem .6rem;color:var(--danger)" onclick="deleteCoupon(${c.id})">削除</button>
                 </td>
             </tr>`;
         }).join('');
         document.getElementById('couponList').innerHTML = `
         <table style="width:100%;border-collapse:collapse;font-size:.875rem">
             <thead><tr style="color:var(--text2);border-bottom:1px solid var(--border)">
-                <th style="padding:.75rem;text-align:left">繧ｳ繝ｼ繝・/th>
-                <th style="padding:.75rem;text-align:left">蜑ｲ蠑・/th>
-                <th style="padding:.75rem;text-align:left">隱ｬ譏・/th>
-                <th style="padding:.75rem;text-align:left">菴ｿ逕ｨ蝗樊焚</th>
-                <th style="padding:.75rem;text-align:left">譛牙柑譛滄剞</th>
-                <th style="padding:.75rem;text-align:left">繧ｹ繝・・繧ｿ繧ｹ</th>
-                <th style="padding:.75rem;text-align:left">謫堺ｽ・/th>
+                <th style="padding:.75rem;text-align:left">コード</th>
+                <th style="padding:.75rem;text-align:left">割引</th>
+                <th style="padding:.75rem;text-align:left">説明</th>
+                <th style="padding:.75rem;text-align:left">使用回数</th>
+                <th style="padding:.75rem;text-align:left">有効期限</th>
+                <th style="padding:.75rem;text-align:left">ステータス</th>
+                <th style="padding:.75rem;text-align:left">操作</th>
             </tr></thead>
             <tbody>${tbody || '<tr><td colspan="7" style="padding:2rem;text-align:center;color:var(--text3)">繧ｯ繝ｼ繝昴Φ縺ｪ縺・/td></tr>'}</tbody>
         </table>`;
@@ -894,27 +894,27 @@ async function submitCreateCoupon() {
             method: 'POST',
             body: JSON.stringify({ code, description: desc, discount_type: type, discount_value: val, max_uses: maxUses, valid_until: validUntil }),
         });
-        showToast(`笨・繧ｯ繝ｼ繝昴Φ縲・{code}縲阪ｒ逋ｺ陦後＠縺ｾ縺励◆・～, 'success');
+        showToast(`✅ クーポン「${code}」を発行しました！`, 'success');
         closeCouponModal();
         loadCoupons();
     } catch (e) {
-        showToast('逋ｺ陦後お繝ｩ繝ｼ: ' + e.message, 'error');
+        showToast('発行エラー: ' + e.message, 'error');
     }
 }
 
 async function toggleCoupon(id) {
     try {
         const r = await api(`/coupons/${id}/toggle`, { method: 'PATCH' });
-        showToast(r.is_active ? '笨・譛牙柑蛹悶＠縺ｾ縺励◆' : '辟｡蜉ｹ蛹悶＠縺ｾ縺励◆', 'info');
+        showToast(r.is_active ? '✅ 有効化しました' : '無効化しました', 'info');
         loadCoupons();
     } catch (e) { showToast(e.message, 'error'); }
 }
 
 async function deleteCoupon(id) {
-    if (!confirm('縺薙・繧ｯ繝ｼ繝昴Φ繧貞炎髯､縺励∪縺吶°・・)) return;
+    if (!confirm('このクーポンを削除しますか？')) return;
     try {
         await api(`/coupons/${id}`, { method: 'DELETE' });
-        showToast('蜑企勁縺励∪縺励◆', 'success');
+        showToast('削除しました', 'success');
         loadCoupons();
     } catch (e) { showToast(e.message, 'error'); }
 }
@@ -947,10 +947,10 @@ function renderPricingTable(comparisons) {
     const rows = comparisons.map(c => {
         const status = c.is_competitive === null ? '' : c.is_competitive ? '笨・ : '笞・・;
         const gpuRentalCell = c.gpurental_price
-            ? `ﾂ･${c.gpurental_price.toLocaleString()}/hr`
-            : '<span style="color:var(--text3)">譛ｪ逋ｻ骭ｲ</span>';
+            ? `¥${c.gpurental_price.toLocaleString()}/hr`
+            : '<span style="color:var(--text3)">未登録</span>';
         const diffCell = c.diff_jpy !== null
-            ? `<span style="color:${c.diff_jpy > 0 ? 'var(--warning)' : 'var(--success)'}">${c.diff_jpy > 0 ? '+' : ''}ﾂ･${c.diff_jpy.toLocaleString()}</span>`
+            ? `<span style="color:${c.diff_jpy > 0 ? 'var(--warning)' : 'var(--success)'}">${c.diff_jpy > 0 ? '+' : ''}¥${c.diff_jpy.toLocaleString()}</span>`
             : '窶・;
         const applybtn = c.suggested_price_jpy
             ? `<button class="btn btn-ghost" style="font-size:.75rem;padding:.25rem .5rem" onclick="applyPrice('${c.gpu_name}',${c.suggested_price_jpy})">驕ｩ逕ｨ</button>`
@@ -959,24 +959,24 @@ function renderPricingTable(comparisons) {
             <td style="padding:.6rem .75rem">${status}</td>
             <td style="padding:.6rem .75rem;font-size:.85rem">${c.gpu_name}</td>
             <td style="padding:.6rem .75rem;text-align:right;color:var(--text2)">${c.vram_gb}GB</td>
-            <td style="padding:.6rem .75rem;text-align:right">ﾂ･${(c.runpod_price_jpy || 0).toLocaleString()}/hr</td>
+            <td style="padding:.6rem .75rem;text-align:right">¥${(c.runpod_price_jpy || 0).toLocaleString()}/hr</td>
             <td style="padding:.6rem .75rem;text-align:right">${gpuRentalCell}</td>
             <td style="padding:.6rem .75rem;text-align:right">${diffCell}</td>
-            <td style="padding:.6rem .75rem;text-align:right;color:var(--accent)">ﾂ･${(c.suggested_price_jpy || 0).toLocaleString()}/hr</td>
+            <td style="padding:.6rem .75rem;text-align:right;color:var(--accent)">¥${(c.suggested_price_jpy || 0).toLocaleString()}/hr</td>
             <td style="padding:.6rem .75rem">${applybtn}</td>
         </tr>`;
     }).join('');
     document.getElementById('pricingTable').innerHTML = `
     <table style="width:100%;border-collapse:collapse;font-size:.85rem">
         <thead><tr style="color:var(--text2);border-bottom:1px solid var(--border)">
-            <th style="padding:.6rem .75rem">迥ｶ諷・/th>
-            <th style="padding:.6rem .75rem;text-align:left">GPU蜷・/th>
+            <th style="padding:.6rem .75rem">状態</th>
+            <th style="padding:.6rem .75rem;text-align:left">GPU名</th>
             <th style="padding:.6rem .75rem;text-align:right">VRAM</th>
             <th style="padding:.6rem .75rem;text-align:right">RunPod</th>
             <th style="padding:.6rem .75rem;text-align:right">GPURental</th>
-            <th style="padding:.6rem .75rem;text-align:right">蟾ｮ鬘・/th>
-            <th style="padding:.6rem .75rem;text-align:right">謗ｨ螂ｨ萓｡譬ｼ</th>
-            <th style="padding:.6rem .75rem">驕ｩ逕ｨ</th>
+            <th style="padding:.6rem .75rem;text-align:right">差額</th>
+            <th style="padding:.6rem .75rem;text-align:right">推奨価格</th>
+            <th style="padding:.6rem .75rem">適用</th>
         </tr></thead>
         <tbody>${rows}</tbody>
     </table>`;
@@ -986,13 +986,13 @@ async function fetchRunPodPrices() {
     showToast('売 RunPod縺九ｉ萓｡譬ｼ繧貞叙蠕嶺ｸｭ...', 'info');
     try {
         const result = await api('/admin/pricing/fetch', { method: 'POST' });
-        showToast(`笨・${result.count}遞ｮ鬘曩PU縺ｮ萓｡譬ｼ繧貞叙蠕励＠縺ｾ縺励◆`, 'success');
+        showToast(`✅ ${result.count}種類のGPUの価格を取得しました`, 'success');
         loadPricingCompare();
-    } catch (e) { showToast('蜿門ｾ励お繝ｩ繝ｼ: ' + e.message, 'error'); }
+    } catch (e) { showToast('取得エラー: ' + e.message, 'error'); }
 }
 
 async function applyPrice(gpuName, priceJpy) {
-    if (!confirm(`${gpuName} 縺ｮ萓｡譬ｼ繧・ﾂ･${priceJpy.toLocaleString()}/hr 縺ｫ螟画峩縺励∪縺吶°・歔)) return;
+    if (!confirm(`${gpuName} の価格を ¥${priceJpy.toLocaleString()}/hr に変更しますか？`)) return;
     try {
         const r = await api('/admin/pricing/apply', {
             method: 'POST',
@@ -1047,7 +1047,7 @@ async function loadRenderJobs() {
         const statusConfig = {
             queued:    { label: '蠕・ｩ滉ｸｭ',   cls: 'b-warning', icon: '竢ｳ' },
             running:   { label: '蜃ｦ逅・ｸｭ',   cls: 'b-primary', icon: '売' },
-            done:      { label: '螳御ｺ・,     cls: 'b-success', icon: '笨・ },
+            done:      { label: '完了',     cls: 'b-success', icon: '笨・ },
             failed:    { label: '螟ｱ謨・,     cls: 'b-danger',  icon: '笶・ },
             cancelled: { label: '繧ｭ繝｣繝ｳ繧ｻ繝ｫ', cls: 'b-muted',   icon: '竢ｹ' },
         };
@@ -1121,7 +1121,7 @@ async function showRenderJobError(jobId) {
     document.getElementById('rjErrLog').textContent    = '';
     try {
         const job = await api(`/admin/render-jobs/${jobId}/error`);
-        const sc = { queued:'蠕・ｩ滉ｸｭ', running:'蜃ｦ逅・ｸｭ', done:'螳御ｺ・, failed:'螟ｱ謨・, cancelled:'繧ｭ繝｣繝ｳ繧ｻ繝ｫ' };
+        const sc = { queued:'蠕・ｩ滉ｸｭ', running:'蜃ｦ逅・ｸｭ', done:'完了', failed:'螟ｱ謨・, cancelled:'繧ｭ繝｣繝ｳ繧ｻ繝ｫ' };
         document.getElementById('rjErrStatus').textContent = sc[job.status] || job.status;
         document.getElementById('rjErrStatus').style.color = job.status === 'failed' ? 'var(--danger)' : job.status === 'done' ? 'var(--success)' : 'inherit';
         document.getElementById('rjErrFormat').textContent = job.format || '窶・;
@@ -1291,23 +1291,23 @@ async function submitOutageReport() {
         await loadOutageReports();
         await updateOutageBadge();
     } catch (e) {
-        showMsg(`笶・繧ｨ繝ｩ繝ｼ: ${e.message}`, true);
+        showMsg(`❌ エラー: ${e.message}`, true);
     }
 }
 
 async function executeCompensation(reportId) {
-    if (!confirm(`髫懷ｮｳ #${reportId} 縺ｮ陬懷─繝昴う繝ｳ繝医ｒ驟榊ｸ・＠縺ｾ縺吶°・歃n縺薙・謫堺ｽ懊・蜿悶ｊ豸医○縺ｾ縺帙ｓ縲Ａ)) return;
+    if (!confirm(`障害 #${reportId} の補償ポイントを付与しますか？\nこの操作は取り消せません。`)) return;
     try {
         const data = await api(`/outage/${reportId}/compensate`, { method: 'POST' });
         const mins = data.outage_minutes || 0;
         const pts = data.total_points_issued || 0;
         const cnt = data.affected_count || 0;
-        alert(`笨・陬懷─螳御ｺ・ｼ―n\n髫懷ｮｳ譎る俣: ${mins} 蛻・n陬懷─蟇ｾ雎｡: ${cnt} 莉ｶ\n驟榊ｸ・・繧､繝ｳ繝亥粋險・ ${pts.toLocaleString()} pt\n(ﾂ･${(pts * 10).toLocaleString()} 逶ｸ蠖・`);
+        alert(`笨・陬懷─螳御ｺ・ｼ―n\n髫懷ｮｳ譎る俣: ${mins} 蛻・n陬懷─蟇ｾ雎｡: ${cnt} 莉ｶ\n驟榊ｸ・・繧､繝ｳ繝亥粋險・ ${pts.toLocaleString()} pt\n(¥${(pts * 10).toLocaleString()} 逶ｸ蠖・`);
         hideOutageForm();
         await loadOutageReports();
         await updateOutageBadge();
     } catch (e) {
-        alert(`笶・陬懷─繧ｨ繝ｩ繝ｼ: ${e.message}`);
+        alert(`❌ 補償エラー: ${e.message}`);
     }
 }
 
@@ -1460,7 +1460,7 @@ function renderApiKeyTable(keys) {
                 <button class="btn" style="font-size:0.72rem;padding:3px 10px;${toggleColor};background:transparent;border:1px solid var(--border)"
                     onclick="toggleApiKey(${k.id}, ${isActive})">${toggleLabel}</button>
                 <button class="btn" style="font-size:0.72rem;padding:3px 10px;color:var(--danger);background:transparent;border:1px solid rgba(255,71,87,.3)"
-                    onclick="deleteApiKey(${k.id}, '${k.username}')">卵 蜑企勁</button>
+                    onclick="deleteApiKey(${k.id}, '${k.username}')">卵 削除</button>
             </td>
         </tr>`;
     }).join('');
@@ -1504,16 +1504,16 @@ async function loadKpiSummary() {
         // 螢ｲ荳階PI繧ｫ繝ｼ繝画峩譁ｰ
         const monthRevEl = document.getElementById('kMonthRevenue');
         if (monthRevEl && s.revenue) {
-            monthRevEl.textContent = 'ﾂ･' + Math.round(s.revenue.month || 0).toLocaleString();
+            monthRevEl.textContent = '¥' + Math.round(s.revenue.month || 0).toLocaleString();
         }
         // 霑ｽ蜉KPI縺後≠繧後・譖ｴ譁ｰ
         const kTotalRevEl = document.getElementById('kTotalRevenue');
         if (kTotalRevEl && s.revenue) {
-            kTotalRevEl.textContent = 'ﾂ･' + Math.round(s.revenue.total || 0).toLocaleString();
+            kTotalRevEl.textContent = '¥' + Math.round(s.revenue.total || 0).toLocaleString();
         }
         const kTotalPayoutEl = document.getElementById('kTotalPayout');
         if (kTotalPayoutEl && s.payouts) {
-            kTotalPayoutEl.textContent = 'ﾂ･' + Math.round(s.payouts.total || 0).toLocaleString();
+            kTotalPayoutEl.textContent = '¥' + Math.round(s.payouts.total || 0).toLocaleString();
         }
         const kAvgSessionEl = document.getElementById('kAvgSession');
         if (kAvgSessionEl && s.sessions) {
@@ -1681,12 +1681,12 @@ async function loadPurchases() {
         el('puPending', pending+'莉ｶ'); el('puCompleted', completed+'莉ｶ'); el('puTotalPt', totalPt.toLocaleString()+' pt');
         const badge=document.getElementById('purchasesBadge'); if(badge){if(pending>0){badge.textContent=pending;badge.style.display='';}else{badge.style.display='none';}}
         const stBadge={pending:'b-warning',completed:'b-success',failed:'b-danger'};
-        const stLabel={pending:'譛ｪ莉倅ｸ・,completed:'螳御ｺ・,failed:'螟ｱ謨・};
+        const stLabel={pending:'譛ｪ莉倅ｸ・,completed:'完了',failed:'螟ｱ謨・};
         tbody.innerHTML = (rows||[]).map(p=>`<tr>
             <td class="mono">#${p.id}</td>
             <td><div>${p.username||'窶・}</div><div style="font-size:0.75rem;color:var(--text3)">${p.email||''}</div></td>
             <td>${p.plan_name}</td>
-            <td class="mono" style="color:var(--accent)">ﾂ･${(p.amount_yen||0).toLocaleString()}</td>
+            <td class="mono" style="color:var(--accent)">¥${(p.amount_yen||0).toLocaleString()}</td>
             <td class="mono" style="color:var(--warning)">${p.points} pt</td>
             <td><span class="badge ${stBadge[p.status]||'b-muted'}">${stLabel[p.status]||p.status}</span></td>
             <td style="color:var(--text3);font-size:0.8rem">${p.created_at?new Date(p.created_at).toLocaleString('ja-JP'):'窶・}</td>
