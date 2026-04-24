@@ -826,20 +826,20 @@
                 </div>
 
                 <div class="bank-form-group" style="margin-top:1.25rem">
-                    <label>振込済蜈亥哨蠎ｧ繧帝∈謚・<span class="req">*</span></label>
+                    <label>振込先口座を選択<span class="req">*</span></label>
                     <select id="payoutBankSelect">
-                        <option value="">口座繧帝∈謚槭＠てく上□縺輔＞</option>
+                        <option value="">口座を選択してください</option>
                     </select>
                 </div>
 
                 <div class="bank-form-group">
                     <label>蜃ｺ驥鷹≡鬘搾ｼ按･🇯🇵<span class="req">*</span></label>
                     <input type="number" id="payoutAmount" placeholder="萓・ 5000" min="1000" step="100" />
-                    <div class="field-hint">譛菴主・驥鷹｡・ ﾂ･1,000</div>
+                    <div class="field-hint">譛€菴主・驥鷹｡・ ﾂ･1,000</div>
                 </div>
 
                 <div class="bank-form-group">
-                    <label>蛯呵・ｼ井ｻｻ諢擾ｼ・</label>
+                    <label>蛯呵€・ｼ井ｻｻ諢擾ｼ・</label>
                     <input type="text" id="payoutNotes" placeholder="莉ｻ諢上・繝｡繝｢" />
                 </div>
 
@@ -856,7 +856,7 @@
                 <div style="font-size:1.3rem;font-weight:700;color:var(--success);margin-bottom:0.5rem">逕ｳ隲句ｮ御ｺ・ｼ・</div>
                 <div style="color:var(--text2);font-size:0.9rem;line-height:1.7;margin-bottom:1.5rem">
                     蜃ｺ驥醍筏隲九ｒ蜿励￠莉倥￠縺ｾ縺励◆縲・br>
-                    <strong>3縲・ 蝟ｶ讌ｭ譌･莉･蜀・/strong>縺ｫ登録口座縺ｸ縺頑険霎ｼ縺ｿします縺吶・br>
+                    <strong>3縲・ 蝟ｶ讌ｭ譌･莉･蜀・/strong>縺ｫ登録口座縺ｸ縺頑険霎ｼ縺ｿします縺吶€・br>
                     逕ｳ隲狗｢ｺ隱阪Γ繝ｼ繝ｫ繧偵＃登録縺ｮ繧｢繝峨Ξ繧ｹ縺ｸ送信します縺励◆縲・
                 </div>
                 <div id="payoutSuccessDetail" class="payout-success-detail"></div>
@@ -864,7 +864,7 @@
             </div>
         </div>
 
-        <!-- 笏笏笏笏笏 TAB 2: 申請履歴 笏笏笏笏笏 -->
+        <!-- 笏€笏€笏€笏€笏€ TAB 2: 申請履歴 笏€笏€笏€笏€笏€ -->
         <div id="wdPane2" class="wd-pane hidden">
             <div id="payoutHistoryList">
                 <div class="wd-empty">読み込み中...</div>
@@ -908,34 +908,34 @@
     </footer>
 
     <!-- 笊絶武笊・TICKET PURCHASE MODAL (static HTML) 笊絶武笊絶武笊絶武笊絶武笊絶武笊絶武笊絶武笊絶武笊絶武笊絶武笊絶武笊絶武笊絶武笊・-->
-    <div id="ticketModal" class="hidden" role="dialog" aria-modal="true" aria-label="繝√こ繝・ヨ雉ｼ蜈･">
+    <div id="ticketModal" class="hidden" role="dialog" aria-modal="true" aria-label="チケット購入">
       <div class="ticket-modal-box">
         <div class="modal-header">
-          <h2>次 繝√こ繝・ヨ雉ｼ蜈･</h2>
-          <span class="modal-subtitle" id="ticketCurrentBalance">谿矩ｫ倡｢ｺ隱堺ｸｭ...</span>
-          <button class="modal-close" onclick="closeTicketModal()" aria-label="髢峨§繧・>笨・</button>
+          <h2>🎟 チケット購入</h2>
+          <span class="modal-subtitle" id="ticketCurrentBalance">残高確認中...</span>
+          <button class="modal-close" onclick="closeTicketModal()" aria-label="閉じる">✕</button>
         </div>
         <div class="ticket-modal-body">
           <div class="ticket-plans-note">
-            <span>東 1pt = 10蜀・嶌蠖薙・PU莠育ｴ・凾縺ｫ閾ｪ蜍墓ｶ郁ｲｻ縺輔ｌ縺ｾ縺吶・</span>
+            <span>📌 1pt = 10円相当。GPU予約時に自動消費されます。</span>
           </div>
-          <!-- クーポンコード牙・蜉・-->
+          <!-- クーポンコード入力 -->
           <div style="display:flex;gap:.4rem;align-items:center;margin-bottom:0.6rem;padding:0.5rem 0.75rem;background:rgba(108,71,255,0.08);border:1px solid rgba(108,71,255,0.2);border-radius:10px">
-            <span style="font-size:0.9rem">捷🇯🇵</span>
-            <input id="couponCodeInput" type="text" placeholder="クーポンコード会ｼ井ｾ・ BETA2025🇯🇵
+            <span style="font-size:0.9rem">🏷️</span>
+            <input id="couponCodeInput" type="text" placeholder="クーポンコード（例: BETA2025）"
               style="flex:1;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);border-radius:6px;padding:.35rem .6rem;color:var(--text);font-size:.8rem;outline:none"
               oninput="couponInputChanged(this.value)" />
-            <button onclick="applyCoupon()" style="padding:.35rem .75rem;background:var(--primary);border:none;border-radius:6px;color:#fff;font-size:.75rem;cursor:pointer;white-space:nowrap;font-weight:600">驕ｩ逕ｨ</button>
+            <button onclick="applyCoupon()" style="padding:.35rem .75rem;background:var(--primary);border:none;border-radius:6px;color:#fff;font-size:.75rem;cursor:pointer;white-space:nowrap;font-weight:600">適用</button>
           </div>
-          <!-- クーポン驕ｩ逕ｨ邨先棡 -->
+          <!-- クーポン適用結果 -->
           <div id="couponResult" style="display:none;margin-bottom:0.5rem;padding:.45rem 0.75rem;border-radius:8px;font-size:.78rem"></div>
-          <!-- 繝励Λ繝ｳ荳隕ｧ -->
+          <!-- プラン一覧 -->
           <div class="ticket-plans-grid" id="ticketPlansContainer">
             <div style="text-align:center;padding:2rem;color:var(--text2);grid-column:1/-1">読み込み中...</div>
           </div>
         </div>
         <div class="ticket-footer">
-          <a href="https://stripe.com/jp" target="_blank">白 Stripe・医け繝ｬ繧ｸ繝・ヨ繧ｫ繝ｼ繝会ｼ峨〒安全縺ｫ豎ｺ貂・</a>
+          <a href="https://stripe.com/jp" target="_blank">🔒 Stripe（クレジットカード）で安全に決済</a>
         </div>
       </div>
     </div>
